@@ -1,0 +1,177 @@
+#include "Uci.h"
+
+#include "Board.h"
+#include "Evaluation.h"
+
+#include <iostream>
+#include <string>
+
+////https://ucichessengine.wordpress.com/2011/03/16/description-of-uci-protocol/
+
+namespace {
+    const std::string VERSION_MAJOR = "0";
+    const std::string VERSION_MINOR = "0";
+    const std::string VERSION_PATCH = "0";
+}
+
+Uci::Uci() :
+    m_board(Board()),
+    m_search(Search(m_board))
+{}
+
+void Uci::Launch() {
+
+    std::string line;
+
+    while(std::getline(std::cin, line)) {
+        std::istringstream stream(line);
+        std::string token;
+        stream >> std::skipws >> token;
+
+        if(token == "uci") {
+            std::cout << "id name Casanchess " << VERSION_MAJOR << "."
+                      << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
+            std::cout << "id author Carlos Sanchez Mayordomo" << std::endl;
+            std::cout << std::endl;
+
+            //Options
+
+            std::cout << "uciok" << std::endl;
+        }
+        else if(token == "debug") {
+
+        }
+        else if(token == "isready") {
+            std::cout << "readyok" << std::endl;
+        }
+        else if(token == "setoption") {
+
+        }
+        else if(token == "ucinewgame") {
+            m_board.Init();
+        }
+        else if(token == "position") {
+            Position(stream);
+        }
+        else if(token == "go") {
+            Go(stream);
+        }
+        else if(token == "stop") {
+            m_search.Stop();
+        }
+        else if(token == "ponderhit") {
+
+        }
+        else if(token == "quit" || token == "q") {
+            std::cout << "info string quitting" << std::endl;
+            break;
+        }
+        //Non-UCI commands
+        else if(token == "perft" || token == "divide") {
+            int depth;
+            stream >> depth;
+
+            typedef std::chrono::high_resolution_clock Clock;
+            auto t0 = Clock::now();
+
+            Board board;
+            board.Print();
+            if(token == "perft") {
+                P( board.Perft(depth) );
+            } else {
+                board.Divide(depth);
+            }
+
+            auto t1 = Clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1-t0);
+            std::cout << "[" << token << " " << depth << "] " << duration.count() << " ms" << std::endl;
+        }
+        else if(token == "mirror") {
+            m_board.Mirror();
+        }
+        else if(token == "probe") {
+            m_search.ProbeBoard();
+        }
+        else if(token == "print") {
+            m_board.Print();
+            std::string activePlayer = (m_board.ActivePlayer() == WHITE) ? "WHITE" : "BLACK";
+            std::string castlingRights;
+            if(m_board.CastlingRights() & 0b0001) castlingRights += "K"; else castlingRights += "-";
+            if(m_board.CastlingRights() & 0b0010) castlingRights += "Q"; else castlingRights += "-";
+            if(m_board.CastlingRights() & 0b0100) castlingRights += "k"; else castlingRights += "-";
+            if(m_board.CastlingRights() & 0b1000) castlingRights += "q"; else castlingRights += "-";
+            P("Active player: " << activePlayer);
+            P("Ply: " << m_board.Ply());
+            P("Fifty-move rule: " << m_board.FiftyRule());
+            P("Castling rights: " << castlingRights);
+            P("Enpassant square: " << BitscanForward(m_board.EnPassantSquare()));
+            P("ZKey: " << m_board.ZKey());
+            P("Static evaluation: " << Evaluation::Evaluate(m_board));
+            std::cout << "Move history: "; m_board.ShowHistory(); std::cout << std::endl;
+        }
+        else {
+            std::cout << "Command not valid: " << line << std::endl;
+        }
+    }
+
+}
+
+void Uci::Go(std::istringstream &stream) {
+    std::string token;
+
+    Limits limits;
+
+    while(stream >> token) {
+
+        if(token == "infinite") limits.infinite = true;
+        else if(token == "depth") stream >> limits.depth;
+        else if(token == "movetime") stream >> limits.moveTime;
+        else if(token == "nodes") stream >> limits.nodes;
+        else if(token == "wtime") stream >> limits.wtime;
+        else if(token == "btime") stream >> limits.btime;
+        else if(token == "winc") stream >> limits.winc;
+        else if(token == "binc") stream >> limits.binc;
+        else if(token == "movestogo") stream >> limits.movesToGo;
+
+        else {
+            std::string temp;
+            stream >> temp;
+            P("UNDEFINED GO STATMENT!!! (LOADING DEFAULT VALUES) " << temp);
+            m_search.FixTime(2000);
+            break;
+        }
+
+    }
+
+    m_search.AllocateLimits(m_board, limits);
+
+    m_search.IterativeDeepening(m_board);
+}
+
+void Uci::Position(std::istringstream &stream) {
+    std::string token;
+
+    while(stream >> token) {
+
+        if(token == "startpos") {
+            m_board.Init();
+        }
+
+        else if(token == "fen") {
+            std::string fen;
+            while(stream >> token && token != "moves") {
+                fen += token + " ";
+            }
+            m_board.SetFen(fen);
+        }
+
+        while(stream >> token) {
+            if(token == "moves") continue;
+            // P(token);
+            m_board.MakeMove(token);
+        }
+
+        m_board.Print();
+    }
+
+}
