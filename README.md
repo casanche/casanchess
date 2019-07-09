@@ -44,8 +44,7 @@ cutechess-cli -engine name=INFINITE_SCORE cmd=casanchess-49 -engine name=StandPa
 cutechess-cli -engine name=FUTILITY_NON_PV cmd=casanchess-29 -engine name=StandPat cmd=casanchess-28 -each proto=uci tc=0/10+0.1 -openings file=/home/carlos/sw/arena/Books/book5.epd format=epd order=random -repeat -concurrency 5 -ratinginterval 25 -sprt alpha=0.05 beta=0.05 elo0=-10 elo1=25 -rounds 1000
 
 ##Queue
-cutechess-cli -engine name=HOTFIX cmd=casanchess-51 -engine name=StandPat cmd=casanchess-50 -each proto=uci tc=0/7+0.07 -openings file=/home/carlos/sw/arena/Books/book5.epd format=epd order=random -repeat -concurrency 3 -ratinginterval 25 -sprt alpha=0.05 beta=0.05 elo0=-5 elo1=15 -rounds 1000
-cutechess-cli -engine name=HOTFIX_2 cmd=casanchess-52 -engine name=StandPat cmd=casanchess-51 -each proto=uci tc=0/7+0.07 -openings file=/home/carlos/sw/arena/Books/book5.epd format=epd order=random -repeat -concurrency 3 -ratinginterval 25 -sprt alpha=0.05 beta=0.05 elo0=-5 elo1=15 -rounds 1000
+cutechess-cli -engine name=LEGAL_MOVE_GENERATOR_FUCKING_FINALLY cmd=casanchess-new -engine name=StandPat cmd=casanchess-old -each proto=uci tc=0/8+0.08 -openings file=/home/carlos/sw/arena/Books/book5.epd format=epd order=random -repeat -concurrency 3 -ratinginterval 25 -sprt alpha=0.05 beta=0.05 elo0=0 elo1=30 -rounds 500
 
 # Two-fold repetition
 * Topple
@@ -192,7 +191,7 @@ Add `-pg` to the compiler options\
 Run the program\
 `gprof <bin> gmon.out > analysis.txt`
 
-`valgrind --tool=callgrind ./<bin>`\
+`valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes ./<bin>`\
 `kcachegrind <out>`
 
 ## DEBUGGER

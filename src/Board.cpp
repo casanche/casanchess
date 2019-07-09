@@ -482,6 +482,26 @@ Bitboard Board::AttackersTo(COLORS color, int square) {
     return attackers;
 }
 
+Bitboard Board::AttackersTo(COLORS color, int square, Bitboard blockers) {
+    Bitboard attackers = ZERO;
+    COLORS enemyColor = (COLORS)!color;
+
+    //Non-sliding
+    attackers |= AttacksPawns(color, square) & GetPieces(enemyColor, PAWN);
+    attackers |= AttacksKnights(square) & GetPieces(enemyColor, KNIGHT);
+    attackers |= AttacksKing(square) & GetPieces(enemyColor, KING);
+
+    //Bishop
+    Bitboard potentialAttackers = AttacksSliding(BISHOP, square, blockers);
+    attackers |= potentialAttackers & ( GetPieces(enemyColor, BISHOP) | GetPieces(enemyColor, QUEEN) );
+
+    //Rook
+    potentialAttackers = AttacksSliding(ROOK, square, blockers);
+    attackers |= potentialAttackers & ( GetPieces(enemyColor, ROOK) | GetPieces(enemyColor, QUEEN) );
+
+    return attackers;
+}
+
 //Note: Always call UpdateKingAttackers before
 bool Board::IsCheck() {
     COLORS color = ActivePlayer();
@@ -514,6 +534,7 @@ bool Board::IsMoveLegal(Move move, bool isCheck) {
         isLegal = false;
     }
     TakeMove(move);
+
     return isLegal;
 }
 
@@ -722,6 +743,11 @@ void Board::ClearBits() {
 
     for(int i = 0; i < MAX_PLIES; ++i) {
         m_history[i].Clear();
+    }
+
+    for(int i = 0; i < 63; ++i) {
+        m_pinnedPushMask[i] = 0;
+        m_pinnedCaptureMask[i] = 0;
     }
 
     m_enPassantSquare = ZERO;

@@ -24,31 +24,6 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    //Perft
-    std::string FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -";
-    if(argc > 1 && argv[1] == std::string("-perft")) {
-        int depth = std::atoi(argv[2]);
-
-        Board board;
-        board.SetFen(FEN);
-        board.Print();
-        P( board.Perft(depth) );
-
-        for(auto elem : countMap) {
-            P(elem.first << " " << elem.second);
-        }
-    }
-
-    //Divide
-    if(argc > 1 && argv[1] == std::string("-divide")) {
-        int depth = std::atoi(argv[2]);
-
-        Board board;
-        board.SetFen(FEN);
-        board.Print();
-        board.Divide(depth);
-    }
-
     Uci uci;
     uci.Launch();
 

@@ -60,6 +60,10 @@ public:
         m_taperedScore.mg += score.mg;
         m_taperedScore.eg += score.eg;
     }
+    void Subtract(int mg, int eg) {
+        m_taperedScore.mg -= mg;
+        m_taperedScore.eg -= eg;
+    }
     void Subtract(TaperedScore score) {
         m_taperedScore.mg -= score.mg;
         m_taperedScore.eg -= score.eg;
@@ -99,8 +103,15 @@ void Evaluation::Init() {
     }
 }
 
+//Are there heavy pieces on the board?
+bool Evaluation::AreHeavyPieces(const Board& board) {
+    return board.AllPieces()
+        ^ (board.Piece(WHITE,PAWN) & board.Piece(BLACK,PAWN))
+        ^ (board.Piece(WHITE,KING) & board.Piece(BLACK,KING));
+}
+
 bool Evaluation::IsSemiopenFile(const Board& board, COLORS color, int square) {
-    return !( board.Piece(color, PAWN) & MaskFile[ File[square] ] );
+    return !( board.Piece(color, PAWN) & MaskFile[ File(square) ] );
 }
 
 int Evaluation::TaperedCalculation(int mgScore, int egScore, int phase) {
@@ -130,7 +141,7 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
 
             COLORS enemyColor = (COLORS)!color;
             Bitboard theKing = board.Piece(enemyColor, KING);
-            int file = File[square];
+            int file = File(square);
             bool inKingFile = theKing & MaskFile[file];
             bool inAdjacentKingFile = theKing & ADJACENT_FILES[file];
             if(inKingFile) {
@@ -179,7 +190,7 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
         score.mg += PSQT[PAWN][index];
         score.eg += PSQT[PAWN][index];
 
-        int file = File[square];
+        int file = File(square);
         // Bitboard pushSquare = color == WHITE ? North(SquareBB(square)) : South(SquareBB(square));
         bool isPassed = !(PASSED_PAWN_AREA[color][square] & enemyPawns);
         // bool isDoubled = thePawns & PASSED_PAWN_FRONT[color][square]; //instead of pushSquare

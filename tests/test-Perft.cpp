@@ -125,3 +125,35 @@ TEST(Perft, Talkchess2) {
     board.SetFen("1N6/6k1/8/8/7B/8/8/4K3 w - - 19 103");
     EXPECT_EQ(board.Perft(1), (U64)14);
 }
+TEST(Perft, PeterEllis) {
+    Board board;
+    board.SetFen("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b QK - 3 2");
+    EXPECT_EQ(board.Perft(1), (U64)8);
+
+    board.SetFen("8/8/8/2k5/2pP4/8/B7/4K3 b - d3 5 3");
+    EXPECT_EQ(board.Perft(1), (U64)8);
+
+    board.SetFen("r3k2r/p1pp1pb1/bn2Qnp1/2qPN3/1p2P3/2N5/PPPBBPPP/R3K2R b QqKk - 3 2");
+    EXPECT_EQ(board.Perft(1), (U64)5);
+
+    board.SetFen("2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b QK - 3 2");
+    EXPECT_EQ(board.Perft(1), (U64)44);
+
+    board.SetFen("rnb2k1r/pp1Pbppp/2p5/q7/2B5/8/PPPQNnPP/RNB1K2R w QK - 3 9");
+    EXPECT_EQ(board.Perft(1), (U64)39);
+
+    board.SetFen("2r5/3pk3/8/2P5/8/2K5/8/8 w - - 5 4");
+    EXPECT_EQ(board.Perft(1), (U64)9);
+
+    board.SetFen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+    EXPECT_EQ(board.Perft(3), (U64)62379);
+
+    board.SetFen("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
+    EXPECT_EQ(board.Perft(3), (U64)89890);
+    
+    board.SetFen("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1");
+    EXPECT_EQ(board.Perft(6), (U64)1134888);
+
+    board.SetFen("K1k5/8/P7/8/8/8/8/8 w - - 0 1");
+    EXPECT_EQ(board.Perft(6), (U64)2217);
+}

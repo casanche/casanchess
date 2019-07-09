@@ -64,6 +64,7 @@ public:
         return AttackersTo(ActivePlayer(), square);
     }
     Bitboard AttackersTo(COLORS color, int square);
+    Bitboard AttackersTo(COLORS color, int square, Bitboard blockers);
     PIECE_TYPE GetPieceAtSquare(COLORS color, int square) const;
     bool IsCheck();
     bool IsCheck(COLORS color);
@@ -157,6 +158,9 @@ private:
     //Helpers: check evasion
     Bitboard m_captureMask; //the piece giving check
     Bitboard m_pushMask; //squares that block a check
+
+    Bitboard m_pinnedPushMask[64];
+    Bitboard m_pinnedCaptureMask[64];
 
     //Static classes
     static Fen m_fen;

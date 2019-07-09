@@ -20,6 +20,10 @@ namespace Attacks {
 
     //Helpers
     DIRECTIONS GetDirection(int sq1, int sq2);
+    bool IsInDirection(PIECE_TYPE pieceType, int sq1, int sq2, DIRECTIONS &direction);
+    bool IsInStraightDirection(int sq1, int sq2, DIRECTIONS &direction);
+    bool IsInDiagonalDirection(int sq1, int sq2, DIRECTIONS &direction);
+    DIRECTIONS OppositeDirection(DIRECTIONS direction);
 
     extern Bitboard m_BishopMask[64];
     extern Bitboard m_RookMask[64];

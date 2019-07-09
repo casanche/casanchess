@@ -60,7 +60,8 @@ int BitboardUtils::ResetLsb(Bitboard &b) {
 
 //Returns a bitboard with the LSB only
 Bitboard BitboardUtils::IsolateLsb(Bitboard b) {
-    return b & -b;
+    //return b & -b;
+	return b & (~b + 1);
 }
 
 //Returns a bitboard removing the the LSB

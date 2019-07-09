@@ -145,6 +145,7 @@ namespace Evaluation {
 
     void Init();
 
+    bool AreHeavyPieces(const Board& board);
     bool IsSemiopenFile(const Board& board, COLORS color, int square);
     int TaperedCalculation(int mgScore, int egScore, int phase);
 
