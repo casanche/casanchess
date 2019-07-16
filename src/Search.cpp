@@ -153,8 +153,8 @@ void Search::UciOutput(std::string PV) {
     std::cout << "info depth " << m_depth;
     if(IsMateValue(m_bestScore)) {
         int mateScore = 0;
-        if     (m_bestScore > 0) mateScore = INFINITE_SCORE - m_bestScore;
-        else if(m_bestScore < 0) mateScore = -INFINITE_SCORE - m_bestScore;
+        if     (m_bestScore > 0) mateScore = INFINITE_SCORE - m_bestScore + 1; //ply+1
+        else if(m_bestScore < 0) mateScore = -INFINITE_SCORE - m_bestScore - 1; //-ply-1
         std::cout << " score mate " << mateScore / 2; //return score in moves, not in plies
     } else {
         std::cout << " score cp " << m_bestScore;
