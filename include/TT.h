@@ -17,6 +17,7 @@ struct TTEntry {
     TTENTRY_TYPE type;
     Move bestMove;
     U8 depth;
+    U8 age;
     
     // U8 type : 2;
     // U8 depth : 6;

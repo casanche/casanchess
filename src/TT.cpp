@@ -6,7 +6,7 @@ void TTEntry::Clear() {
     type = TTENTRY_TYPE::NONE;
     bestMove = Move();
     depth = 0;
-    // age = 0;
+    age = 0;
 }
 
 TT::TT() {
@@ -31,23 +31,25 @@ void TT::AddEntry(U64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int dep
     assert(depth <= MAX_DEPTH);
 
     U64 index = zkey % MAX_HASH_ENTRIES;
-    // if(age < m_entries[index].age) return;
 
-    TTEntry entry;
-    entry.zkey = zkey;
-    entry.score = score;
-    entry.type = type;
-    entry.bestMove = bestMove;
-    entry.depth = depth;
-    // entry.age = age;
+    //Replacement scheme
+    if(depth >= m_entries[index].depth || age != m_entries[index].age) {
+        TTEntry entry;
+        entry.zkey = zkey;
+        entry.score = score;
+        entry.type = type;
+        entry.bestMove = bestMove;
+        entry.depth = depth;
+        entry.age = age;
 
-    m_entries[index] = entry;
+        m_entries[index] = entry;
+    }
 }
 
 TTEntry* TT::ProbeEntry(U64 zkey, int depth) {
     U64 index = zkey % MAX_HASH_ENTRIES;
     TTEntry entry = m_entries[index];
-    if(entry.zkey == zkey && entry.depth >= depth) { //&& entry.depth == depth
+    if(entry.zkey == zkey && entry.depth >= depth) {
         return &m_entries[index];
     } else {
         return nullptr;

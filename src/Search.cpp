@@ -39,6 +39,7 @@ Search::Search() {
     m_counter = 0;
 
     ClearSearch();
+    m_tt.Clear();
 }
 
 Search::Search(Board board) : m_initialBoard(board) {
