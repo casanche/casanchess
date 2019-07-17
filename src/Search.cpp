@@ -361,8 +361,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // && board.LastMove().MoveType != NULLMOVE
         && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=12)  //enough depth
         && !inCheck
-        && Evaluation::AreHeavyPieces(board)     //there are pieces on the board (to avoid zugzwang in K+P)
-        && Evaluation::Evaluate(board) >= beta   //very good score
+        && Evaluation::AreHeavyPiecesOnBothSides(board)  //there are pieces on the board (to avoid zugzwang in K+P)
+        && Evaluation::Evaluate(board) >= beta           //very good score
     ) {
         #ifdef DEBUG
         debug_nullmove++;

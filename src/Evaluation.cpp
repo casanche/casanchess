@@ -103,11 +103,9 @@ void Evaluation::Init() {
     }
 }
 
-//Are there heavy pieces on the board?
-bool Evaluation::AreHeavyPieces(const Board& board) {
-    return board.AllPieces()
-        ^ (board.Piece(WHITE,PAWN) & board.Piece(BLACK,PAWN))
-        ^ (board.Piece(WHITE,KING) & board.Piece(BLACK,KING));
+bool Evaluation::AreHeavyPiecesOnBothSides(const Board& board) {
+    return board.Piece(WHITE,ALL_PIECES) ^ (board.Piece(WHITE,PAWN) | board.Piece(WHITE,KING))
+        && board.Piece(BLACK,ALL_PIECES) ^ (board.Piece(BLACK,PAWN) | board.Piece(BLACK,KING));
 }
 
 bool Evaluation::IsSemiopenFile(const Board& board, COLORS color, int square) {
