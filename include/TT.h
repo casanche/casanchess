@@ -10,17 +10,13 @@ const int MAX_DEPTH = 128;
 //Beta node: the true eval is at least equal to the score (true >= score) LOWER_BOUND
 enum TTENTRY_TYPE { NONE, EXACT, LOWER_BOUND, UPPER_BOUND };
 
-//64(zkey) + 32(move) + 4(type) + 16(score) + 8(depth) = 128
+//64(zkey) + 32(move) + 16(score) + 8(depth) + 2(type) + 6(age) = 128
 struct TTEntry {
     U64 zkey;
-    int score;
-    TTENTRY_TYPE type;
-    Move bestMove;
+    I16 score;
     U8 depth;
-    U8 age;
-    
-    // U8 type : 2;
-    // U8 depth : 6;
+    U8 type: 2, age: 6;
+    Move bestMove;
 
     void Clear();
 };
