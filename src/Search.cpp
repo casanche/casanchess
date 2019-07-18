@@ -153,6 +153,7 @@ void Search::UciOutput(std::string PV) {
     std::cout << " time " << m_elapsedTime;
     std::cout << " nodes " << m_nodes;
     std::cout << " nps " << m_nps;
+    std::cout << " hashfull " << m_tt.OccupancyPerMil();
     std::cout << " pv " << PV;
     std::cout << std::endl;
 }

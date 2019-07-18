@@ -28,6 +28,7 @@ public:
     void Clear();
     void AddEntry(U64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age);
     TTEntry* ProbeEntry(U64 zkey, int depth);
+    int OccupancyPerMil();
     U64 NumEntries();
 private:
 

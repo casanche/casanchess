@@ -56,6 +56,14 @@ TTEntry* TT::ProbeEntry(U64 zkey, int depth) {
     }
 }
 
+int TT::OccupancyPerMil() {
+    int count = 0;
+    for(int i = 0; i < 1000; i++) {
+        count += (m_entries[i].zkey != 0);
+    }
+    return count;
+}
+
 U64 TT::NumEntries() {
     U64 count = 0;
     for(U64 i = 0; i < MAX_HASH_ENTRIES; ++i) {
