@@ -38,7 +38,7 @@ private:
     TTEntry* m_entries;
 };
 
-const int HASH_SIZE_MB = 24;
+const int HASH_SIZE_MB = 16;
 const uint MAX_HASH_ENTRIES = HASH_SIZE_MB * (1024*1024) / sizeof(TTEntry);
 
 #endif //TT_H
