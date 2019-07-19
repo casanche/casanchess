@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <string>
+#include <thread>
 
 ////https://ucichessengine.wordpress.com/2011/03/16/description-of-uci-protocol/
 
@@ -145,6 +146,11 @@ void Uci::Go(std::istringstream &stream) {
 
     m_search.AllocateLimits(m_board, limits);
 
+    std::thread thread(&Uci::StartSearch, this);
+    thread.detach();
+}
+
+void Uci::StartSearch() {
     m_search.IterativeDeepening(m_board);
 }
 

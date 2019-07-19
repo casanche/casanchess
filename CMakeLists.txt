@@ -25,7 +25,7 @@ add_library(tests-common STATIC tests/test-Common.cpp)
 
 #Main
 add_executable(casanchess Main.cpp)
-target_link_libraries(casanchess engine)
+target_link_libraries(casanchess engine pthread)
 
 set(BUILD_TESTS 1)
 if(BUILD_TESTS)

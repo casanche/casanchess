@@ -14,6 +14,7 @@ public:
 private:
     void Go(std::istringstream &stream);
     void Position(std::istringstream &stream);
+    void StartSearch();
 
     Board m_board;
     Search m_search;
