@@ -67,7 +67,6 @@ public:
     Bitboard AttackersTo(COLORS color, int square, Bitboard blockers) const;
     PIECE_TYPE GetPieceAtSquare(COLORS color, int square) const;
     bool IsCheck();
-    bool IsCheck(COLORS color);
     bool IsRepetitionDraw(int searchPly = 0);
     Bitboard XRayAttackersTo(COLORS color, int square);
 
@@ -150,6 +149,7 @@ private:
     Bitboard m_pinnedPieces[2];
     Bitboard m_kingAttackers[2]; //pieces that attack the king
     Bitboard m_kingDangerSquares[2];
+    bool m_checkCalculated;
 
     //Helpers: check evasion
     Bitboard m_captureMask; //the piece giving check

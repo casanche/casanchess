@@ -162,6 +162,9 @@ void Board::MakeMove(Move move) {
     //Update helper bitboards
     UpdateBitboards();
 
+    //Reset check calculation
+    m_checkCalculated = false;
+
     //Asserts
     assert(CheckIntegrity());
     assert(~m_allpieces & SquareBB(fromSq) );
@@ -233,6 +236,9 @@ void Board::TakeMove(Move move) {
     //Update helper bitboards
     UpdateBitboards();
 
+    //Reset check calculation
+    m_checkCalculated = false;
+
     //Asserts
     assert(CheckIntegrity());
     assert(m_allpieces & SquareBB(fromSq));
@@ -268,6 +274,9 @@ void Board::MakeNull() {
     m_history[m_ply].enpassant = m_enPassantSquare;
     m_history[m_ply].move = move;
 
+    //Reset check calculation
+    m_checkCalculated = false;
+
     //Asserts
     assert(move.MoveType() == NULLMOVE);
 }
@@ -284,6 +293,9 @@ void Board::TakeNull() {
     m_castlingRights = m_history[m_ply].castling;
     m_zobristKey.SetKey( m_history[m_ply].zkey );
     m_enPassantSquare = m_history[m_ply].enpassant;
+
+    //Reset check calculation
+    m_checkCalculated = false;
 }
 
 int Board::SquareToIndex(std::string square) {
@@ -504,11 +516,10 @@ Bitboard Board::AttackersTo(COLORS color, int square, Bitboard blockers) const {
 
 bool Board::IsCheck() {
     COLORS color = ActivePlayer();
-    UpdateKingAttackers(color);
-    return m_kingAttackers[color];
-}
-bool Board::IsCheck(COLORS color) {
-    UpdateKingAttackers(color);
+    if(!m_checkCalculated) {
+        UpdateKingAttackers(color);
+        m_checkCalculated = true;
+    }
     return m_kingAttackers[color];
 }
 
