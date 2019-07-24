@@ -2,11 +2,11 @@
 #define BOARD_H
 
 #include "Constants.h"
-#include "Fen.h"
-// #include "MakeMove.h"
-#include "Move.h"
 #include "ZobristKeys.h"
-#include <string>
+
+#include "Fen.h"
+#include "MoveMaker.h"
+
 #include <map>
 
 const int MAX_PLIES = 3000;
@@ -15,9 +15,9 @@ const char PIECE_LETTERS[16] = { ' ', 'P', 'N', 'B', 'R', 'Q', 'K', '-',
                                  'p', 'n', 'b', 'r', 'q', 'k', '-', '-' };
 
 class Board {
-	//friend class MakeMove;
-    friend class MoveGenerator;
     friend class Fen;
+    friend class MoveMaker;
+    friend class MoveGenerator;
 
     struct History {
         unsigned int fiftyrule;
@@ -44,20 +44,21 @@ public:
     void Mirror();
     U64 Perft(int depth);
     void Print(bool bits = false) const;
-    void SetFen(std::string fenString);
     void ShowHistory();
     void ShowMoves();
 
-    // Make/Take move
-    void MakeMove(Move move);
-    void TakeMove(Move move);
+    // Fen
+    void SetFen(std::string fenString) { m_fen.SetPosition(*this, fenString); }
 
-    void MakeMove(std::string input);
-    void TakeMove();
-
-    //Null-move
-    void MakeNull();
-    void TakeNull();
+    // MoveMaker
+    void MakeMove(Move move) { m_moveMaker.MakeMove(*this, move); }
+    void TakeMove(Move move) { m_moveMaker.TakeMove(*this, move); }
+    //
+    void MakeMove(std::string input) { m_moveMaker.MakeMove(*this, input); }
+    void TakeMove() { m_moveMaker.TakeMove(*this); }
+    //
+    void MakeNull() { m_moveMaker.MakeNull(*this); }
+    void TakeNull() { m_moveMaker.TakeNull(*this); }
 
     // Helper methods
     Bitboard AttackersTo(int square) const {
@@ -68,9 +69,10 @@ public:
     PIECE_TYPE GetPieceAtSquare(COLORS color, int square) const;
     bool IsCheck();
     bool IsRepetitionDraw(int searchPly = 0);
+    int SquareToIndex(std::string square) const;
     Bitboard XRayAttackersTo(COLORS color, int square);
 
-    //Debug
+    // Debug
     bool CheckIntegrity() const;
 
     // Static Exchange Evaluation
@@ -95,34 +97,9 @@ public:
     bool operator==(const Board& rhs) const;
 
 private:
-    void AddPiece(int square, COLORS color, PIECE_TYPE pieceType);
-    void RemovePiece(int square, COLORS color, PIECE_TYPE pieceType);
-    void MovePiece(int fromSq, int toSq, COLORS color, PIECE_TYPE pieceType);
-
-    //Make-Take helpers
-    int SquareToIndex(std::string squareString);
-    Move StringToMove(std::string input);
-    Move DescriptiveToMove(SQUARES fromSq, SQUARES toSq, char promLet);
-
-    void AddCastlingRights(CASTLING_TYPE castlingType) {
-        if(~ CastlingRights() & castlingType) //if the bit is 0
-            ToggleCastlingRights(castlingType);
-    }
-    void RemoveCastlingRights(CASTLING_TYPE castlingType) {
-        if(CastlingRights() & castlingType) //if the bit is 1
-            ToggleCastlingRights(castlingType);
-    }
-    void ToggleCastlingRights(CASTLING_TYPE castlingType) {
-        m_castlingRights ^= castlingType;
-        m_zobristKey.UpdateCastling(castlingType);
-    }
-
     void ClearBits();
     void UpdateBitboards();
     void UpdateKingAttackers(COLORS color);
-
-    void UpdateCastlingRights(const Move& move);
-    void RewindCastlingRights(const Move& move);
 
     //Static Exchange Evaluation
     Bitboard LeastValuableAttacker(Bitboard attackers, COLORS color, PIECE_TYPE& pieceType);
@@ -159,7 +136,8 @@ private:
     Bitboard m_pinnedCaptureMask[64];
 
     //Static classes
-    static Fen m_fen;
+    inline static Fen m_fen;
+    inline static MoveMaker m_moveMaker;
 };
 
 #endif //BOARD_H
