@@ -1,5 +1,5 @@
-#ifndef _INTERFACE_H
-#define _INTERFACE_H
+#ifndef INTERFACE_H
+#define INTERFACE_H
 
 #include "Board.h"
 #include "MoveGenerator.h"
@@ -15,4 +15,4 @@ private:
     Board m_board;
 };
 
-#endif //_INTERFACE_H
+#endif //INTERFACE_H

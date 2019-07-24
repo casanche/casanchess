@@ -1,5 +1,5 @@
-#ifndef _EVALUATION_H
-#define _EVALUATION_H
+#ifndef EVALUATION_H
+#define EVALUATION_H
 
 #include "Constants.h"
 
@@ -160,4 +160,4 @@ namespace Evaluation {
 
 } //namespace Evaluation
 
-#endif //_EVALUATION_H
+#endif //EVALUATION_H

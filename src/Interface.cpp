@@ -54,7 +54,7 @@ void Interface::Start(std::string fenString) {
             if(!moves.empty()) {
                 m_board.MakeMove( gen.RandomMove() );
             } else {
-                if( m_board.IsCheck(m_board.ActivePlayer()) ) {
+                if( m_board.IsCheck() ) {
                     P("Checkmate!!!")
                 } else {
                     P("Stalemate...")

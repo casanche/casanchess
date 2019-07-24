@@ -458,7 +458,7 @@ void Board::ShowMoves() {
 }
 
 //Attackers
-Bitboard Board::AttackersTo(COLORS color, int square) {
+Bitboard Board::AttackersTo(COLORS color, int square) const {
     Bitboard attackers = ZERO;
 
     COLORS enemyColor = (COLORS)!color;
@@ -482,7 +482,7 @@ Bitboard Board::AttackersTo(COLORS color, int square) {
     return attackers;
 }
 
-Bitboard Board::AttackersTo(COLORS color, int square, Bitboard blockers) {
+Bitboard Board::AttackersTo(COLORS color, int square, Bitboard blockers) const {
     Bitboard attackers = ZERO;
     COLORS enemyColor = (COLORS)!color;
 
@@ -502,7 +502,6 @@ Bitboard Board::AttackersTo(COLORS color, int square, Bitboard blockers) {
     return attackers;
 }
 
-//Note: Always call UpdateKingAttackers before
 bool Board::IsCheck() {
     COLORS color = ActivePlayer();
     UpdateKingAttackers(color);
@@ -511,31 +510,6 @@ bool Board::IsCheck() {
 bool Board::IsCheck(COLORS color) {
     UpdateKingAttackers(color);
     return m_kingAttackers[color];
-}
-
-bool Board::IsMoveLegal(Move move, bool isCheck) {
-    // =======================================
-    // == Previa (try to avoid make/unmake) ==
-    // =======================================
-    if(move.MoveType() == CASTLING) {
-        return true;
-    }
-    if(move.PieceType() == KING) {
-        return !AttackersTo(move.ToSq());
-    }
-
-    //The easy way
-    bool isLegal = true;
-    COLORS color = ActivePlayer();
-
-    MakeMove(move);
-    // UpdateKingAttackers(color);
-    if(IsCheck(color)) {
-        isLegal = false;
-    }
-    TakeMove(move);
-
-    return isLegal;
 }
 
 bool Board::IsRepetitionDraw(int searchPly) {
@@ -660,34 +634,6 @@ Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLORS color, PIECE_TY
     assert(false);
     return ZERO;
 }
-
-// Bitboard Board::PinnedPieces(COLORS color) { //to be finished
-//     Bitboard enemyKing = GetPieces((COLORS)!color, KING);
-//     Bitboard enemyPieces = GetPieces((COLORS)!color, ALL_PIECES);
-//     Bitboard bishops = GetPieces(color, BISHOP);
-//     // Bitboard blockers = enemyPieces;
-//     Bitboard xrayd;
-//     while(bishops) {
-//         int square = ResetLsb(bishops);
-//         Bitboard pseudo = AttacksSliding(BISHOP, square, ZERO);
-//         Bitboard attacks = AttacksSliding(BISHOP, square, enemyKing);
-//         xrayd = pseudo & enemyPieces & ~attacks;
-//     }
-//     return xrayd;
-// }
-// Bitboard Board::XRaydPieces(COLORS color) { //to be finished
-//     Bitboard enemyPieces = GetPieces((COLORS)!color, ALL_PIECES);
-//     Bitboard bishops = GetPieces(color, BISHOP);
-//     // Bitboard blockers = enemyPieces;
-//     Bitboard xrayd;
-//     while(bishops) {
-//         int square = ResetLsb(bishops);
-//         Bitboard pseudo = AttacksSliding(BISHOP, square, ZERO);
-//         Bitboard attacks = AttacksSliding(BISHOP, square, enemyPieces);
-//         xrayd = pseudo & enemyPieces & ~attacks;
-//     }
-//     return xrayd;
-// }
 
 //Operators
 bool Board::operator==(const Board& rhs) const {

@@ -1,5 +1,5 @@
-#ifndef _BOARD_H
-#define _BOARD_H
+#ifndef BOARD_H
+#define BOARD_H
 
 #include "Constants.h"
 #include "Fen.h"
@@ -60,15 +60,14 @@ public:
     void TakeNull();
 
     // Helper methods
-    Bitboard AttackersTo(int square) {
+    Bitboard AttackersTo(int square) const {
         return AttackersTo(ActivePlayer(), square);
     }
-    Bitboard AttackersTo(COLORS color, int square);
-    Bitboard AttackersTo(COLORS color, int square, Bitboard blockers);
+    Bitboard AttackersTo(COLORS color, int square) const;
+    Bitboard AttackersTo(COLORS color, int square, Bitboard blockers) const;
     PIECE_TYPE GetPieceAtSquare(COLORS color, int square) const;
     bool IsCheck();
     bool IsCheck(COLORS color);
-    bool IsMoveLegal(Move move, bool isCheck);
     bool IsRepetitionDraw(int searchPly = 0);
     Bitboard XRayAttackersTo(COLORS color, int square);
 
@@ -78,13 +77,10 @@ public:
     // Static Exchange Evaluation
     int SEE(Move move);
 
-    // Bitboard PinnedPieces(COLORS color);
-    // Bitboard XRaydPieces(COLORS color);
-    // void MyFunction(Bitboard attacker, Bitboard theKing);
-
     //Getters
     inline COLORS ActivePlayer() const      { return m_activePlayer; }
     inline Bitboard AllPieces() const       { return m_allpieces; }
+    inline Bitboard AttackedSquares(COLORS color) const                 { return m_kingDangerSquares[color]; };
     inline U8 CastlingRights() const        { return m_castlingRights; }
     inline Bitboard EnPassantSquare() const { return m_enPassantSquare; };
     inline unsigned int FiftyRule() const   { return m_fiftyrule; };
@@ -166,4 +162,4 @@ private:
     static Fen m_fen;
 };
 
-#endif //_BOARD_H
+#endif //BOARD_H

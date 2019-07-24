@@ -23,7 +23,6 @@ TEST_F(PositionMisc, Fine70) {
     search.FixDepth(25);
     search.IterativeDeepening(board);
     EXPECT_EQ(search.BestMove().Notation(), "a1b1");
-    EXPECT_LE(search.ElapsedTime(), 1000);
 }
 
 //Mate tests

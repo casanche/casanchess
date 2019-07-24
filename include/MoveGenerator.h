@@ -1,5 +1,5 @@
-#ifndef _MOVEGENERATOR_H
-#define _MOVEGENERATOR_H
+#ifndef MOVEGENERATOR_H
+#define MOVEGENERATOR_H
 
 #include "Constants.h"
 #include "Move.h"
@@ -46,4 +46,4 @@ private:
     MoveList m_legalMoves;
 };
 
-#endif //_MOVEGENERATOR_H
+#endif //MOVEGENERATOR_H

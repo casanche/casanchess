@@ -1,5 +1,5 @@
-#ifndef _BITBOARDUTILS_H
-#define _BITBOARDUTILS_H
+#ifndef BITBOARDUTILS_H
+#define BITBOARDUTILS_H
 
 #include "Constants.h"
 
@@ -37,4 +37,4 @@ namespace BitboardUtils {
 
 using namespace BitboardUtils;
 
-#endif //_BITBOARDUTILS_H
+#endif //BITBOARDUTILS_H

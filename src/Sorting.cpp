@@ -28,7 +28,6 @@ namespace {
             //Hash move: 255 (max)
             if(move == hashMove) {
                 move.SetScore(255);
-                // P("hashmove: " << move.Notation()<<  " " << ttEntry->score);
                 continue;
             }
 

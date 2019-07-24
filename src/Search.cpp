@@ -138,16 +138,6 @@ void Search::IterativeDeepening(Board &board) {
     }
 
     std::cout << "bestmove " << m_bestMove.Notation() << std::endl;
-
-    // #ifdef DEBUG //hash %
-    // double percent = 100 * (double)m_tt.NumEntries() / MAX_HASH_ENTRIES;
-    // std::cout << "TT entries: " << m_tt.NumEntries() << " / " << MAX_HASH_ENTRIES << " (" << percent << "%)" << std::endl;
-    // #endif
-
-    // double hasfull_permil = 1000 * (double)m_tt.NumEntries() / MAX_HASH_ENTRIES;
-    // std::cout << "info hashfull " << hasfull_permil << std::endl;
-
-    // m_tt.Clear();
 }
 void Search::UciOutput(std::string PV) {
     std::cout << "info depth " << m_depth;
@@ -288,7 +278,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         debug_negaMaxRep++;
         #endif
 
-        return 0; //or draw score
+        return 0;
     }
 
     //---------- Mate distance pruning ------------- //Different for PV nodes?
@@ -386,12 +376,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     m_nullmoveAllowed = true;
 
     // --------- Generate the moves -----------
+    MoveGenerator gen;
+    MoveList moves = gen.GenerateMoves(board);
+
     #ifdef DEBUG
     debug_negaMax_generation++;
     #endif
-
-    MoveGenerator gen;
-    MoveList moves = gen.GenerateMoves(board);
 
     //----- One-reply extension -------
     if(moves.size() == 1)
@@ -501,7 +491,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
                 m_tt.AddEntry(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_counter);
 
                 //update heuristics
-                if( move.IsQuiet() ) { //&& !inCheck
+                if( move.IsQuiet() ) {
                     m_heuristics.killer.Update(move, m_ply);
                     m_heuristics.history.GoodHistory(move, board.ActivePlayer(), depth);
                 }
@@ -522,10 +512,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 }
 
 int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
-    #ifdef NO_QUIESCENCE
-    return Evaluation::Evaluate(board);
-    #endif
-
     #ifdef DEBUG_QUISCENCE
     P("    at Quiescence, ply: " << m_ply << " alpha: " << alpha << " beta: " << beta);
     #endif

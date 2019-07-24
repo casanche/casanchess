@@ -1,5 +1,5 @@
-#ifndef _ZOBRIST_KEYS_H
-#define _ZOBRIST_KEYS_H
+#ifndef ZOBRIST_KEYS_H
+#define ZOBRIST_KEYS_H
 
 #include "Constants.h"
 #include "Move.h"
@@ -40,4 +40,4 @@ private:
     std::uniform_int_distribution<U64> m_distribution;
 };
 
-#endif //_ZOBRIST_KEYS_H
+#endif //ZOBRIST_KEYS_H

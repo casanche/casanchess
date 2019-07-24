@@ -13,17 +13,7 @@ using namespace BitboardUtils;
 	#include <time.h>
 #endif
 
-/*
-Magic bitboards:
-https://rhysre.net/2019/01/15/magic-bitboards.html (didactic)
-*/
-
-//#define PERFT_VERBOSE
-
 MoveGenerator::MoveGenerator() { }
-
-int count;
-std::map<std::string, int> countMap;
 
 //Legal moves
 MoveList MoveGenerator::GenerateMoves(Board &board) {
@@ -43,52 +33,11 @@ MoveList MoveGenerator::GenerateMoves(Board &board) {
     }
     board.m_pinnedPieces[color] = PinnedPieces(board, color);
 
-    bool isCheck = board.IsCheck();
-    if(isCheck) {
+    if(board.IsCheck()) {
         GenerateEvasionMoves(board);
     } else {
         GeneratePseudoMoves(board);
     }
-
-    // m_moves.erase( std::remove_if(
-    //     m_moves.begin(),
-    //     m_moves.end(),
-    //     [&](const Move theMove)-> bool {
-    //         return !board.IsMoveLegal(theMove, isCheck);
-    //     }
-    // ), m_moves.end() );
-
-
-    #ifdef PERFT_VERBOSE
-    for(auto move : m_moves) {
-        if(move.MoveType() == CAPTURE) //move.MoveType() == PROMOTION_CAPTURE
-            countMap["captures"]++;
-        if(move.IsPromotion() ) { countMap["promotions"]++; }
-        if(move.MoveType() == ENPASSANT) countMap["enpassants"]++;
-        if(move.MoveType() == CASTLING) countMap["castlings"]++;
-        if(true) {
-            board.MakeMove(move);
-            COLORS color = board.ActivePlayer();
-            // board.UpdateKingAttackers(color);
-            bool isCheck = board.IsCheck(color);
-            if(isCheck) {
-                countMap["checks"]++;
-            }
-            board.TakeMove(move);
-        }
-        if(true) {
-            board.MakeMove(move);
-            COLORS color = board.ActivePlayer();
-            // board.UpdateKingAttackers(color);
-            bool isCheck = board.IsCheck(color);
-            MoveGenerator gen;
-            if(isCheck && gen.GenerateMoves(board).size() == 0) {
-                countMap["checkmates"]++;
-            }
-            board.TakeMove(move);
-        }
-    }
-    #endif
 
     return m_moves;
 }

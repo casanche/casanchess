@@ -1,5 +1,5 @@
-#ifndef _FEN_H
-#define _FEN_H
+#ifndef FEN_H
+#define FEN_H
 
 #include <string>
 
@@ -10,4 +10,4 @@ public:
     static void SetPosition(Board& board, std::string fenString);
 };
 
-#endif //_FEN_H
+#endif //FEN_H

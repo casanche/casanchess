@@ -1,5 +1,5 @@
-#ifndef _MOVE_SORTING_H
-#define _MOVE_SORTING_H
+#ifndef SORTING_H
+#define SORTING_H
 
 #include "Move.h"
 struct RootMove;
@@ -95,4 +95,4 @@ struct Heuristics {
     HistoryHeuristics history;
 };
 
-#endif //_MOVE_SORTING_H
+#endif //SORTING_H

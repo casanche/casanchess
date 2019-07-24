@@ -1,5 +1,5 @@
-#ifndef _ATTACKS_H
-#define _ATTACKS_H
+#ifndef ATTACKS_H
+#define ATTACKS_H
 
 #include "Constants.h"
 
@@ -33,4 +33,4 @@ namespace Attacks {
     extern Bitboard m_Between[64][64]; //[SQUARE][SQUARE]
 }
 
-#endif //_ATTACKS_H
+#endif //ATTACKS_H

@@ -1,5 +1,5 @@
-#ifndef _SEARCH_H
-#define _SEARCH_H
+#ifndef SEARCH_H
+#define SEARCH_H
 
 #include "Board.h"
 #include "Move.h"
@@ -137,4 +137,4 @@ struct Limits {
     int movesToGo = 0;
 };
 
-#endif //_SEARCH_H
+#endif //SEARCH_H

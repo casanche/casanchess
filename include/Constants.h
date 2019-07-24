@@ -1,5 +1,5 @@
-#ifndef _CONSTANTS_H
-#define _CONSTANTS_H
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 
 #include <cstdint>
 #include <string>
@@ -132,4 +132,4 @@ inline int ColorlessRank(COLORS color, int square) {
     return color == WHITE ? Rank(square) : 7 ^ Rank(square);
 }
 
-#endif //_CONSTANTS_H
+#endif //CONSTANTS_H
