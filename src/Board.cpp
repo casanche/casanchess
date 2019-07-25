@@ -624,10 +624,10 @@ int Board::SEE(Move move) {
 
 Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLORS color, PIECE_TYPE& pieceType) {
     assert(attackers);
-    for(int ipiece = PAWN; ipiece <= KING; ++ipiece) {
-        Bitboard pieceAttackers = attackers & Piece(color, (PIECE_TYPE)ipiece);
+    for(PIECE_TYPE ipiece = PAWN; ipiece <= KING; ++ipiece) {
+        Bitboard pieceAttackers = attackers & Piece(color, ipiece);
         if(pieceAttackers) {
-            pieceType = (PIECE_TYPE)ipiece;
+            pieceType = ipiece;
             return IsolateLsb(pieceAttackers);
         }
     }
