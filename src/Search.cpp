@@ -19,6 +19,8 @@ const int NULLMOVE_REDUCTION_FACTOR = 2;
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
 
+const int STATIC_MARGIN[4] = {0, 150, 300, 450};
+
 // #define SEARCH_VERBOSE
 // #define DEBUG_SEARCH
 #ifdef DEBUG_SEARCH
@@ -325,6 +327,15 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             return ttEntry->score; //return ttEntry->score or beta
         if(ttEntry->type == TTENTRY_TYPE::EXACT && ttEntry->score >= alpha && ttEntry->score <= beta)
             return ttEntry->score;
+    }
+
+    // --- Static null-move pruning (aka Reverse futility) ---
+    if(depth <= 3 && !isPV && !inCheck
+        && Evaluation::AreHeavyPiecesOnBothSides(board)
+    ) {
+        int evalMargin = Evaluation::Evaluate(board) - STATIC_MARGIN[depth];
+        if(evalMargin >= beta)
+            return evalMargin;
     }
 
     // ------- Futility pruning ---------
