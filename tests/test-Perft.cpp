@@ -110,21 +110,6 @@ TEST(Perft, Numpty5) {
     EXPECT_EQ(board.Perft(3), (U64)27990);
     EXPECT_EQ(board.Perft(4), (U64)909807);
 }
-
-//http://www.talkchess.com/forum3/viewtopic.php?t=59781
-TEST(Perft, Talkchess1) {
-    Board board;
-    board.SetFen("rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
-    EXPECT_EQ(board.Perft(1), (U64)28);
-    EXPECT_EQ(board.Perft(2), (U64)741);
-    EXPECT_EQ(board.Perft(3), (U64)21395);
-    EXPECT_EQ(board.Perft(4), (U64)583456);
-}
-TEST(Perft, Talkchess2) {
-    Board board;
-    board.SetFen("1N6/6k1/8/8/7B/8/8/4K3 w - - 19 103");
-    EXPECT_EQ(board.Perft(1), (U64)14);
-}
 TEST(Perft, PeterEllis) {
     Board board;
     board.SetFen("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b QK - 3 2");
@@ -156,4 +141,29 @@ TEST(Perft, PeterEllis) {
 
     board.SetFen("K1k5/8/P7/8/8/8/8/8 w - - 0 1");
     EXPECT_EQ(board.Perft(6), (U64)2217);
+}
+TEST(Perft, Talkchess) {
+    //http://www.talkchess.com/forum3/viewtopic.php?t=59781
+    Board board;
+    board.SetFen("rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
+    EXPECT_EQ(board.Perft(1), (U64)28);
+    EXPECT_EQ(board.Perft(2), (U64)741);
+    EXPECT_EQ(board.Perft(3), (U64)21395);
+    EXPECT_EQ(board.Perft(4), (U64)583456);
+
+    board.SetFen("1N6/6k1/8/8/7B/8/8/4K3 w - - 19 103");
+    EXPECT_EQ(board.Perft(1), (U64)14);
+
+    //http://talkchess.com/forum3/viewtopic.php?f=7&t=71379
+    board.SetFen("8/ppp3p1/8/8/3p4/5Q2/1ppp2K1/brk4n w - - 11 7");
+    EXPECT_EQ(board.Perft(1), (U64)27);
+    EXPECT_EQ(board.Perft(2), (U64)390);
+    EXPECT_EQ(board.Perft(3), (U64)9354);
+    EXPECT_EQ(board.Perft(4), (U64)134167);
+
+    board.SetFen("8/6kR/8/8/8/bq6/1rqqqqqq/K1nqnbrq b - - 0 1");
+    EXPECT_EQ(board.Perft(1), (U64)7);
+    EXPECT_EQ(board.Perft(2), (U64)52);
+    EXPECT_EQ(board.Perft(3), (U64)4593);
+    EXPECT_EQ(board.Perft(4), (U64)50268);
 }
