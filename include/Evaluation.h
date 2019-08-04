@@ -42,6 +42,10 @@ namespace Evaluation {
 
         int ROOK_SEMIOPEN[2] = {20, 10};
         int ROOK_OPEN[2] = {40, 20};
+        int KING_SEMIOPEN[2] = {15, 0};
+        int KING_OPEN[2] = {30, 0};
+        int KING_SEMIOPEN_ADJACENT[2] = {5, 0};
+        int KING_OPEN_ADJACENT[2] = {20, 10};
 
         int BISHOP_PAIR[2] = {30, 50};
     } params;

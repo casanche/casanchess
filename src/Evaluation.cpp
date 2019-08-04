@@ -134,24 +134,24 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
             bool inKingFile = theKing & MaskFile[file];
             bool inAdjacentKingFile = theKing & ADJACENT_FILES[file];
             if(inKingFile) {
-                score.mg += 15;
-                score.eg += 0;
+                score.mg += params.KING_SEMIOPEN[MG];
+                score.eg += params.KING_SEMIOPEN[EG];
             }
             else if(inAdjacentKingFile) {
-                score.mg += 5;
-                score.eg += 0;
+                score.mg += params.KING_SEMIOPEN_ADJACENT[MG];
+                score.eg += params.KING_SEMIOPEN_ADJACENT[EG];
             }
             //Open Files
             if( IsSemiopenFile(board, enemyColor, square) ) {
                 score.mg += params.ROOK_OPEN[MG];
                 score.eg += params.ROOK_OPEN[EG];
                 if(inKingFile) {
-                    score.mg += 30;
-                    score.eg += 0;
+                    score.mg += params.KING_OPEN[MG];
+                    score.eg += params.KING_OPEN[EG];
                 }
                 else if(inAdjacentKingFile) {
-                    score.mg += 20;
-                    score.eg += 10;
+                    score.mg += params.KING_OPEN_ADJACENT[MG];
+                    score.eg += params.KING_OPEN_ADJACENT[EG];
                 }
             }
         }
