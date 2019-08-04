@@ -28,7 +28,10 @@ namespace Evaluation {
 
     //Evaluation parameters for tuning
     extern const struct Parameters {
-        int MATERIAL_VALUES[8] = {0, 100, 355, 365, 525, 1100, 0};
+        int MATERIAL_VALUES[2][8] = {
+            {0, 100, 355, 365, 525, 1100, 0},
+            {0, 100, 355, 365, 525, 1100, 0}
+        };
 
         int DOUBLED_PAWN[2] = {-20, -35};
         int PASSED_PAWN[2][8] = {  //[RANK]

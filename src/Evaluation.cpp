@@ -246,17 +246,19 @@ int Evaluation::Evaluate(const Board& board) {
     //Pawn material
     int whitePawns = PopCount(board.Piece(WHITE,PAWN));
     int blackPawns = PopCount(board.Piece(BLACK,PAWN));
-    score.Add((whitePawns - blackPawns) * params.MATERIAL_VALUES[PAWN]);
+    score.Add( (whitePawns-blackPawns) * params.MATERIAL_VALUES[MG][PAWN],
+               (whitePawns-blackPawns) * params.MATERIAL_VALUES[EG][PAWN] );
 
     //Heavy material, psqt and phase
-    int heavyMaterial[2] = {0};
+    TaperedScore heavyMaterial[2];
     for(COLORS color = WHITE; color <= BLACK; ++color) {
         int sign = 1 - 2*color;
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= KING; ++pieceType) {
             Bitboard bb = board.Piece(color, pieceType);
             int popcnt = PopCount(bb);
             //Material
-            heavyMaterial[color] += params.MATERIAL_VALUES[pieceType] * popcnt;
+            heavyMaterial[color].mg += params.MATERIAL_VALUES[MG][pieceType] * popcnt;
+            heavyMaterial[color].eg += params.MATERIAL_VALUES[EG][pieceType] * popcnt;
             //Phase
             phase += PHASE_WEIGHT[pieceType] * popcnt;
             //Psqt
@@ -267,10 +269,11 @@ int Evaluation::Evaluate(const Board& board) {
             }
         }
     }
-    score.Add(heavyMaterial[WHITE] - heavyMaterial[BLACK]);
+    score.Add     (heavyMaterial[WHITE]);
+    score.Subtract(heavyMaterial[BLACK]);
 
     //Insufficient material
-    if(whitePawns == 0 && blackPawns == 0 && (heavyMaterial[WHITE] + heavyMaterial[BLACK]) < 400)
+    if(whitePawns == 0 && blackPawns == 0 && (heavyMaterial[WHITE].mg + heavyMaterial[BLACK].mg) < 400)
         return 0;
 
     //Mobility
