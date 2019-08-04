@@ -20,17 +20,8 @@ Bitboard Evaluation::PASSED_PAWN_FRONT[2][64] = {{0}};
 Bitboard Evaluation::PASSED_PAWN_SIDES[2][64] = {{0}};
 Bitboard Evaluation::PASSED_PAWN_AREA[2][64] = {{0}};
 
-//Scores
-const int ROOK_OPEN_FILE[2] = {40, 20};
-const int ROOK_SEMIOPEN_FILE[2] = {20, 10};
-const int BISHOP_PAIR[2] = {30, 50};
-const int PASSED_PAWN[2][8] = { //[RANK]
-    {0, 0, 5, 10, 20, 35, 50, 0},
-    {0, 10, 25, 45, 75, 110, 185, 0}
-};
-const int DOUBLED_PAWN[2] = {-20, -35};
-const int ISOLATED_PAWN[2][8] = { {0, -5, -12, -20, -15, -10, -5, 0}, {*ISOLATED_PAWN[MG]} };
-const int BACKWARD_PAWN[2] = {-15, -15};
+//Evaluation parameters for tuning
+const Parameters Evaluation::params;
 
 //Game phase
 //16 is the maximum, we enter endgame with 8
@@ -121,8 +112,8 @@ int Evaluation::TaperedCalculation(int mgScore, int egScore, int phase) {
 TaperedScore Evaluation::EvalBishopPair(const Board &board, COLORS color) {
     TaperedScore score;
     if( (board.Piece(color, BISHOP) & LIGHT_SQUARES) && (board.Piece(color, BISHOP) & DARK_SQUARES) ) {
-        score.mg = BISHOP_PAIR[MG];
-        score.eg = BISHOP_PAIR[EG];
+        score.mg = params.BISHOP_PAIR[MG];
+        score.eg = params.BISHOP_PAIR[EG];
     }
     return score;
 }
@@ -134,8 +125,8 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
         int square = ResetLsb(bb);
         //Semi-open files
         if( IsSemiopenFile(board, color, square) ) {
-            score.mg += ROOK_SEMIOPEN_FILE[MG];
-            score.eg += ROOK_SEMIOPEN_FILE[EG];
+            score.mg += params.ROOK_SEMIOPEN[MG];
+            score.eg += params.ROOK_SEMIOPEN[EG];
 
             COLORS enemyColor = (COLORS)!color;
             Bitboard theKing = board.Piece(enemyColor, KING);
@@ -152,8 +143,8 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
             }
             //Open Files
             if( IsSemiopenFile(board, enemyColor, square) ) {
-                score.mg += ROOK_OPEN_FILE[MG];
-                score.eg += ROOK_OPEN_FILE[EG];
+                score.mg += params.ROOK_OPEN[MG];
+                score.eg += params.ROOK_OPEN[EG];
                 if(inKingFile) {
                     score.mg += 30;
                     score.eg += 0;
@@ -176,8 +167,8 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
 
     //Doubled pawns
     int doubledPawns = PopCount(thePawns & North(thePawns));
-    score.mg += doubledPawns * DOUBLED_PAWN[MG];
-    score.eg += doubledPawns * DOUBLED_PAWN[EG];
+    score.mg += doubledPawns * params.DOUBLED_PAWN[MG];
+    score.eg += doubledPawns * params.DOUBLED_PAWN[EG];
 
     Bitboard bb = thePawns;
     while(bb) {
@@ -209,14 +200,14 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
             //         score.eg += 2 * PASSED_PAWN[EG][rank];
             //     }
             // } else {
-                score.mg += PASSED_PAWN[MG][rank];
-                score.eg += PASSED_PAWN[EG][rank];
+                score.mg += params.PASSED_PAWN[MG][rank];
+                score.eg += params.PASSED_PAWN[EG][rank];
             // }
         }
         if(isIsolated) {
             int rank = ColorlessRank(color, square);
-            score.mg += ISOLATED_PAWN[MG][rank];
-            score.eg += ISOLATED_PAWN[EG][rank];
+            score.mg += params.ISOLATED_PAWN[MG][rank];
+            score.eg += params.ISOLATED_PAWN[EG][rank];
         }
     }
 
@@ -255,7 +246,7 @@ int Evaluation::Evaluate(const Board& board) {
     //Pawn material
     int whitePawns = PopCount(board.Piece(WHITE,PAWN));
     int blackPawns = PopCount(board.Piece(BLACK,PAWN));
-    score.Add((whitePawns - blackPawns) * MATERIAL_VALUES[PAWN]);
+    score.Add((whitePawns - blackPawns) * params.MATERIAL_VALUES[PAWN]);
 
     //Heavy material, psqt and phase
     int heavyMaterial[2] = {0};
@@ -265,7 +256,7 @@ int Evaluation::Evaluate(const Board& board) {
             Bitboard bb = board.Piece(color, pieceType);
             int popcnt = PopCount(bb);
             //Material
-            heavyMaterial[color] += MATERIAL_VALUES[pieceType] * popcnt;
+            heavyMaterial[color] += params.MATERIAL_VALUES[pieceType] * popcnt;
             //Phase
             phase += PHASE_WEIGHT[pieceType] * popcnt;
             //Psqt
