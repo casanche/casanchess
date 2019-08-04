@@ -5,7 +5,6 @@ using namespace Attacks;
 #include "BitboardUtils.h"
 using namespace BitboardUtils;
 #include "Evaluation.h"
-using namespace Evaluation;
 #include "Move.h"
 #include "MoveGenerator.h"
 
@@ -302,8 +301,8 @@ int Board::SEE(Move move) {
     attackers ^= SquareBB(data.fromSq);
 
     // simulate the initial capture
-    scores[numCapture] = MATERIAL_VALUES[data.capturedType];
-    int pieceValue = MATERIAL_VALUES[data.pieceType]; //what is actually on the square
+    scores[numCapture] = SEE_MATERIAL_VALUES[data.capturedType];
+    int pieceValue = SEE_MATERIAL_VALUES[data.pieceType]; //what is actually on the square
 
     // switch the active player
     color = (COLORS)!color;
@@ -324,7 +323,7 @@ int Board::SEE(Move move) {
         //fill an array of scores / current-piece-on-square
         numCapture++;
         scores[numCapture] = pieceValue - scores[numCapture-1];
-        pieceValue = MATERIAL_VALUES[pieceType];
+        pieceValue = SEE_MATERIAL_VALUES[pieceType];
 
         // switch the active player
         color = (COLORS)!color;

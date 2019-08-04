@@ -5,23 +5,11 @@ using namespace Evaluation;
 #include "Board.h"
 #include "BitboardUtils.h"
 
-// #define DEBUG_EVALUATION 0
-
 //Constants
 #define MG MIDDLEGAME
 #define EG ENDGAME
 const Bitboard LIGHT_SQUARES = 0x55AA55AA55AA55AA;
 const Bitboard DARK_SQUARES = 0xAA55AA55AA55AA55;
-
-//Precomputed tables
-Bitboard Evaluation::ADJACENT_FILES[8] = {0};
-Bitboard Evaluation::ADJACENT_RANKS[8] = {0};
-Bitboard Evaluation::PASSED_PAWN_FRONT[2][64] = {{0}};
-Bitboard Evaluation::PASSED_PAWN_SIDES[2][64] = {{0}};
-Bitboard Evaluation::PASSED_PAWN_AREA[2][64] = {{0}};
-
-//Evaluation parameters for tuning
-const Parameters Evaluation::params;
 
 //Game phase
 //16 is the maximum, we enter endgame with 8
@@ -36,9 +24,16 @@ const int PHASE_WEIGHT[8] = {
     0 //KING
 };
 
-class Evaluation::NewScore {
+//Precomputed tables
+Bitboard Evaluation::ADJACENT_FILES[8] = {0};
+Bitboard Evaluation::ADJACENT_RANKS[8] = {0};
+Bitboard Evaluation::PASSED_PAWN_FRONT[2][64] = {{0}};
+Bitboard Evaluation::PASSED_PAWN_SIDES[2][64] = {{0}};
+Bitboard Evaluation::PASSED_PAWN_AREA[2][64] = {{0}};
+
+class Evaluation::Score {
 public:
-    NewScore() {}
+    Score() {}
     void Add(int score) {
         m_taperedScore.mg += score;
         m_taperedScore.eg += score;
@@ -60,11 +55,19 @@ public:
         m_taperedScore.eg -= score.eg;
     }
     int Tapered(int phase) {
-        return Evaluation::TaperedCalculation(m_taperedScore.mg, m_taperedScore.eg, phase);
+        return TaperedCalculation(m_taperedScore.mg, m_taperedScore.eg, phase);
     }
 private:
+    int TaperedCalculation(int mgScore, int egScore, int phase);
+
     TaperedScore m_taperedScore;
 };
+
+int Evaluation::Score::TaperedCalculation(int mgScore, int egScore, int phase) {
+    int score = mgScore * phase + egScore * (MAX_PHASEMATERIAL - phase);
+    score /= 2 * MAX_PHASEMATERIAL;
+    return score;
+}
 
 void Evaluation::Init() {
     //Adjacent files
@@ -101,12 +104,6 @@ bool Evaluation::AreHeavyPiecesOnBothSides(const Board& board) {
 
 bool Evaluation::IsSemiopenFile(const Board& board, COLORS color, int square) {
     return !( board.Piece(color, PAWN) & MaskFile[ File(square) ] );
-}
-
-int Evaluation::TaperedCalculation(int mgScore, int egScore, int phase) {
-    int score = mgScore * phase + egScore * (MAX_PHASEMATERIAL - phase);
-    score /= 2 * MAX_PHASEMATERIAL;
-    return score;
 }
 
 TaperedScore Evaluation::EvalBishopPair(const Board &board, COLORS color) {
@@ -214,33 +211,8 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
     return score;
 }
 
-// int Evaluation::EvalEndgame(const Board &board) {
-//     int score;
-
-//     for(COLORS color = WHITE; color <= BLACK; ++color) {
-//         Bitboard thePawns = board.Piece(color, PAWN);
-//         COLORS enemyColor = (COLORS)!color;
-//         if( board.ActivePlayer() == color && PopCount(thePawns) == 1  && PopCount(board.Piece(enemyColor, PAWN)) == 0 ) {
-//             int square = BitscanForward(thePawns);
-//             int promRank = color == WHITE ? RANK8 : RANK1;
-//             int rank = ColorlessRank(color, square);
-//             int distanceToPromotion = abs(promRank - rank);
-//             Bitboard enemyKing = board.Piece(enemyColor, KING);
-//             int enemyKingSquare = BitscanForward(enemyKing);
-//             if(    abs(Rank(enemyKingSquare) - promRank) > distanceToPromotion
-//                 || abs(File(enemyKingSquare) - File(square)) > distanceToPromotion)
-//             {
-//                 int sign = color == WHITE ? +1 : -1;
-//                 score = sign * 1000;
-//             }
-//         }
-//     }
-
-//     return score;
-// }
-
 int Evaluation::Evaluate(const Board& board) {
-    NewScore score;
+    Score score;
     int phase = 0;
 
     //Pawn material
@@ -273,11 +245,8 @@ int Evaluation::Evaluate(const Board& board) {
     score.Subtract(heavyMaterial[BLACK]);
 
     //Insufficient material
-    if(whitePawns == 0 && blackPawns == 0 && (heavyMaterial[WHITE].mg + heavyMaterial[BLACK].mg) < 400)
+    if(!whitePawns && !blackPawns && (heavyMaterial[WHITE].mg + heavyMaterial[BLACK].mg) < 400)
         return 0;
-
-    //Mobility
-    // Attacks::AttacksKnights(square);
 
     //Pawns
     score.Add     ( EvalPawns(board,WHITE) );
@@ -291,6 +260,6 @@ int Evaluation::Evaluate(const Board& board) {
     score.Add     ( EvalBishopPair(board,WHITE) );
     score.Subtract( EvalBishopPair(board,BLACK) );
 
-    int sign = 1 - 2*board.ActivePlayer();
+    int sign = board.ActivePlayer() == WHITE ? 1 : -1;
     return sign * score.Tapered(phase);
 }

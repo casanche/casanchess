@@ -7,13 +7,6 @@ class Board;
 
 namespace Evaluation {
 
-    //Precomputed tables
-    extern Bitboard ADJACENT_FILES[8]; //[FILE]
-    extern Bitboard ADJACENT_RANKS[8]; //[RANK]
-    extern Bitboard PASSED_PAWN_FRONT[2][64]; //[COLOR][SQUARE]
-    extern Bitboard PASSED_PAWN_SIDES[2][64]; //[COLOR][SQUARE]
-    extern Bitboard PASSED_PAWN_AREA[2][64]; //[COLOR][SQUARE]
-
     enum GAME_PHASE { MIDDLEGAME, ENDGAME };
 
     struct TaperedScore {
@@ -22,12 +15,29 @@ namespace Evaluation {
         TaperedScore() : mg(0), eg(0) {}
         TaperedScore(int mgScore, int egScore) : mg(mgScore), eg(egScore) {}
     };
-    class NewScore;
 
-    const int MATERIAL_VALUES[8] = {0, 100, 355, 365, 525, 1100, 0};
+    class Score;
+
+    //Precomputed tables
+    extern Bitboard ADJACENT_FILES[8]; //[FILE]
+    extern Bitboard ADJACENT_RANKS[8]; //[RANK]
+    extern Bitboard PASSED_PAWN_FRONT[2][64]; //[COLOR][SQUARE]
+    extern Bitboard PASSED_PAWN_SIDES[2][64]; //[COLOR][SQUARE]
+    extern Bitboard PASSED_PAWN_AREA[2][64]; //[COLOR][SQUARE]
+    void Init();
+
+    int Evaluate(const Board& board);
+
+    bool AreHeavyPiecesOnBothSides(const Board& board);
+    bool IsSemiopenFile(const Board& board, COLORS color, int square);
+
+    TaperedScore EvalRookOpen(const Board& board, COLORS color);
+    TaperedScore EvalBishopPair(const Board &board, COLORS color);
+    TaperedScore EvalPassedPawn(const Board &board, COLORS color);
+    TaperedScore EvalPawns(const Board& board, COLORS color);
 
     //Evaluation parameters for tuning
-    extern const struct Parameters {
+    const struct Parameters {
         int MATERIAL_VALUES[2][8] = {
             {0, 100, 355, 365, 525, 1100, 0},
             {0, 100, 355, 365, 525, 1100, 0}
@@ -52,7 +62,7 @@ namespace Evaluation {
 
         int BISHOP_PAIR[2] = {30, 50};
     } params;
-    
+
     //from https://www.chessprogramming.org/Simplified_Evaluation_Function
     const int PSQT[8][64] = {
         //NO_PIECE
@@ -169,21 +179,6 @@ namespace Evaluation {
             63, 62, 61, 60, 59, 58, 57, 56
         }
     };
-
-    void Init();
-
-    bool AreHeavyPiecesOnBothSides(const Board& board);
-    bool IsSemiopenFile(const Board& board, COLORS color, int square);
-    int TaperedCalculation(int mgScore, int egScore, int phase);
-
-    TaperedScore EvalRookOpen(const Board& board, COLORS color);
-    TaperedScore EvalBishopPair(const Board &board, COLORS color);
-    TaperedScore EvalPassedPawn(const Board &board, COLORS color);
-    TaperedScore EvalPawns(const Board& board, COLORS color);
-
-    // int EvalEndgame(const Board &board);
-
-    int Evaluate(const Board& board);
 
 } //namespace Evaluation
 

@@ -544,7 +544,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // --------- Delta pruning ---------
     const bool deltaPruning = 0;
     if(deltaPruning) {
-        const int delta = Evaluation::MATERIAL_VALUES[QUEEN];
+        const int delta = 1000;
         if( standPat < alpha - delta )
             return standPat;
     }
