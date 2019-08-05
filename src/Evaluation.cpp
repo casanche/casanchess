@@ -223,7 +223,7 @@ int Evaluation::Evaluate(const Board& board) {
 
     //Heavy material, psqt and phase
     TaperedScore heavyMaterial[2];
-    for(COLORS color = WHITE; color <= BLACK; ++color) {
+    for(COLORS color : {WHITE, BLACK}) {
         int sign = 1 - 2*color;
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= KING; ++pieceType) {
             Bitboard bb = board.Piece(color, pieceType);

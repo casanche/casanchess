@@ -13,7 +13,7 @@ void ZobristKeys::Init() {
     PRNG random;
     //color
     m_zkeyColor = random.Random();
-    for(int color = WHITE; color <= BLACK; color++) {
+    for(COLORS color : {WHITE, BLACK}) {
         //Castling rights
         for(int castlingType = 0; castlingType <= 1; castlingType++) {
             m_zkeyCastling[color][castlingType] = random.Random();
@@ -47,10 +47,10 @@ void ZobristKey::SetKey(Board& board) {
     if(board.CastlingRights() & CASTLING_k) m_key ^= ZobristKeys::m_zkeyCastling[BLACK][0];
     if(board.CastlingRights() & CASTLING_q) m_key ^= ZobristKeys::m_zkeyCastling[BLACK][1];
 
-    for(int color = WHITE; color <= BLACK; color++) {
+    for(COLORS color : {WHITE, BLACK}) {
         //Pieces
-        for(int pieceType = PAWN; pieceType <= KING; pieceType++) {
-            Bitboard thePieces = board.GetPieces((COLORS)color, (PIECE_TYPE)pieceType);
+        for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
+            Bitboard thePieces = board.GetPieces(color, pieceType);
             while(thePieces) {
                 int square = ResetLsb(thePieces);
                 m_key ^= ZobristKeys::m_zkeyPieces[color][pieceType][square];

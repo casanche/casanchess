@@ -114,8 +114,8 @@ void Board::Print(bool bits) const {
         squareMap[i] = PIECE_LETTERS[NO_PIECE];
     }
 
-    for(int color = WHITE; color <= BLACK; color++) {
-        for(int piece = PAWN; piece <= KING; piece++) {
+    for(COLORS color : {WHITE, BLACK}) {
+        for(PIECE_TYPE piece = PAWN; piece <= KING; ++piece) {
             Bitboard thePieces = m_pieces[color][piece];
             while(thePieces) {
                 int index = ResetLsb(thePieces);
@@ -360,13 +360,10 @@ Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLORS color, PIECE_TY
 //Operators
 bool Board::operator==(const Board& rhs) const {
     bool pieceIntegrity = true;
-    for(int color = WHITE; color <= BLACK; color++) {
-        for(int piece = PAWN; piece <= KING; piece++) {
-            if( this->GetPieces((COLORS)color, (PIECE_TYPE)piece) !=
-                rhs.GetPieces((COLORS)color, (PIECE_TYPE)piece) )
-            {
+    for(COLORS color : {WHITE, BLACK}) {
+        for(PIECE_TYPE piece = PAWN; piece <= KING; ++piece) {
+            if( this->GetPieces(color, piece) != rhs.GetPieces(color, piece) )
                 pieceIntegrity = false;
-            }
         }
     }
     if( this->m_allpieces != rhs.m_allpieces )
@@ -383,13 +380,13 @@ bool Board::operator==(const Board& rhs) const {
 
 //Private
 void Board::ClearBits() {
-    for(int color = WHITE; color <= BLACK; color++) {
+    for(COLORS color : {WHITE, BLACK}) {
         m_attackedSquares[color] = 0;
         m_pinnedPieces[color] = 0;
         m_kingAttackers[color] = 0;
         m_kingDangerSquares[color] = 0;
 
-        for(int pieceType = PAWN; pieceType <= KING; pieceType++) {
+        for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
             m_pieces[color][pieceType] = 0;
         }
     }

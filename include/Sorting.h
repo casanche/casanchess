@@ -45,7 +45,7 @@ private:
 
 //Loop over all elements of the history table, to perform operations
 #define LoopHistoryTable(stmt) \
-    for(COLORS color = WHITE; color <= BLACK; ++color) { \
+    for(COLORS color : {WHITE, BLACK}) { \
         for(int from = 0; from < 64; from++) { \
             for (int to = 0; to < 64; to++) { \
                 stmt; \

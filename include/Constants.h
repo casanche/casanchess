@@ -114,12 +114,6 @@ const Bitboard ClearFile[8] = {
 };
 
 //Operators over enums
-inline COLORS& operator++(COLORS& color) {
-    int i = static_cast<int>(color);
-    assert(i+1 > 0);
-    assert(i+1 <= (int)NO_COLOR);
-    return color = static_cast<COLORS>(++i);
-}
 inline PIECE_TYPE& operator++(PIECE_TYPE& pieceType) {
     int i = static_cast<int>(pieceType);
     assert(i+1 > 0);
