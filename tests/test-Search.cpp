@@ -9,7 +9,7 @@ class ShortSearch : public ::testing::Test {
 protected:
     Search search;
     Board board;
-    int depth = 7; //short: 5, long: 7
+    int depth = 8; //short: 5, long: 7
     int time = 1000 + (depth > 5)*10000;
     void SetUp() override {
         std::cout.rdbuf(nullptr);
@@ -18,7 +18,6 @@ protected:
 };
 
 TEST_F(ShortSearch, Start) {
-    // board.SetFen(STARTFEN);
     search.FixDepth(depth+1);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
@@ -66,7 +65,7 @@ TEST_F(ShortSearch, RG6_crowdy) {
 // Failed with Rc8, depth 8, 8s
 TEST_F(ShortSearch, RG7) {
     board.SetFen("4r1k1/1p3ppp/b7/3R4/1pn5/4P3/3N1PPP/R5K1 b - - 0 30");
-    search.FixDepth(depth+1);
+    search.FixDepth(depth+2);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
