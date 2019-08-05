@@ -39,28 +39,28 @@ namespace Evaluation {
     //Evaluation parameters for tuning
     const struct Parameters {
         int MATERIAL_VALUES[2][8] = {
-            {0, 100, 355, 365, 525, 1100, 0},
-            {0, 100, 355, 365, 525, 1100, 0}
+            {0, 95, 380, 385, 500, 1120, 0},
+            {0, 93, 340, 360, 600, 1120, 0}
         };
 
-        int DOUBLED_PAWN[2] = {-20, -35};
+        int DOUBLED_PAWN[2] = {-15, -15};
         int PASSED_PAWN[2][8] = {  //[RANK]
-            {0,  0,  5, 10, 20,  35,  50, 0},
-            {0, 10, 25, 45, 75, 110, 185, 0}
+            {0,  0,  0, 10, 20,  35,  50, 0},
+            {0, 10, 20, 40, 55, 125, 185, 0}
         };
         int ISOLATED_PAWN[2][8] = {
-            {0,  -5, -12, -20, -15, -10, -5, 0},
-            {*ISOLATED_PAWN[0]}
+            {0, -15, -12, -20, -15, -10, -5, 0},
+            {0, -15, -12, -20, -15, -10, -5, 0}
         };
 
         int ROOK_SEMIOPEN[2] = {20, 10};
-        int ROOK_OPEN[2] = {40, 20};
+        int ROOK_OPEN[2] = {40, 0};
         int KING_SEMIOPEN[2] = {15, 0};
         int KING_OPEN[2] = {30, 0};
-        int KING_SEMIOPEN_ADJACENT[2] = {5, 0};
+        int KING_SEMIOPEN_ADJACENT[2] = {5, -5};
         int KING_OPEN_ADJACENT[2] = {20, 10};
 
-        int BISHOP_PAIR[2] = {30, 50};
+        int BISHOP_PAIR[2] = {35, 50};
     } params;
 
     //from https://www.chessprogramming.org/Simplified_Evaluation_Function
