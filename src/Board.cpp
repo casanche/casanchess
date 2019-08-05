@@ -70,6 +70,8 @@ void Board::Mirror() {
         if(m_castlingRights & CASTLING_q) mirroredCastlingRights ^= CASTLING_Q;
         m_castlingRights = mirroredCastlingRights;
     }
+    m_zobristKey.SetKey(*this);
+    m_pawnKey.SetPawnKey(*this);
     UpdateBitboards();
 }
 

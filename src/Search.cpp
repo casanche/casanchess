@@ -42,6 +42,7 @@ Search::Search() {
 
     ClearSearch();
     m_tt.Clear();
+    Hash::pawnHash.Clear();
 }
 
 Search::Search(Board board) : m_initialBoard(board) {

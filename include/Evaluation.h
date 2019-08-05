@@ -2,6 +2,7 @@
 #define EVALUATION_H
 
 #include "Constants.h"
+#include "Hash.h"
 
 class Board;
 
@@ -35,6 +36,7 @@ namespace Evaluation {
     TaperedScore EvalBishopPair(const Board &board, COLORS color);
     TaperedScore EvalPassedPawn(const Board &board, COLORS color);
     TaperedScore EvalPawns(const Board& board, COLORS color);
+    TaperedScore EvalPawnsFromHash(const Board& board);
 
     //Evaluation parameters for tuning
     const struct Parameters {

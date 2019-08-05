@@ -212,11 +212,17 @@ void MoveMaker::AddPiece(Board& board, int square, COLORS color, PIECE_TYPE piec
     Bitboard &bb = board.m_pieces[color][pieceType];
     bb |= SquareBB(square); //add bit, OR
     board.m_zobristKey.UpdatePiece(color, pieceType, square); //modify the Zobrist key (XOR)
+    if(pieceType == PAWN) {
+        board.m_pawnKey.UpdatePiece(color, PAWN, square);
+    }
 }
 void MoveMaker::RemovePiece(Board& board, int square, COLORS color, PIECE_TYPE pieceType) {
     Bitboard &bb = board.m_pieces[color][pieceType];
     bb ^= SquareBB(square); //remove bit, XOR
     board.m_zobristKey.UpdatePiece(color, pieceType, square); //modify the Zobrist key (XOR)
+    if(pieceType == PAWN) {
+        board.m_pawnKey.UpdatePiece(color, PAWN, square);
+    }
 }
 void MoveMaker::MovePiece(Board& board, int fromSq, int toSq, COLORS color, PIECE_TYPE pieceType) {
     AddPiece(board, toSq, color, pieceType);

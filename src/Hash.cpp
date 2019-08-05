@@ -1,4 +1,6 @@
-#include "TT.h"
+#include "Hash.h"
+
+// -- Transposition table
 
 void TTEntry::Clear() {
     zkey = 0;
@@ -71,4 +73,53 @@ U64 TT::NumEntries() {
         count += (m_entries[i].zkey != 0);
     }
     return count;
+}
+
+// -- Pawn-hash
+
+PawnHash Hash::pawnHash;
+
+void PawnEntry::Clear() {
+    zkey = 0;
+    evalMg = 0;
+    evalEg = 0;
+}
+
+PawnHash::PawnHash() {
+    m_pawnEntries = new PawnEntry[PAWN_HASH_SIZE];
+    Clear();
+}
+
+PawnHash::~PawnHash() {
+    delete [] m_pawnEntries;
+}
+
+void PawnHash::Clear() {
+    for(U64 i=0; i < PAWN_HASH_SIZE; ++i) {
+        m_pawnEntries[i].Clear();
+    }
+}
+
+void PawnHash::AddEntry(U64 zkey, int evalMg, int evalEg) {
+    assert( abs(evalMg) <= INFINITE_SCORE );
+    assert( abs(evalEg) <= INFINITE_SCORE );
+
+    U64 index = zkey % PAWN_HASH_SIZE;
+
+    PawnEntry pawnEntry;
+    pawnEntry.zkey = zkey;
+    pawnEntry.evalMg = evalMg;
+    pawnEntry.evalEg = evalEg;
+
+    m_pawnEntries[index] = pawnEntry;
+}
+
+PawnEntry* PawnHash::ProbeEntry(U64 zkey) {
+    U64 index = zkey % PAWN_HASH_SIZE;
+    PawnEntry entry = m_pawnEntries[index];
+    if(entry.zkey == zkey) {
+        return &m_pawnEntries[index];
+    } else {
+        return nullptr;
+    }
 }

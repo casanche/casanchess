@@ -2,9 +2,9 @@
 #define SEARCH_H
 
 #include "Board.h"
+#include "Hash.h"
 #include "Move.h"
 #include "Sorting.h"
-#include "TT.h"
 
 #include <chrono>
 #include <vector>
@@ -82,6 +82,7 @@ private:
 
     //Fundamental variables
     Board m_initialBoard;
+    //Hash
     TT m_tt;
 
     //Info variables

@@ -90,6 +90,7 @@ public:
     inline COLORS InactivePlayer() const    { return (COLORS)!m_activePlayer; }
     inline unsigned int MoveNumber() const  { return m_moveNumber; }
     inline Move LastMove() const            { return m_history[m_ply].move; }
+    inline U64 PawnKey() const              { return m_pawnKey.Key(); }
     inline Bitboard Piece(COLORS color, PIECE_TYPE pieceType) const     { return m_pieces[color][pieceType]; };
     inline unsigned int Ply() const         { return m_ply; }
     inline U64 ZKey() const                 { return m_zobristKey.Key(); }
@@ -110,9 +111,10 @@ private:
     unsigned int m_moveNumber;
     unsigned int m_ply; //a ply is half a move
     unsigned int m_fiftyrule;
-    ZobristKey m_zobristKey;
     U8 m_castlingRights; //[0-4] bits: the castling rights
     Bitboard m_enPassantSquare;
+    ZobristKey m_zobristKey;
+    ZobristKey m_pawnKey;
 
     //History
     History m_history[MAX_PLIES];

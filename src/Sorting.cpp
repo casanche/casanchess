@@ -1,8 +1,8 @@
 #include "Sorting.h"
 #include "Board.h"
 #include "Evaluation.h"
+#include "Hash.h"
 #include "Search.h"
-#include "TT.h"
 #include <algorithm>
 
 //Unnamed namespace (private functions)

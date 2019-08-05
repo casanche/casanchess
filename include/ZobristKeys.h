@@ -22,6 +22,7 @@ public:
     inline U64 Key() const { return m_key; };
     void SetKey(Board& board);
     inline void SetKey(U64 key) { m_key = key; }
+    void SetPawnKey(Board& board);
     void UpdateColor();
     void UpdateEnpassant(Bitboard enpassant);
     void UpdatePiece(COLORS color, PIECE_TYPE pieceType, int square);

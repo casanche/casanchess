@@ -81,6 +81,7 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     board.m_history[board.m_ply].castling = board.m_castlingRights;
     board.m_history[board.m_ply].enpassant = board.m_enPassantSquare;
     board.m_zobristKey.SetKey(board);
+    board.m_pawnKey.SetPawnKey(board);
     board.m_history[board.m_ply].zkey = board.ZKey();
     board.m_checkCalculated = false;
 }

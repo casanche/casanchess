@@ -211,6 +211,52 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
     return score;
 }
 
+#ifdef DEBUG_PAWN_HASH
+int test_total = 0;
+int test_hit = 0;
+int test_miss = 0;
+#endif
+
+
+//Try to retrieve the pawn structure from hash. If not found, calculate evaluation for the first time
+TaperedScore Evaluation::EvalPawnsFromHash(const Board &board) {
+    #ifdef DEBUG_PAWN_HASH
+    if(test_total % 1000 == 0) {
+        P(board.PawnKey());
+        P("PawnHash hitrate: " << test_total << ", " << test_hit << ", " << test_miss \
+                               << ", " << (float)test_hit / test_total * 100 << "%");
+    }
+    test_total++;
+    #endif
+
+    PawnEntry* pawnEntry = Hash::pawnHash.ProbeEntry( board.PawnKey() );
+    if(pawnEntry) {
+        #ifdef DEBUG_PAWN_HASH
+        test_hit++;
+        #endif
+
+        return TaperedScore( pawnEntry->evalMg,
+                             pawnEntry->evalEg );
+    }
+    else {
+        //Calculate
+        #ifdef DEBUG_PAWN_HASH
+        test_miss++;
+        #endif
+
+        TaperedScore whiteEval = EvalPawns(board, WHITE);
+        TaperedScore blackEval = EvalPawns(board, BLACK);
+        TaperedScore score;
+        score.mg = whiteEval.mg - blackEval.mg;
+        score.eg = whiteEval.eg - blackEval.eg;
+
+        //Store in hash
+        Hash::pawnHash.AddEntry(board.PawnKey(), score.mg, score.eg);
+
+        return score;
+    }
+}
+
 int Evaluation::Evaluate(const Board& board) {
     Score score;
     int phase = 0;
@@ -224,7 +270,7 @@ int Evaluation::Evaluate(const Board& board) {
     //Heavy material, psqt and phase
     TaperedScore heavyMaterial[2];
     for(COLORS color : {WHITE, BLACK}) {
-        int sign = 1 - 2*color;
+        const int sign = color == WHITE ? 1 : -1;
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= KING; ++pieceType) {
             Bitboard bb = board.Piece(color, pieceType);
             int popcnt = PopCount(bb);
@@ -249,17 +295,16 @@ int Evaluation::Evaluate(const Board& board) {
         return 0;
 
     //Pawns
-    score.Add     ( EvalPawns(board,WHITE) );
-    score.Subtract( EvalPawns(board,BLACK) );
+    score.Add( EvalPawnsFromHash(board) );
 
     //Rook open files
-    score.Add     ( EvalRookOpen(board,WHITE) );
-    score.Subtract( EvalRookOpen(board,BLACK) );
+    score.Add     ( EvalRookOpen(board, WHITE) );
+    score.Subtract( EvalRookOpen(board, BLACK) );
     
     //Bishop pair
-    score.Add     ( EvalBishopPair(board,WHITE) );
-    score.Subtract( EvalBishopPair(board,BLACK) );
+    score.Add     ( EvalBishopPair(board, WHITE) );
+    score.Subtract( EvalBishopPair(board, BLACK) );
 
-    int sign = board.ActivePlayer() == WHITE ? 1 : -1;
+    const int sign = board.ActivePlayer() == WHITE ? 1 : -1;
     return sign * score.Tapered(phase);
 }

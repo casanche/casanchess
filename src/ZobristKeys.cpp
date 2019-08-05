@@ -64,6 +64,18 @@ void ZobristKey::SetKey(Board& board) {
     m_key ^= ZobristKeys::m_zkeyEnpassant[file];
 }
 
+void ZobristKey::SetPawnKey(Board& board) {
+    m_key = 0;
+
+    for(COLORS color : {WHITE, BLACK}) {
+        Bitboard thePawns = board.GetPieces(color, PAWN);
+        while(thePawns) {
+            int square = ResetLsb(thePawns);
+            m_key ^= ZobristKeys::m_zkeyPieces[color][PAWN][square];
+        }
+    }
+}
+
 void ZobristKey::UpdateColor() {
     m_key ^= ZobristKeys::m_zkeyColor;
 }
