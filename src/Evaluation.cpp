@@ -191,20 +191,30 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
 
         if(isPassed) {
             int rank = ColorlessRank(color, square);
-            // bool isFreePassed = !(PASSED_PAWN_FRONT[color][square] & board.Piece((COLORS)!color, ALL_PIECES));
-            // if(isFreePassed) {
-            //     const bool isUnstoppable = false;
-            //     if(isUnstoppable) {
-            //         score.mg += 800;
-            //         score.eg += 800;
-            //     } else {
-            //         score.mg += 2 * PASSED_PAWN[MG][rank];
-            //         score.eg += 2 * PASSED_PAWN[EG][rank];
-            //     }
-            // } else {
+
+            //Check if the front span is not attacked by enemy pieces
+            bool isFreePassed = true;
+            Bitboard frontSpan = PASSED_PAWN_FRONT[color][square];
+            while(frontSpan) {
+                int spanSq = ResetLsb(frontSpan);
+                //There is an enemy piece IN the square
+                bool thereIsAPiece = SquareBB(spanSq) & board.Piece((COLORS)!color, ALL_PIECES);
+                //There are enemy pieces ATTACKING the square
+                Bitboard attackers = board.AttackersTo(color, spanSq);
+                if(attackers || thereIsAPiece) {
+                    isFreePassed = false;
+                    break;
+                }
+            }
+
+            if(isFreePassed) {
+                score.mg += params.FREE_PASSED_PAWN[MG][rank];
+                score.eg += params.FREE_PASSED_PAWN[EG][rank];
+            }
+            else {
                 score.mg += params.PASSED_PAWN[MG][rank];
                 score.eg += params.PASSED_PAWN[EG][rank];
-            // }
+            }
         }
         if(isIsolated) {
             int rank = ColorlessRank(color, square);
