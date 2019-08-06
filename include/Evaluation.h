@@ -45,7 +45,7 @@ namespace Evaluation {
             {0, 93, 340, 360, 600, 1120, 0}
         };
 
-        int DOUBLED_PAWN[2] = {-15, -15};
+        int DOUBLED_PAWN[2] = {-15, -12};
         int PASSED_PAWN[2][8] = {  //[RANK]
             {0,  0,  0, 10, 20,  35,  50, 0},
             {0, 10, 20, 40, 55, 125, 185, 0}

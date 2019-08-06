@@ -162,10 +162,15 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
     Bitboard thePawns = board.Piece(color, PAWN);
     Bitboard enemyPawns = board.Piece((COLORS)!color, PAWN);
 
-    //Doubled pawns
+    //--Double pawns
+    //1-rank distance
     int doubledPawns = PopCount(thePawns & North(thePawns));
     score.mg += doubledPawns * params.DOUBLED_PAWN[MG];
     score.eg += doubledPawns * params.DOUBLED_PAWN[EG];
+    //2-rank distance: half bonus
+    doubledPawns = PopCount(thePawns & North(thePawns, 2));
+    score.mg += doubledPawns * params.DOUBLED_PAWN[MG] / 2;
+    score.eg += doubledPawns * params.DOUBLED_PAWN[EG] / 2;
 
     Bitboard bb = thePawns;
     while(bb) {
