@@ -26,7 +26,7 @@ TEST_F(ShortSearch, Start) {
 // RG = Position from Real Game
 TEST_F(ShortSearch, RG1) {
     board.SetFen("r2qkb2/1b1p1pp1/p1n1p3/1pp4r/4PB2/1BNP2QP/PPP2P1P/R3R1K1 w q - 3 16");
-    search.FixDepth(depth-1);
+    search.FixDepth(depth-2);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
@@ -98,3 +98,33 @@ TEST_F(ShortSearch, RG11_F_g3) {
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
+// Mis-evaluated endgame with -0.14 d18/3s
+TEST_F(ShortSearch, RG12_endgame) {
+    board.SetFen("5b2/p1p2p2/7p/4kP2/PpPp2P1/5P2/4K3/4R3 b - - 6 36");
+    search.FixDepth(depth+3);
+    search.IterativeDeepening(board);
+    EXPECT_LE(search.ElapsedTime(), time);
+}
+// Be careful with king safety! Failed with Bd2 0.13s
+TEST_F(ShortSearch, RG13_kingSafetyI) {
+    board.SetFen("5r1bk2r1/ppp2p2/3p1b1p/1Q1P4/2P1P2q/2N2R2/PP2B1nP/R1B4K w - - 2 15");
+    search.FixDepth(depth);
+    search.IterativeDeepening(board);
+    EXPECT_LE(search.ElapsedTime(), time);
+}
+// Be careful with king safety! Failed with Nxc5 +0.49 d12/5s
+TEST_F(ShortSearch, RG14_kingSafetyII) {
+    board.SetFen("r2qk2r/pp3ppp/n1p5/2b2b2/Q1P1N1n1/5N2/PP1PBPPP/R1B1K2R w KQkq - 8 10");
+    search.FixDepth(depth);
+    search.IterativeDeepening(board);
+    EXPECT_LE(search.ElapsedTime(), time);
+}
+// Weird king move. Kf1 +0.19 d14/5s
+TEST_F(ShortSearch, RG15_weirdMove) {
+    board.SetFen("rnb1kbnr/ppp1pppp/6q1/8/8/5N2/PPPPBPPP/RNBQK2R w KQkq - 4 5");
+    search.FixDepth(depth);
+    search.IterativeDeepening(board);
+    EXPECT_LE(search.ElapsedTime(), time);
+}
+// Other engine eval raise. c5 +0.12 d13/3s
+//r1bqr1k1/ppp2ppp/3p1n2/4n3/2PNP3/2P2P2/P3B1PP/1RBQ1RK1 b - - 1 11
