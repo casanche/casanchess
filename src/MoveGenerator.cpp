@@ -458,9 +458,9 @@ void MoveGenerator::AddCastlingMoves(Board &board) {
         //WHITE CASTLING KING
         if(castlingRights & CASTLING_K 
             && !(board.m_allpieces & ( (ONE << F1) | (ONE << G1) ) )
-            && !board.AttackersTo(color, E1)
-            && !board.AttackersTo(color, F1)
-            && !board.AttackersTo(color, G1)
+            && !board.IsAttacked(color, E1)
+            && !board.IsAttacked(color, F1)
+            && !board.IsAttacked(color, G1)
         ) {
             fromSq = E1; toSq = G1;
             Move move = Move(fromSq, toSq, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
@@ -469,9 +469,9 @@ void MoveGenerator::AddCastlingMoves(Board &board) {
         //WHITE CASTLING QUEEN
         if(castlingRights & CASTLING_Q 
             && !(board.m_allpieces & ( (ONE << B1) | (ONE << C1) | (ONE << D1) ) )
-            && !board.AttackersTo(color, E1)
-            && !board.AttackersTo(color, D1)
-            && !board.AttackersTo(color, C1)
+            && !board.IsAttacked(color, E1)
+            && !board.IsAttacked(color, D1)
+            && !board.IsAttacked(color, C1)
         ) {
             fromSq = E1; toSq = C1;
             Move move = Move(fromSq, toSq, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
@@ -481,9 +481,9 @@ void MoveGenerator::AddCastlingMoves(Board &board) {
         //BLACK CASTLING KING
         if(castlingRights & CASTLING_k 
             && !(board.m_allpieces & ( (ONE << F8) | (ONE << G8) ) )
-            && !board.AttackersTo(color, E8)
-            && !board.AttackersTo(color, F8)
-            && !board.AttackersTo(color, G8)
+            && !board.IsAttacked(color, E8)
+            && !board.IsAttacked(color, F8)
+            && !board.IsAttacked(color, G8)
         ) {
             fromSq = E8; toSq = G8;
             Move move = Move(fromSq, toSq, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
@@ -492,9 +492,9 @@ void MoveGenerator::AddCastlingMoves(Board &board) {
         //BLACK CASTLING QUEEN
         if(castlingRights & CASTLING_q 
             && !(board.m_allpieces & ( (ONE << B8) | (ONE << C8) | (ONE << D8) ) )
-            && !board.AttackersTo(color, E8)
-            && !board.AttackersTo(color, D8)
-            && !board.AttackersTo(color, C8)
+            && !board.IsAttacked(color, E8)
+            && !board.IsAttacked(color, D8)
+            && !board.IsAttacked(color, C8)
         ) {
             fromSq = E8; toSq = C8;
             Move move = Move(fromSq, toSq, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);

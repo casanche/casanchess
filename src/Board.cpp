@@ -216,6 +216,22 @@ PIECE_TYPE Board::GetPieceAtSquare(COLORS color, int square) const {
     return piece;
 }
 
+bool Board::IsAttacked(COLORS color, int square) const {
+    COLORS enemyColor = (COLORS)!color;
+
+    if( AttacksPawns(color, square) & Piece(enemyColor, PAWN) ) return true;
+    if( AttacksKnights(square) & Piece(enemyColor, KNIGHT) ) return true;
+    if( AttacksKing(square) & Piece(enemyColor, KING) ) return true;
+
+    Bitboard blockers = m_allpieces;
+    Bitboard slidingPieces = Piece(enemyColor, BISHOP) | Piece(enemyColor, QUEEN);
+    if( AttacksSliding(BISHOP, square, blockers) & slidingPieces ) return true;
+    Bitboard straightPieces = Piece(enemyColor, ROOK) | Piece(enemyColor, QUEEN);
+    if( AttacksSliding(ROOK, square, blockers) & straightPieces ) return true;
+
+    return false;
+}
+
 bool Board::IsCheck() {
     COLORS color = ActivePlayer();
     if(!m_checkCalculated) {

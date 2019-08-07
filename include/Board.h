@@ -68,6 +68,7 @@ public:
     Bitboard AttackersTo(COLORS color, int square) const;
     Bitboard AttackersTo(COLORS color, int square, Bitboard blockers) const;
     PIECE_TYPE GetPieceAtSquare(COLORS color, int square) const;
+    bool IsAttacked(COLORS color, int square) const;
     bool IsCheck();
     bool IsRepetitionDraw(int searchPly = 0);
     int SquareToIndex(std::string square) const;
