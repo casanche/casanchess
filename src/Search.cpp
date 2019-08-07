@@ -10,7 +10,7 @@ using namespace Sorting;
 #include <iomanip> //debug output
 
 const bool TURNOFF_ASPIRATION_WINDOW = false;
-const int ASPIRATION_WINDOW_DEPTH = 5;
+const int ASPIRATION_WINDOW_DEPTH = 4;
 const int ASPIRATION_WINDOW = 25;
 
 const bool TURNOFF_NULLMOVE_PRUNING = false;
