@@ -27,10 +27,9 @@ const int PHASE_WEIGHT[8] = {
 //Precomputed tables
 Bitboard Evaluation::ADJACENT_FILES[8] = {0};
 Bitboard Evaluation::ADJACENT_RANKS[8] = {0};
-Bitboard Evaluation::FRONT_SPAN[2][64] = {{0}};
+Bitboard Evaluation::PASSED_PAWN_FRONT[2][64] = {{0}};
 Bitboard Evaluation::PASSED_PAWN_SIDES[2][64] = {{0}};
 Bitboard Evaluation::PASSED_PAWN_AREA[2][64] = {{0}};
-Bitboard Evaluation::BACKWARD_AREA[2][64] = {{0}};
 
 class Evaluation::Score {
 public:
@@ -83,37 +82,18 @@ void Evaluation::Init() {
     }
     //Passed pawn area
     for(int square = 0; square < 64; square++) {
-        FRONT_SPAN[WHITE][square] = Attacks::GetRay(NORTH, square);
-        FRONT_SPAN[BLACK][square] = Attacks::GetRay(SOUTH, square);
-        if(Rank(square) == Rank(square+1)) { //The rank does not change (not in h-file)
+        PASSED_PAWN_FRONT[WHITE][square] = Attacks::GetRay(NORTH, square);
+        PASSED_PAWN_FRONT[BLACK][square] = Attacks::GetRay(SOUTH, square);
+        if(Rank(square) == Rank(square+1)) {
             PASSED_PAWN_SIDES[WHITE][square] |= Attacks::GetRay(NORTH, square+1);
             PASSED_PAWN_SIDES[BLACK][square] |= Attacks::GetRay(SOUTH, square+1);
         }
-        if(Rank(square) == Rank(square-1)) { //The rank does not change (not in a-file)
+        if(Rank(square) == Rank(square-1)) {
             PASSED_PAWN_SIDES[WHITE][square] |= Attacks::GetRay(NORTH, square-1);
             PASSED_PAWN_SIDES[BLACK][square] |= Attacks::GetRay(SOUTH, square-1);
         }
-        PASSED_PAWN_AREA[WHITE][square] = FRONT_SPAN[WHITE][square] | PASSED_PAWN_SIDES[WHITE][square];
-        PASSED_PAWN_AREA[BLACK][square] = FRONT_SPAN[BLACK][square] | PASSED_PAWN_SIDES[BLACK][square];
-    }
-    //Backward area
-    Bitboard REAR_SPAN[2][64] = {{0}};
-    Bitboard BACKWARD_SIDES[2][64] = {{0}};
-    for(int square = 0; square < 64; square++) {
-        REAR_SPAN[WHITE][square] = FRONT_SPAN[BLACK][square];
-        REAR_SPAN[BLACK][square] = FRONT_SPAN[WHITE][square];
-        BACKWARD_SIDES[WHITE][square] = PASSED_PAWN_SIDES[BLACK][square];
-        BACKWARD_SIDES[BLACK][square] = PASSED_PAWN_SIDES[WHITE][square];
-        if(Rank(square) == Rank(square+1)) {
-            BACKWARD_SIDES[WHITE][square] |= SquareBB(square+1);
-            BACKWARD_SIDES[BLACK][square] |= SquareBB(square+1);
-        }
-        if(Rank(square) == Rank(square-1)) {
-            BACKWARD_SIDES[WHITE][square] |= SquareBB(square-1);
-            BACKWARD_SIDES[BLACK][square] |= SquareBB(square-1);
-        }
-        BACKWARD_AREA[WHITE][square] = REAR_SPAN[WHITE][square] | BACKWARD_SIDES[WHITE][square];
-        BACKWARD_AREA[BLACK][square] = REAR_SPAN[BLACK][square] | BACKWARD_SIDES[BLACK][square];
+        PASSED_PAWN_AREA[WHITE][square] = PASSED_PAWN_FRONT[WHITE][square] | PASSED_PAWN_SIDES[WHITE][square];
+        PASSED_PAWN_AREA[BLACK][square] = PASSED_PAWN_FRONT[BLACK][square] | PASSED_PAWN_SIDES[BLACK][square];
     }
 }
 
@@ -182,16 +162,6 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
     Bitboard thePawns = board.Piece(color, PAWN);
     Bitboard enemyPawns = board.Piece((COLORS)!color, PAWN);
 
-    Bitboard enemyPawnAttacks = ZERO;
-    if(color == WHITE) {
-        enemyPawnAttacks |= ( (enemyPawns & ClearFile[FILEH]) >> 7);
-        enemyPawnAttacks |= ( (enemyPawns & ClearFile[FILEA]) >> 9);
-    }
-    else {
-        enemyPawnAttacks |= ( (enemyPawns & ClearFile[FILEA]) << 7);
-        enemyPawnAttacks |= ( (enemyPawns & ClearFile[FILEH]) << 9);
-    }
-
     //--Double pawns
     //1-rank distance
     int doubledPawns = PopCount(thePawns & North(thePawns));
@@ -205,33 +175,41 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
     Bitboard bb = thePawns;
     while(bb) {
         int square = ResetLsb(bb);
-        int file = File(square);
-        int rank = ColorlessRank(color, square);
 
         //Psqt
         int index = SQUARE_CONVERSION[color][square];
         score.mg += PSQT[PAWN][index];
         score.eg += PSQT[PAWN][index];
 
+        int file = File(square);
+        // Bitboard pushSquare = color == WHITE ? North(SquareBB(square)) : South(SquareBB(square));
         bool isPassed = !(PASSED_PAWN_AREA[color][square] & enemyPawns);
+        // bool isDoubled = thePawns & PASSED_PAWN_FRONT[color][square]; //instead of pushSquare
         bool isIsolated = !(thePawns & ADJACENT_FILES[file]);
-
-        Bitboard pushSquare = color == WHITE ? North(SquareBB(square)) : South(SquareBB(square));
-        bool emptyBackwardArea = !(thePawns & BACKWARD_AREA[color][square]);
-        bool controlledPushSquare = pushSquare & enemyPawnAttacks;
-        bool isBackward = emptyBackwardArea && controlledPushSquare;
+        // bool isBackward = enemyPawnsAttacks & pushSquare;
+        // bool isBackward = thePawns & ADJACENT_FILES[file];
 
         if(isPassed) {
-            score.mg += params.PASSED_PAWN[MG][rank];
-            score.eg += params.PASSED_PAWN[EG][rank];
+            int rank = ColorlessRank(color, square);
+            // bool isFreePassed = !(PASSED_PAWN_FRONT[color][square] & board.Piece((COLORS)!color, ALL_PIECES));
+            // if(isFreePassed) {
+            //     const bool isUnstoppable = false;
+            //     if(isUnstoppable) {
+            //         score.mg += 800;
+            //         score.eg += 800;
+            //     } else {
+            //         score.mg += 2 * PASSED_PAWN[MG][rank];
+            //         score.eg += 2 * PASSED_PAWN[EG][rank];
+            //     }
+            // } else {
+                score.mg += params.PASSED_PAWN[MG][rank];
+                score.eg += params.PASSED_PAWN[EG][rank];
+            // }
         }
         if(isIsolated) {
+            int rank = ColorlessRank(color, square);
             score.mg += params.ISOLATED_PAWN[MG][rank];
             score.eg += params.ISOLATED_PAWN[EG][rank];
-        }
-        if(isBackward) {
-            score.mg += params.BACKWARD_PAWN[MG];
-            score.eg += (rank <= RANK3) * params.BACKWARD_PAWN[EG];
         }
     }
 
@@ -243,6 +221,7 @@ int test_total = 0;
 int test_hit = 0;
 int test_miss = 0;
 #endif
+
 
 //Try to retrieve the pawn structure from hash. If not found, calculate evaluation for the first time
 TaperedScore Evaluation::EvalPawnsFromHash(const Board &board) {

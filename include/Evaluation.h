@@ -22,10 +22,9 @@ namespace Evaluation {
     //Precomputed tables
     extern Bitboard ADJACENT_FILES[8]; //[FILE]
     extern Bitboard ADJACENT_RANKS[8]; //[RANK]
-    extern Bitboard FRONT_SPAN[2][64]; //[COLOR][SQUARE]
+    extern Bitboard PASSED_PAWN_FRONT[2][64]; //[COLOR][SQUARE]
     extern Bitboard PASSED_PAWN_SIDES[2][64]; //[COLOR][SQUARE]
     extern Bitboard PASSED_PAWN_AREA[2][64]; //[COLOR][SQUARE]
-    extern Bitboard BACKWARD_AREA[2][64]; //[COLOR][SQUARE]
     void Init();
 
     int Evaluate(const Board& board);
@@ -55,7 +54,6 @@ namespace Evaluation {
             {0, -15, -12, -20, -15, -10, -5, 0},
             {0, -15, -12, -20, -15, -10, -5, 0}
         };
-        int BACKWARD_PAWN[2] = {-12, -4};
 
         int ROOK_SEMIOPEN[2] = {20, 10};
         int ROOK_OPEN[2] = {40, 0};
