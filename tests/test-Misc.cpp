@@ -20,7 +20,7 @@ protected:
 
 TEST_F(PositionMisc, Fine70) {
     board.SetFen("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -");
-    search.FixDepth(25);
+    search.FixDepth(26);
     search.IterativeDeepening(board);
     EXPECT_EQ(search.BestMove().Notation(), "a1b1");
 }
