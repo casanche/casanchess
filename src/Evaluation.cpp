@@ -179,7 +179,7 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
         //Psqt
         int index = SQUARE_CONVERSION[color][square];
         score.mg += PSQT[PAWN][index];
-        score.eg += PSQT[PAWN][index];
+        score.eg += PSQT_ENDGAME[PAWN][index];
 
         int file = File(square);
         // Bitboard pushSquare = color == WHITE ? North(SquareBB(square)) : South(SquareBB(square));
