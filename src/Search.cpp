@@ -533,13 +533,18 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     debug_quiescence++;
     #endif
 
-    //--------- Standpat -----------
-    int standPat = Evaluation::Evaluate(board);
+    bool inCheck = board.IsCheck();
 
-    if(standPat > alpha) {
-        if(standPat >= beta)
-            return standPat;
-        alpha = standPat;
+    //--------- Standpat -----------
+    int standPat;
+    if(!inCheck) {
+        standPat = Evaluation::Evaluate(board);
+
+        if(standPat > alpha) {
+            if(standPat >= beta)
+                return standPat;
+            alpha = standPat;
+        }
     }
 
     // --------- Delta pruning ---------
@@ -585,16 +590,19 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     for(auto move : moves) {
 
-        //Skip non-captures
-        bool isCapture = move.MoveType() == CAPTURE;
-        bool queenPromotion = move.IsPromotion() && move.PromotionType() == PROMOTION_QUEEN;
-        if(!isCapture && !queenPromotion)
-            continue;
+        if(!inCheck) {
+            //Skip non-captures
+            bool isCapture = move.MoveType() == CAPTURE;
+            bool queenPromotion = move.IsPromotion() && move.PromotionType() == PROMOTION_QUEEN;
+            if(!isCapture && !queenPromotion)
+                continue;
 
-        //Skip negative SEE captures
-        const int SEE_EQUAL = 127;
-        if(isCapture && move.Score() < SEE_EQUAL)
-            continue;
+            //Skip negative SEE captures
+            const int SEE_EQUAL = 127;
+            if(isCapture && move.Score() < SEE_EQUAL)
+                continue;
+        }
+
 
         //Delta pruning
         // if(standPat < (alpha - 1200 - Evaluation::MATERIAL_VALUES[move.CapturedType()]) )
