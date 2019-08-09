@@ -526,6 +526,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 }
 
 int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
+    assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
+    assert(m_ply <= MAX_PLIES);
+
     #ifdef DEBUG_QUISCENCE
     P("    at Quiescence, ply: " << m_ply << " alpha: " << alpha << " beta: " << beta);
     #endif
