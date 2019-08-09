@@ -549,14 +549,6 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             alpha = standPat;
         }
     }
-
-    // --------- Delta pruning ---------
-    const bool deltaPruning = 0;
-    if(deltaPruning) {
-        const int delta = 1000;
-        if( standPat < alpha - delta )
-            return standPat;
-    }
     
     // --------- Transposition table lookup -----------
     TTEntry* ttEntry = m_tt.ProbeEntry(board.ZKey(), 0);
@@ -579,13 +571,10 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     //--------- Check for checkmate/stalemate ---------
     if( moves.empty() ) {
-        int score;
-        if( board.IsCheck() ) {
-            score = -INFINITE_SCORE + m_ply; //checkmate
-        } else {
-            score = 0; //stalemate
-        }
-        return score;
+        if(inCheck)
+            return -INFINITE_SCORE + m_ply; //checkmate
+        else
+            return 0; //stalemate
     }
 
     //Order captures
@@ -605,13 +594,6 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             if(isCapture && move.Score() < SEE_EQUAL)
                 continue;
         }
-
-
-        //Delta pruning
-        // if(standPat < (alpha - 1200 - Evaluation::MATERIAL_VALUES[move.CapturedType()]) )
-        //     continue;
-        // if( alpha > Evaluation::MATERIAL_VALUES[move.CapturedType()] + standPat + 1000 )
-        //     continue;
         
         #ifdef DEBUG_QUISCENCE
         P("    at QuiescenceLoop, ply: " << m_ply << " alpha: " << alpha << " beta: " << beta << " move: " << move.Notation());
