@@ -593,6 +593,12 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             const int SEE_EQUAL = 127;
             if(isCapture && move.Score() < SEE_EQUAL)
                 continue;
+
+            //Delta pruning
+            const int deltaMargin = 100;
+            if(isCapture && standPat < (alpha - deltaMargin) && move.Score() == SEE_EQUAL ) {
+                continue;
+            }
         }
         
         #ifdef DEBUG_QUISCENCE
