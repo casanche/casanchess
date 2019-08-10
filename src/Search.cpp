@@ -583,22 +583,21 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     for(auto move : moves) {
 
         if(!inCheck) {
-            //Skip non-captures
-            bool isCapture = move.MoveType() == CAPTURE;
-            bool queenPromotion = move.IsPromotion() && move.PromotionType() == PROMOTION_QUEEN;
-            if(!isCapture && !queenPromotion)
-                continue;
-
-            //Skip negative SEE captures
-            const int SEE_EQUAL = 127;
-            if(isCapture && move.Score() < SEE_EQUAL)
+            //Skip quiet moves (keep captures, promotions and enpassants)
+            if(move.IsQuiet())
                 continue;
 
             //Delta pruning
+            const int SEE_EQUAL = 127;
             const int deltaMargin = 100;
-            if(isCapture && standPat < (alpha - deltaMargin) && move.Score() == SEE_EQUAL ) {
+            bool isCapture = move.MoveType() == CAPTURE;
+            if(isCapture && move.Score() == SEE_EQUAL && standPat < (alpha - deltaMargin) ) {
                 continue;
             }
+
+            //Skip negative SEE captures
+            if(isCapture && move.Score() < SEE_EQUAL)
+                continue;
         }
         
         #ifdef DEBUG_QUISCENCE
