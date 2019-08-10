@@ -10,7 +10,7 @@
 #include <map>
 
 const int MAX_PLIES = 3000;
-const int SEE_MATERIAL_VALUES[8] = {0, 100, 355, 365, 525, 1100, 0};
+const int SEE_MATERIAL_VALUES[8] = {0, 100, 360, 360, 535, 1100, 0};
 
 const char PIECE_LETTERS[16] = { ' ', 'P', 'N', 'B', 'R', 'Q', 'K', '-',
                                  'p', 'n', 'b', 'r', 'q', 'k', '-', '-' };
