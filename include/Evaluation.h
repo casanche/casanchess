@@ -34,9 +34,9 @@ namespace Evaluation {
 
     TaperedScore EvalRookOpen(const Board& board, COLORS color);
     TaperedScore EvalBishopPair(const Board &board, COLORS color);
-    TaperedScore EvalPassedPawn(const Board &board, COLORS color);
-    TaperedScore EvalPawns(const Board& board, COLORS color);
-    TaperedScore EvalPawnsFromHash(const Board& board);
+    
+    TaperedScore EvalPawns(const Board& board);
+    TaperedScore EvalPawnsCalculation(const Board& board, COLORS color);
 
     //Evaluation parameters for tuning
     const struct Parameters {

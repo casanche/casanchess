@@ -156,7 +156,52 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
     return score;
 }
 
-TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
+#ifdef DEBUG_PAWN_HASH
+int test_total = 0;
+int test_hit = 0;
+int test_miss = 0;
+#endif
+
+//Try to retrieve the pawn structure from hash. If not found, calculate evaluation for the first time
+TaperedScore Evaluation::EvalPawns(const Board &board) {
+    #ifdef DEBUG_PAWN_HASH
+    if(test_total % 1000 == 0) {
+        P(board.PawnKey());
+        P("PawnHash hitrate: " << test_total << ", " << test_hit << ", " << test_miss \
+                               << ", " << (float)test_hit / test_total * 100 << "%");
+    }
+    test_total++;
+    #endif
+
+    PawnEntry* pawnEntry = Hash::pawnHash.ProbeEntry( board.PawnKey() );
+    if(pawnEntry) {
+        #ifdef DEBUG_PAWN_HASH
+        test_hit++;
+        #endif
+
+        return TaperedScore( pawnEntry->evalMg,
+                             pawnEntry->evalEg );
+    }
+    else {
+        //Calculate
+        #ifdef DEBUG_PAWN_HASH
+        test_miss++;
+        #endif
+
+        TaperedScore whiteEval = EvalPawnsCalculation(board, WHITE);
+        TaperedScore blackEval = EvalPawnsCalculation(board, BLACK);
+        TaperedScore score;
+        score.mg = whiteEval.mg - blackEval.mg;
+        score.eg = whiteEval.eg - blackEval.eg;
+
+        //Store in hash
+        Hash::pawnHash.AddEntry(board.PawnKey(), score.mg, score.eg);
+
+        return score;
+    }
+}
+
+TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLORS color) {
     TaperedScore score;
 
     Bitboard thePawns = board.Piece(color, PAWN);
@@ -216,52 +261,6 @@ TaperedScore Evaluation::EvalPawns(const Board &board, COLORS color) {
     return score;
 }
 
-#ifdef DEBUG_PAWN_HASH
-int test_total = 0;
-int test_hit = 0;
-int test_miss = 0;
-#endif
-
-
-//Try to retrieve the pawn structure from hash. If not found, calculate evaluation for the first time
-TaperedScore Evaluation::EvalPawnsFromHash(const Board &board) {
-    #ifdef DEBUG_PAWN_HASH
-    if(test_total % 1000 == 0) {
-        P(board.PawnKey());
-        P("PawnHash hitrate: " << test_total << ", " << test_hit << ", " << test_miss \
-                               << ", " << (float)test_hit / test_total * 100 << "%");
-    }
-    test_total++;
-    #endif
-
-    PawnEntry* pawnEntry = Hash::pawnHash.ProbeEntry( board.PawnKey() );
-    if(pawnEntry) {
-        #ifdef DEBUG_PAWN_HASH
-        test_hit++;
-        #endif
-
-        return TaperedScore( pawnEntry->evalMg,
-                             pawnEntry->evalEg );
-    }
-    else {
-        //Calculate
-        #ifdef DEBUG_PAWN_HASH
-        test_miss++;
-        #endif
-
-        TaperedScore whiteEval = EvalPawns(board, WHITE);
-        TaperedScore blackEval = EvalPawns(board, BLACK);
-        TaperedScore score;
-        score.mg = whiteEval.mg - blackEval.mg;
-        score.eg = whiteEval.eg - blackEval.eg;
-
-        //Store in hash
-        Hash::pawnHash.AddEntry(board.PawnKey(), score.mg, score.eg);
-
-        return score;
-    }
-}
-
 int Evaluation::Evaluate(const Board& board) {
     Score score;
     int phase = 0;
@@ -300,7 +299,7 @@ int Evaluation::Evaluate(const Board& board) {
         return 0;
 
     //Pawns
-    score.Add( EvalPawnsFromHash(board) );
+    score.Add( EvalPawns(board) );
 
     //Rook open files
     score.Add     ( EvalRookOpen(board, WHITE) );

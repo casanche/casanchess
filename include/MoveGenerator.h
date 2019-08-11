@@ -4,10 +4,6 @@
 #include "Constants.h"
 #include "Move.h"
 
-// extern int count; //test
-#include <map>
-extern std::map<std::string, int> countMap; //test
-
 class Board;
 
 class MoveGenerator {
@@ -43,7 +39,6 @@ private:
     Bitboard FillPinned(Board& board, COLORS color, PIECE_TYPE slidingType, int square, int kingSquare);
 
     MoveList m_moves;
-    MoveList m_legalMoves;
 };
 
 #endif //MOVEGENERATOR_H
