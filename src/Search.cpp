@@ -9,6 +9,8 @@ using namespace Sorting;
 #include <cmath> //INFINITY
 #include <iomanip> //debug output
 
+const bool UCI_VERBOSE = false;
+
 const bool TURNOFF_ASPIRATION_WINDOW = false;
 const int ASPIRATION_WINDOW_DEPTH = 4;
 const int ASPIRATION_WINDOW = 25;
@@ -156,7 +158,8 @@ void Search::UciOutput(std::string PV) {
     std::cout << " time " << m_elapsedTime;
     std::cout << " nodes " << m_nodes;
     std::cout << " nps " << m_nps;
-    std::cout << " hashfull " << m_tt.OccupancyPerMil();
+    if(m_elapsedTime > 1000)
+        std::cout << " hashfull " << m_tt.OccupancyPerMil();
     std::cout << " pv " << PV;
     std::cout << std::endl;
 }
@@ -207,9 +210,9 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         // assert(move.MoveType());
 
         //Uci output
-        if(depth >= 7) {
-            std::cout << "info currmove " << move.Notation();
-            std::cout << " currmovenumber " << count;
+        if(m_elapsedTime > 1000) {
+            std::cout << "info currmovenumber " << count;
+            std::cout << " currmove " << move.Notation();
             std::cout << std::endl;
         }
 
@@ -665,7 +668,8 @@ void Search::AllocateLimits(Board &board, Limits limits) {
 
     m_allocatedTime = myTime / limits.movesToGo + myInc;
 
-    std::cout << "info string AllocateTime " <<  myTime << " " << yourTime << " " << m_allocatedTime << std::endl;
+    if(UCI_VERBOSE)
+        std::cout << "info string AllocateTime " <<  myTime << " " << yourTime << " " << m_allocatedTime << std::endl;
 }
 
 void Search::ProbeBoard() {
