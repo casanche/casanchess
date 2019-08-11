@@ -313,8 +313,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         return QuiescenceSearch(board, alpha, beta);
     }
 
-    // --------- Transposition table lookup --------
-    //ttEntry preparation
+    // --------- Transposition table probe --------
     Move bestMove; //for later storage in the Transposition Table
     int bestScore = -INFINITE_SCORE;
     int alphaOriginal = alpha; //for later calculation of TTENTRY_TYPE
@@ -325,12 +324,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         debug_tthits++;
         #endif
 
-        if(ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && ttEntry->score <= alpha)
-            return ttEntry->score; //return ttEntry->score or alpha
-        if(ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && ttEntry->score >= beta)
-            return ttEntry->score; //return ttEntry->score or beta
-        if(ttEntry->type == TTENTRY_TYPE::EXACT && ttEntry->score >= alpha && ttEntry->score <= beta)
+        if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && ttEntry->score <= alpha)
+            || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && ttEntry->score >= beta)
+            || (ttEntry->type == TTENTRY_TYPE::EXACT && ttEntry->score >= alpha && ttEntry->score <= beta) )
+        {
             return ttEntry->score;
+        }
     }
 
     // --- Static null-move pruning (aka Reverse futility) ---
@@ -368,7 +367,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // && board.LastMove().MoveType != NULLMOVE
         && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=12)  //enough depth
         && !inCheck
-        && Evaluation::AreHeavyPiecesOnBothSides(board)  //there are pieces on the board (to avoid zugzwang in K+P)
+        && Evaluation::AreHeavyPiecesOnBothSides(board)  //there are pieces on the board (to avoid zugzwang in K+P endgames)
         && Evaluation::Evaluate(board) >= beta           //very good score
     ) {
         #ifdef DEBUG
@@ -406,13 +405,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Check for checkmate and stalemate -----------
     if( moves.empty() ) {
-        int score;
-        if( inCheck ) {
-            score = -INFINITE_SCORE + m_ply; //checkmate
-        } else {
-            score = 0; //stalemate
-        }
-        return score;
+        if(inCheck)
+            return -INFINITE_SCORE + m_ply; //checkmate
+        else
+            return 0; //stalemate
     }
 
     // --------- Sort moves -----------
@@ -444,7 +440,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         board.MakeMove(move);
         m_ply++; m_nodes++;
-
 
         //-------- Late Move Reductions ----------
         if( !TURNOFF_LMR
@@ -478,15 +473,15 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // }
 
         // -------- Principal Variation Search -----------
-        int newDepth = depth - 1 + extension;
-        int reducedDepth = newDepth - reduction;
+        int extendedDepth = depth - 1 + extension;
+        int reducedDepth = extendedDepth - reduction;
         if(moveNumber == 1) {
-            score = -NegaMax(board, newDepth, -beta, -alpha); //full window, no reduction
+            score = -NegaMax(board, extendedDepth, -beta, -alpha); //full window, no reduction
         }
         else {
             score = -NegaMax(board, reducedDepth, -alpha-1, -alpha); //zero window, reduction
             if(score > alpha && score < beta) //'score < beta' is needed in fail-soft schemes
-                score = -NegaMax(board, newDepth, -beta, -alpha);
+                score = -NegaMax(board, extendedDepth, -beta, -alpha);
         }
 
         board.TakeMove(move);
@@ -500,7 +495,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(score > alpha) {
 
             if(score >= beta) {
-
                 #ifdef DEBUG
                 debug_negaMax_cutoffs++;
                 #endif
@@ -521,7 +515,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         
     } //move loop
 
-    //ttEntry
     TTENTRY_TYPE type = (alpha > alphaOriginal) ? TTENTRY_TYPE::EXACT : TTENTRY_TYPE::UPPER_BOUND;
     m_tt.AddEntry(board.ZKey(), alpha, type, bestMove, depth, m_counter); //alpha or bestScore?
 
