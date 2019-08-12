@@ -26,7 +26,7 @@ public:
         }
     }
     void Update(const Move& killer, int ply) {
-        if(killer.MoveType() != CAPTURE && killer != m_killers[ply][0]) {
+        if(killer != m_killers[ply][0]) {
             m_killers[ply][1] = m_killers[ply][0];
             m_killers[ply][0] = killer;
         }
