@@ -574,7 +574,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
 
     //Order captures
-    SortCaptureMoves(board, moves);
+    if(!inCheck)
+        SortCaptureMoves(board, moves);
 
     for(auto move : moves) {
 
