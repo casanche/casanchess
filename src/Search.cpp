@@ -439,11 +439,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // )
         //     extension++;
 
-        // ---- SEE extensions ----
-        const int SEE_POSITIVE = 251;
-        if(move.Score() == SEE_POSITIVE && isPV)
-            extension++;
-
         board.MakeMove(move);
         m_ply++; m_nodes++;
 
