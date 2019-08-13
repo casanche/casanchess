@@ -6,8 +6,6 @@ using namespace Evaluation;
 #include "BitboardUtils.h"
 
 //Constants
-#define MG MIDDLEGAME
-#define EG ENDGAME
 const Bitboard LIGHT_SQUARES = 0x55AA55AA55AA55AA;
 const Bitboard DARK_SQUARES = 0xAA55AA55AA55AA55;
 
@@ -271,6 +269,13 @@ int Evaluation::Evaluate(const Board& board) {
     score.Add( (whitePawns-blackPawns) * params.MATERIAL_VALUES[MG][PAWN],
                (whitePawns-blackPawns) * params.MATERIAL_VALUES[EG][PAWN] );
 
+    //Pawn attacks
+    Bitboard pawnAttacks[2];
+    Bitboard thePawns = board.Piece(WHITE, PAWN);
+    pawnAttacks[WHITE] = (thePawns & ClearFile[FILEA]) << 7 | (thePawns & ClearFile[FILEH]) << 9;
+    thePawns = board.Piece(BLACK, PAWN);
+    pawnAttacks[BLACK] = (thePawns & ClearFile[FILEH]) >> 7 | (thePawns & ClearFile[FILEA]) >> 9;
+
     //Heavy material, psqt and phase
     TaperedScore heavyMaterial[2];
     for(COLORS color : {WHITE, BLACK}) {
@@ -288,6 +293,15 @@ int Evaluation::Evaluate(const Board& board) {
                 int square = ResetLsb(bb);
                 int index = SQUARE_CONVERSION[color][square];
                 score.Add(sign * PSQT[pieceType][index], sign * PSQT_ENDGAME[pieceType][index]);
+
+                if(pieceType == BISHOP) {
+                    Bitboard blockers = board.AllPieces() ^ (board.Piece(color, BISHOP) | board.Piece(color, QUEEN));
+                    Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color];
+                    Bitboard attacks = Attacks::AttacksSliding(BISHOP, square, blockers) & ~pawnRestrictions;
+                    int pop = PopCount(attacks);
+                    score.Add( sign * params.MOBILITY_BISHOP[MG][pop],
+                               sign * params.MOBILITY_BISHOP[EG][pop] );
+                }
             }
         }
     }

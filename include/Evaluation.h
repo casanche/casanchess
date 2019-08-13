@@ -9,6 +9,8 @@ class Board;
 namespace Evaluation {
 
     enum GAME_PHASE { MIDDLEGAME, ENDGAME };
+    #define MG MIDDLEGAME
+    #define EG ENDGAME
 
     struct TaperedScore {
         int mg;
@@ -18,6 +20,15 @@ namespace Evaluation {
     };
 
     class Score;
+
+    //Mobility formulas
+    template<GAME_PHASE ph>
+    constexpr int MOB_B(U8 mob) {
+        if constexpr(ph == MIDDLEGAME)
+            return -50.9 + 17.8*mob - 2*mob*mob + 0.0877*mob*mob*mob;
+        else
+            return -95 + 26.5*mob - 2.6*mob*mob + 0.0955*mob*mob*mob;
+    }
 
     //Precomputed tables
     extern Bitboard ADJACENT_FILES[8]; //[FILE]
@@ -63,6 +74,11 @@ namespace Evaluation {
         int KING_OPEN_ADJACENT[2] = {20, 0};
 
         int BISHOP_PAIR[2] = {35, 50};
+
+        int MOBILITY_BISHOP[2][14] = {
+            {MOB_B<MG>(0), MOB_B<MG>(1), MOB_B<MG>(2), MOB_B<MG>(3), MOB_B<MG>(4), MOB_B<MG>(5), MOB_B<MG>(6), MOB_B<MG>(7), MOB_B<MG>(8), MOB_B<MG>(9), MOB_B<MG>(10), MOB_B<MG>(11), MOB_B<MG>(12), MOB_B<MG>(13)},
+            {MOB_B<EG>(0), MOB_B<EG>(1), MOB_B<EG>(2), MOB_B<EG>(3), MOB_B<EG>(4), MOB_B<EG>(5), MOB_B<EG>(6), MOB_B<EG>(7), MOB_B<EG>(8), MOB_B<EG>(9), MOB_B<EG>(10), MOB_B<EG>(11), MOB_B<EG>(12), MOB_B<EG>(13)}
+        };
     } params;
 
     //from https://www.chessprogramming.org/Simplified_Evaluation_Function
