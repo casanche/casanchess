@@ -2,8 +2,6 @@
 
 #include "BitboardUtils.h"
 
-Bitboard Attacks::m_BishopMask[64] = {0};
-Bitboard Attacks::m_RookMask[64] = {0};
 Bitboard Attacks::m_Rays[8][64] = {{0}};
 Bitboard Attacks::m_NonSlidingAttacks[2][8][64] = {{{0}}};
 Bitboard Attacks::m_Between[64][64] = {{0}};
@@ -19,16 +17,6 @@ void Attacks::Init() {
         m_Rays[NORTH_EAST][square] = GetRay(NORTH_EAST, square);
         m_Rays[SOUTH_WEST][square] = GetRay(SOUTH_WEST, square);
         m_Rays[SOUTH_EAST][square] = GetRay(SOUTH_EAST, square);
-    }
-    
-    //Bishop mask
-    for(int square = 0; square < 64; square++) {
-        m_BishopMask[square] = AttacksSliding(BISHOP, square, ZERO);
-    }
-
-    //Rook mask
-    for(int square = 0; square < 64; square++) {
-        m_RookMask[square] = AttacksSliding(ROOK, square, ZERO);
     }
 
     //Pawn attacks
@@ -196,11 +184,6 @@ Bitboard Attacks::AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard bloc
             Bitboard swBlockers = blockers & sw;
             Bitboard seBlockers = blockers & se;
 
-            // attacks |= nw & ~m_Rays[NORTH_WEST][BitscanForward(nwBlockers)];
-            // attacks |= ne & ~m_Rays[NORTH_EAST][BitscanForward(neBlockers)];
-            // attacks |= sw & ~m_Rays[SOUTH_WEST][BitscanForward(swBlockers)];
-            // attacks |= se & ~m_Rays[SOUTH_EAST][BitscanForward(seBlockers)];
-
             attacks |= (nwBlockers) ? nw & ~m_Rays[NORTH_WEST][BitscanForward(nwBlockers)] : nw;
             attacks |= (neBlockers) ? ne & ~m_Rays[NORTH_EAST][BitscanForward(neBlockers)] : ne;
             attacks |= (swBlockers) ? sw & ~m_Rays[SOUTH_WEST][BitscanReverse(swBlockers)] : sw;
@@ -219,11 +202,6 @@ Bitboard Attacks::AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard bloc
             Bitboard southBlockers = blockers & south;
             Bitboard westBlockers = blockers & west;
             Bitboard eastBlockers = blockers & east;
-
-            // attacks |= north & ~m_Rays[NORTH][BitscanForward(northBlockers)];
-            // attacks |= south & ~m_Rays[SOUTH][BitscanForward(southBlockers)];
-            // attacks |= west & ~m_Rays[WEST][BitscanForward(westBlockers)];
-            // attacks |= east & ~m_Rays[EAST][BitscanForward(eastBlockers)];
 
             attacks |= (northBlockers) ? north & ~m_Rays[NORTH][BitscanForward(northBlockers)] : north;
             attacks |= (southBlockers) ? south & ~m_Rays[SOUTH][BitscanReverse(southBlockers)] : south;
