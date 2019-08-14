@@ -23,6 +23,13 @@ namespace Evaluation {
 
     //Mobility formulas
     template<GAME_PHASE ph>
+    constexpr int MOB_N(U8 mob) {
+        if constexpr(ph == MIDDLEGAME)
+            return -25.3 + 4.53*mob - 0.67*mob*mob - 0.0715*mob*mob*mob;
+        else
+            return -33.3 + 2.96*mob + 1.42*mob*mob - 0.141*mob*mob*mob;
+    }
+    template<GAME_PHASE ph>
     constexpr int MOB_B(U8 mob) {
         if constexpr(ph == MIDDLEGAME)
             return -50.9 + 17.8*mob - 2*mob*mob + 0.0877*mob*mob*mob;
@@ -75,6 +82,14 @@ namespace Evaluation {
 
         int BISHOP_PAIR[2] = {35, 50};
 
+        int MOBILITY_KNIGHT[2][9] = {
+            {-22, -14, -7, -6, -4, 1, 10, 14, 22},
+            {-42, -37, -34, -15, -7, 0, 9, 11, 8}
+        };
+        // int MOBILITY_KNIGHT[2][9] = {
+        //     {MOB_N<MG>(0), MOB_N<MG>(1), MOB_N<MG>(2), MOB_N<MG>(3), MOB_N<MG>(4), MOB_N<MG>(5), MOB_N<MG>(6), MOB_N<MG>(7), MOB_N<MG>(8)},
+        //     {MOB_N<EG>(0), MOB_N<EG>(1), MOB_N<EG>(2), MOB_N<EG>(3), MOB_N<EG>(4), MOB_N<EG>(5), MOB_N<EG>(6), MOB_N<EG>(7), MOB_N<EG>(8)}
+        // };
         int MOBILITY_BISHOP[2][14] = {
             {MOB_B<MG>(0), MOB_B<MG>(1), MOB_B<MG>(2), MOB_B<MG>(3), MOB_B<MG>(4), MOB_B<MG>(5), MOB_B<MG>(6), MOB_B<MG>(7), MOB_B<MG>(8), MOB_B<MG>(9), MOB_B<MG>(10), MOB_B<MG>(11), MOB_B<MG>(12), MOB_B<MG>(13)},
             {MOB_B<EG>(0), MOB_B<EG>(1), MOB_B<EG>(2), MOB_B<EG>(3), MOB_B<EG>(4), MOB_B<EG>(5), MOB_B<EG>(6), MOB_B<EG>(7), MOB_B<EG>(8), MOB_B<EG>(9), MOB_B<EG>(10), MOB_B<EG>(11), MOB_B<EG>(12), MOB_B<EG>(13)}

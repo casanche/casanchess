@@ -294,9 +294,16 @@ int Evaluation::Evaluate(const Board& board) {
                 int index = SQUARE_CONVERSION[color][square];
                 score.Add(sign * PSQT[pieceType][index], sign * PSQT_ENDGAME[pieceType][index]);
 
-                if(pieceType == BISHOP) {
-                    Bitboard blockers = board.AllPieces() ^ (board.Piece(color, BISHOP) | board.Piece(color, QUEEN));
-                    Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color];
+                if(pieceType == KNIGHT) {
+                    Bitboard restrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color];
+                    Bitboard attacks = Attacks::AttacksKnights(square) & ~restrictions;
+                    int pop = PopCount(attacks);
+                    score.Add( sign * params.MOBILITY_KNIGHT[MG][pop],
+                               sign * params.MOBILITY_KNIGHT[EG][pop] );
+                }
+                else if(pieceType == BISHOP) {
+                    Bitboard blockers = board.AllPieces() ^ board.Piece(color, QUEEN);
+                    Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color]; //first term not needed?
                     Bitboard attacks = Attacks::AttacksSliding(BISHOP, square, blockers) & ~pawnRestrictions;
                     int pop = PopCount(attacks);
                     score.Add( sign * params.MOBILITY_BISHOP[MG][pop],
