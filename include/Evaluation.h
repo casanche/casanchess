@@ -3,6 +3,7 @@
 
 #include "Constants.h"
 #include "Hash.h"
+#include <cmath>
 
 class Board;
 
@@ -35,6 +36,13 @@ namespace Evaluation {
             return -50.9 + 17.8*mob - 2*mob*mob + 0.0877*mob*mob*mob;
         else
             return -95 + 26.5*mob - 2.6*mob*mob + 0.0955*mob*mob*mob;
+    }
+    template<GAME_PHASE ph>
+    constexpr int MOB_R(U8 mob) {
+        if constexpr(ph == MIDDLEGAME)
+            return std::lrint(-14.5 + 0.87*mob + 0.29*mob*mob - 0.0095*mob*mob*mob);
+        else
+            return std::lrint(-58.6 + 12.2*mob - 0.59*mob*mob + 0.0041*mob*mob*mob);
     }
 
     //Precomputed tables
@@ -93,6 +101,10 @@ namespace Evaluation {
         int MOBILITY_BISHOP[2][14] = {
             {MOB_B<MG>(0), MOB_B<MG>(1), MOB_B<MG>(2), MOB_B<MG>(3), MOB_B<MG>(4), MOB_B<MG>(5), MOB_B<MG>(6), MOB_B<MG>(7), MOB_B<MG>(8), MOB_B<MG>(9), MOB_B<MG>(10), MOB_B<MG>(11), MOB_B<MG>(12), MOB_B<MG>(13)},
             {MOB_B<EG>(0), MOB_B<EG>(1), MOB_B<EG>(2), MOB_B<EG>(3), MOB_B<EG>(4), MOB_B<EG>(5), MOB_B<EG>(6), MOB_B<EG>(7), MOB_B<EG>(8), MOB_B<EG>(9), MOB_B<EG>(10), MOB_B<EG>(11), MOB_B<EG>(12), MOB_B<EG>(13)}
+        };
+        int MOBILITY_ROOK[2][15] = {
+            {MOB_R<MG>(0), MOB_R<MG>(1), MOB_R<MG>(2), MOB_R<MG>(3), MOB_R<MG>(4), MOB_R<MG>(5), MOB_R<MG>(6), MOB_R<MG>(7), MOB_R<MG>(8), MOB_R<MG>(9), MOB_R<MG>(10), MOB_R<MG>(11), MOB_R<MG>(12), MOB_R<MG>(13), MOB_R<MG>(14)},
+            {MOB_R<EG>(0), MOB_R<EG>(1), MOB_R<EG>(2), MOB_R<EG>(3), MOB_R<EG>(4), MOB_R<EG>(5), MOB_R<EG>(6), MOB_R<EG>(7), MOB_R<EG>(8), MOB_R<EG>(9), MOB_R<EG>(10), MOB_R<EG>(11), MOB_R<EG>(12), MOB_R<EG>(13), MOB_R<MG>(14)}
         };
     } params;
 

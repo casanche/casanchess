@@ -309,6 +309,14 @@ int Evaluation::Evaluate(const Board& board) {
                     score.Add( sign * params.MOBILITY_BISHOP[MG][pop],
                                sign * params.MOBILITY_BISHOP[EG][pop] );
                 }
+                else if(pieceType == ROOK) {
+                    Bitboard blockers = board.AllPieces() ^ (board.Piece(color, ROOK) | board.Piece(color, QUEEN));
+                    Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color];
+                    Bitboard attacks = Attacks::AttacksSliding(ROOK, square, blockers) & ~pawnRestrictions;
+                    int pop = PopCount(attacks);
+                    score.Add( sign * params.MOBILITY_ROOK[MG][pop],
+                               sign * params.MOBILITY_ROOK[EG][pop] );
+                }
             }
         }
     }
