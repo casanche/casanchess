@@ -49,6 +49,14 @@ namespace Evaluation {
         else
             return CUBIC(1, -58.6, +12.2, -0.59, +0.0041);
     }
+    template<GAME_PHASE ph>
+    constexpr int MOB_Q(U8 mob) {
+        if constexpr(ph == MIDDLEGAME)
+            // return (mob <= 21) * LINEAR(-27.8, 2.4) + (mob > 21) * (std::lrint( -27.8 + 2.4 * 21 ));
+            return CUBIC(0.5, -29.5, 2.63, 0.026, -0.002);
+        else
+            return CUBIC(0.5, -27.9, 2.29, 0.026, -0.0018);
+    }
 
     //Precomputed tables
     extern Bitboard ADJACENT_FILES[8]; //[FILE]
@@ -107,6 +115,18 @@ namespace Evaluation {
             {MOB_R<MG>(0), MOB_R<MG>(1), MOB_R<MG>(2), MOB_R<MG>(3), MOB_R<MG>(4), MOB_R<MG>(5), MOB_R<MG>(6), MOB_R<MG>(7), MOB_R<MG>(8), MOB_R<MG>(9), MOB_R<MG>(10), MOB_R<MG>(11), MOB_R<MG>(12), MOB_R<MG>(13), MOB_R<MG>(14)},
             {MOB_R<EG>(0), MOB_R<EG>(1), MOB_R<EG>(2), MOB_R<EG>(3), MOB_R<EG>(4), MOB_R<EG>(5), MOB_R<EG>(6), MOB_R<EG>(7), MOB_R<EG>(8), MOB_R<EG>(9), MOB_R<EG>(10), MOB_R<EG>(11), MOB_R<EG>(12), MOB_R<EG>(13), MOB_R<MG>(14)}
         };
+        int MOBILITY_QUEEN[2][28] = {
+            {MOB_Q<MG>(0), MOB_Q<MG>(1), MOB_Q<MG>(2), MOB_Q<MG>(3), MOB_Q<MG>(4), MOB_Q<MG>(5), MOB_Q<MG>(6), MOB_Q<MG>(7), MOB_Q<MG>(8), MOB_Q<MG>(9), MOB_Q<MG>(10), MOB_Q<MG>(11), MOB_Q<MG>(12), MOB_Q<MG>(13), MOB_Q<MG>(14), MOB_Q<MG>(15), MOB_Q<MG>(16), MOB_Q<MG>(17), MOB_Q<MG>(18), MOB_Q<MG>(19), MOB_Q<MG>(20), MOB_Q<MG>(21), MOB_Q<MG>(22), MOB_Q<MG>(23), MOB_Q<MG>(24), MOB_Q<MG>(25), MOB_Q<MG>(26), MOB_Q<MG>(27)},
+            {MOB_Q<EG>(0), MOB_Q<EG>(1), MOB_Q<EG>(2), MOB_Q<EG>(3), MOB_Q<EG>(4), MOB_Q<EG>(5), MOB_Q<EG>(6), MOB_Q<EG>(7), MOB_Q<EG>(8), MOB_Q<EG>(9), MOB_Q<EG>(10), MOB_Q<EG>(11), MOB_Q<EG>(12), MOB_Q<EG>(13), MOB_Q<EG>(14), MOB_Q<EG>(15), MOB_Q<EG>(16), MOB_Q<EG>(17), MOB_Q<EG>(18), MOB_Q<EG>(19), MOB_Q<EG>(20), MOB_Q<EG>(21), MOB_Q<EG>(22), MOB_Q<EG>(23), MOB_Q<EG>(24), MOB_Q<EG>(25), MOB_Q<EG>(26), MOB_Q<EG>(27)}
+        };
+        // int MOBILITY_QUEEN[2][28] = {
+        //     {-22, -22, -20, -20, -22,   -14, -14, -10, -5, -4,
+        //      0, 0, 1, 1, 3,   3, 13, 13, 14, 18,
+        //      23, 18, 18, 18, 19,   19, 20, 21},
+        //     {-27, -25, -23, -21, -18,   -16, -12, -11, -10, -6,
+        //      -2, -1, 0, 1, 2,   2, 8, 9, 13, 21,
+        //      14, 15, 17, 18, 19,   16, 16, 17}
+        // };
     } params;
 
     //from https://www.chessprogramming.org/Simplified_Evaluation_Function

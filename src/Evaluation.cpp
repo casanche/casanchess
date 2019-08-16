@@ -317,6 +317,19 @@ int Evaluation::Evaluate(const Board& board) {
                     score.Add( sign * params.MOBILITY_ROOK[MG][pop],
                                sign * params.MOBILITY_ROOK[EG][pop] );
                 }
+                else if(pieceType == QUEEN) {
+                    Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color];
+                    //Bishop-like movement
+                    Bitboard blockers = board.AllPieces() ^ (board.Piece(color, BISHOP) | board.Piece(color, QUEEN));
+                    Bitboard diagonal = Attacks::AttacksSliding(BISHOP, square, blockers) & ~pawnRestrictions;
+                    //Rook-like movement
+                    blockers = board.AllPieces() ^ (board.Piece(color, ROOK) | board.Piece(color, QUEEN));
+                    Bitboard straight = Attacks::AttacksSliding(ROOK, square, blockers) & ~pawnRestrictions;
+
+                    int pop = PopCount(diagonal | straight);
+                    score.Add( sign * params.MOBILITY_QUEEN[MG][pop],
+                               sign * params.MOBILITY_QUEEN[EG][pop] );
+                }
             }
         }
     }
