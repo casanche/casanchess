@@ -23,26 +23,28 @@ namespace Evaluation {
     class Score;
 
     //Mobility formulas
+    #define CUBIC(f, a, b, c, d) (std::lrint( f*(a + b*mob + c*mob*mob + d*mob*mob*mob) )) //f*(a + bx + cx^2 + dx^3)
+
     template<GAME_PHASE ph>
     constexpr int MOB_N(U8 mob) {
         if constexpr(ph == MIDDLEGAME)
-            return -25.3 + 4.53*mob - 0.67*mob*mob - 0.0715*mob*mob*mob;
+            return CUBIC(1, -25.3, 4.53, -0.67, -0.0715);
         else
-            return -33.3 + 2.96*mob + 1.42*mob*mob - 0.141*mob*mob*mob;
+            return CUBIC(1, -33.3, 2.96, 1.42, -0.141);
     }
     template<GAME_PHASE ph>
     constexpr int MOB_B(U8 mob) {
         if constexpr(ph == MIDDLEGAME)
-            return -50.9 + 17.8*mob - 2*mob*mob + 0.0877*mob*mob*mob;
+            return CUBIC(1, -50.9, 17.8, -2, 0.0877);
         else
-            return -95 + 26.5*mob - 2.6*mob*mob + 0.0955*mob*mob*mob;
+            return CUBIC(1, -95, 26.5, -2.6, 0.0955);
     }
     template<GAME_PHASE ph>
     constexpr int MOB_R(U8 mob) {
         if constexpr(ph == MIDDLEGAME)
-            return std::lrint(-14.5 + 0.87*mob + 0.29*mob*mob - 0.0095*mob*mob*mob);
+            return CUBIC(1, -14.5, 0.87, 0.29, -0.0095);
         else
-            return std::lrint(-58.6 + 12.2*mob - 0.59*mob*mob + 0.0041*mob*mob*mob);
+            return CUBIC(1, -58.6, +12.2, -0.59, +0.0041);
     }
 
     //Precomputed tables
