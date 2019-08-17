@@ -72,13 +72,13 @@ namespace Evaluation {
     //Evaluation parameters for tuning
     const struct Parameters {
         int MATERIAL_VALUES[2][8] = {
-            {0, 95, 380, 385, 500, 1120, 0},
-            {0, 94, 340, 360, 600, 1120, 0}
+            {0, 98, 397, 385, 490, 1150, 0},
+            {0, 94, 345, 360, 600, 1150, 0}
         };
 
         int DOUBLED_PAWN[2] = {-15, -12};
         int PASSED_PAWN[2][8] = {  //[RANK]
-            {0,  0,  0,  6, 20,  35,  50, 0},
+            {0,  0,  0,  6, 18,  35,  50, 0},
             {0, 10, 18, 40, 55, 125, 185, 0}
         };
         int ISOLATED_PAWN[2][8] = {
@@ -86,14 +86,14 @@ namespace Evaluation {
             {0, -15, -12, -20, -15, -10, -5, 0}
         };
 
-        int ROOK_SEMIOPEN[2] = {25, 10};
-        int ROOK_OPEN[2] = {40, 0};
+        int ROOK_SEMIOPEN[2] = {26, 8};
+        int ROOK_OPEN[2] = {37, -6};
         int KING_SEMIOPEN[2] = {18, 0};
-        int KING_OPEN[2] = {35, 0};
+        int KING_OPEN[2] = {41, 6};
         int KING_SEMIOPEN_ADJACENT[2] = {8, -8};
         int KING_OPEN_ADJACENT[2] = {20, 0};
 
-        int BISHOP_PAIR[2] = {35, 50};
+        int BISHOP_PAIR[2] = {35, 52};
 
         int MOBILITY_KNIGHT[2][9] = {
             {MOB_N<MG>(0), MOB_N<MG>(1), MOB_N<MG>(2), MOB_N<MG>(3), MOB_N<MG>(4), MOB_N<MG>(5), MOB_N<MG>(6), MOB_N<MG>(7), MOB_N<MG>(8)},
