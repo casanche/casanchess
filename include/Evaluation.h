@@ -70,12 +70,12 @@ namespace Evaluation {
 
     bool AreHeavyPiecesOnBothSides(const Board& board);
     bool IsSemiopenFile(const Board& board, COLORS color, int square);
+    void PawnAttacks(const Board& board, Bitboard* pawnAttacks);
 
-    TaperedScore EvalRookOpen(const Board& board, COLORS color);
     TaperedScore EvalBishopPair(const Board &board, COLORS color);
-    
     TaperedScore EvalPawns(const Board& board);
     TaperedScore EvalPawnsCalculation(const Board& board, COLORS color);
+    TaperedScore EvalRookOpen(const Board& board, COLORS color);
 
     //Evaluation parameters for tuning
     const struct Parameters {

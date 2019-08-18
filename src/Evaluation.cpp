@@ -62,6 +62,8 @@ private:
 };
 
 int Evaluation::Score::TaperedCalculation(int mgScore, int egScore, int phase) {
+    assert(phase <= MAX_PHASEMATERIAL);
+
     int score = mgScore * phase + egScore * (MAX_PHASEMATERIAL - phase);
     score /= 2 * MAX_PHASEMATERIAL;
     return score;
@@ -104,52 +106,18 @@ bool Evaluation::IsSemiopenFile(const Board& board, COLORS color, int square) {
     return !( board.Piece(color, PAWN) & MaskFile[ File(square) ] );
 }
 
+void Evaluation::PawnAttacks(const Board& board, Bitboard* pawnAttacks) {
+    Bitboard thePawns = board.Piece(WHITE, PAWN);
+    pawnAttacks[WHITE] = (thePawns & ClearFile[FILEA]) << 7 | (thePawns & ClearFile[FILEH]) << 9;
+    thePawns = board.Piece(BLACK, PAWN);
+    pawnAttacks[BLACK] = (thePawns & ClearFile[FILEH]) >> 7 | (thePawns & ClearFile[FILEA]) >> 9;
+}
+
 TaperedScore Evaluation::EvalBishopPair(const Board &board, COLORS color) {
     TaperedScore score;
     if( (board.Piece(color, BISHOP) & LIGHT_SQUARES) && (board.Piece(color, BISHOP) & DARK_SQUARES) ) {
         score.mg = params.BISHOP_PAIR[MG];
         score.eg = params.BISHOP_PAIR[EG];
-    }
-    return score;
-}
-
-TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
-    TaperedScore score;
-    Bitboard bb = board.Piece(color, ROOK);
-    while(bb) {
-        int square = ResetLsb(bb);
-        //Semi-open files
-        if( IsSemiopenFile(board, color, square) ) {
-            score.mg += params.ROOK_SEMIOPEN[MG];
-            score.eg += params.ROOK_SEMIOPEN[EG];
-
-            COLORS enemyColor = (COLORS)!color;
-            Bitboard theKing = board.Piece(enemyColor, KING);
-            int file = File(square);
-            bool inKingFile = theKing & MaskFile[file];
-            bool inAdjacentKingFile = theKing & ADJACENT_FILES[file];
-            if(inKingFile) {
-                score.mg += params.KING_SEMIOPEN[MG];
-                score.eg += params.KING_SEMIOPEN[EG];
-            }
-            else if(inAdjacentKingFile) {
-                score.mg += params.KING_SEMIOPEN_ADJACENT[MG];
-                score.eg += params.KING_SEMIOPEN_ADJACENT[EG];
-            }
-            //Open Files
-            if( IsSemiopenFile(board, enemyColor, square) ) {
-                score.mg += params.ROOK_OPEN[MG];
-                score.eg += params.ROOK_OPEN[EG];
-                if(inKingFile) {
-                    score.mg += params.KING_OPEN[MG];
-                    score.eg += params.KING_OPEN[EG];
-                }
-                else if(inAdjacentKingFile) {
-                    score.mg += params.KING_OPEN_ADJACENT[MG];
-                    score.eg += params.KING_OPEN_ADJACENT[EG];
-                }
-            }
-        }
     }
     return score;
 }
@@ -259,6 +227,47 @@ TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLORS color) 
     return score;
 }
 
+TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
+    TaperedScore score;
+    Bitboard bb = board.Piece(color, ROOK);
+    while(bb) {
+        int square = ResetLsb(bb);
+        //Semi-open files
+        if( IsSemiopenFile(board, color, square) ) {
+            score.mg += params.ROOK_SEMIOPEN[MG];
+            score.eg += params.ROOK_SEMIOPEN[EG];
+
+            COLORS enemyColor = (COLORS)!color;
+            Bitboard theKing = board.Piece(enemyColor, KING);
+            int file = File(square);
+            bool inKingFile = theKing & MaskFile[file];
+            bool inAdjacentKingFile = theKing & ADJACENT_FILES[file];
+            if(inKingFile) {
+                score.mg += params.KING_SEMIOPEN[MG];
+                score.eg += params.KING_SEMIOPEN[EG];
+            }
+            else if(inAdjacentKingFile) {
+                score.mg += params.KING_SEMIOPEN_ADJACENT[MG];
+                score.eg += params.KING_SEMIOPEN_ADJACENT[EG];
+            }
+            //Open Files
+            if( IsSemiopenFile(board, enemyColor, square) ) {
+                score.mg += params.ROOK_OPEN[MG];
+                score.eg += params.ROOK_OPEN[EG];
+                if(inKingFile) {
+                    score.mg += params.KING_OPEN[MG];
+                    score.eg += params.KING_OPEN[EG];
+                }
+                else if(inAdjacentKingFile) {
+                    score.mg += params.KING_OPEN_ADJACENT[MG];
+                    score.eg += params.KING_OPEN_ADJACENT[EG];
+                }
+            }
+        }
+    }
+    return score;
+}
+
 int Evaluation::Evaluate(const Board& board) {
     Score score;
     int phase = 0;
@@ -270,16 +279,15 @@ int Evaluation::Evaluate(const Board& board) {
                (whitePawns-blackPawns) * params.MATERIAL_VALUES[EG][PAWN] );
 
     //Pawn attacks
-    Bitboard pawnAttacks[2];
-    Bitboard thePawns = board.Piece(WHITE, PAWN);
-    pawnAttacks[WHITE] = (thePawns & ClearFile[FILEA]) << 7 | (thePawns & ClearFile[FILEH]) << 9;
-    thePawns = board.Piece(BLACK, PAWN);
-    pawnAttacks[BLACK] = (thePawns & ClearFile[FILEH]) >> 7 | (thePawns & ClearFile[FILEA]) >> 9;
+    Bitboard pawnAttacks[2]; //[COLORS]
+    PawnAttacks(board, pawnAttacks);
 
-    //Heavy material, psqt and phase
+    //Heavy material, phase, psqt and mobility
     TaperedScore heavyMaterial[2];
     for(COLORS color : {WHITE, BLACK}) {
         const int sign = color == WHITE ? 1 : -1;
+        Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color]; //for mobility
+
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= KING; ++pieceType) {
             Bitboard bb = board.Piece(color, pieceType);
             int popcnt = PopCount(bb);
@@ -288,37 +296,45 @@ int Evaluation::Evaluate(const Board& board) {
             heavyMaterial[color].eg += params.MATERIAL_VALUES[EG][pieceType] * popcnt;
             //Phase
             phase += PHASE_WEIGHT[pieceType] * popcnt;
-            //Psqt
+            
             while(bb) {
                 int square = ResetLsb(bb);
-                int index = SQUARE_CONVERSION[color][square];
-                score.Add(sign * PSQT[pieceType][index], sign * PSQT_ENDGAME[pieceType][index]);
 
+                //Psqt
+                int index = SQUARE_CONVERSION[color][square];
+                score.Add(
+                    sign * PSQT[pieceType][index],
+                    sign * PSQT_ENDGAME[pieceType][index]
+                );
+
+                //Mobility
                 if(pieceType == KNIGHT) {
-                    Bitboard restrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color];
-                    Bitboard attacks = Attacks::AttacksKnights(square) & ~restrictions;
-                    int pop = PopCount(attacks);
-                    score.Add( sign * params.MOBILITY_KNIGHT[MG][pop],
-                               sign * params.MOBILITY_KNIGHT[EG][pop] );
+                    Bitboard attacks = Attacks::AttacksKnights(square) & ~pawnRestrictions;
+                    int mob = PopCount(attacks);
+                    score.Add(
+                        sign * params.MOBILITY_KNIGHT[MG][mob],
+                        sign * params.MOBILITY_KNIGHT[EG][mob]
+                    );
                 }
                 else if(pieceType == BISHOP) {
-                    Bitboard blockers = board.AllPieces() ^ board.Piece(color, QUEEN);
-                    Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color]; //first term not needed?
+                    Bitboard blockers = board.AllPieces() ^ (board.Piece(color, BISHOP) | board.Piece(color, QUEEN));
                     Bitboard attacks = Attacks::AttacksSliding(BISHOP, square, blockers) & ~pawnRestrictions;
-                    int pop = PopCount(attacks);
-                    score.Add( sign * params.MOBILITY_BISHOP[MG][pop],
-                               sign * params.MOBILITY_BISHOP[EG][pop] );
+                    int mob = PopCount(attacks);
+                    score.Add(
+                        sign * params.MOBILITY_BISHOP[MG][mob],
+                        sign * params.MOBILITY_BISHOP[EG][mob]
+                    );
                 }
                 else if(pieceType == ROOK) {
                     Bitboard blockers = board.AllPieces() ^ (board.Piece(color, ROOK) | board.Piece(color, QUEEN));
-                    Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color];
                     Bitboard attacks = Attacks::AttacksSliding(ROOK, square, blockers) & ~pawnRestrictions;
-                    int pop = PopCount(attacks);
-                    score.Add( sign * params.MOBILITY_ROOK[MG][pop],
-                               sign * params.MOBILITY_ROOK[EG][pop] );
+                    int mob = PopCount(attacks);
+                    score.Add(
+                        sign * params.MOBILITY_ROOK[MG][mob],
+                        sign * params.MOBILITY_ROOK[EG][mob]
+                    );
                 }
                 else if(pieceType == QUEEN) {
-                    Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color];
                     //Bishop-like movement
                     Bitboard blockers = board.AllPieces() ^ (board.Piece(color, BISHOP) | board.Piece(color, QUEEN));
                     Bitboard diagonal = Attacks::AttacksSliding(BISHOP, square, blockers) & ~pawnRestrictions;
@@ -326,13 +342,16 @@ int Evaluation::Evaluate(const Board& board) {
                     blockers = board.AllPieces() ^ (board.Piece(color, ROOK) | board.Piece(color, QUEEN));
                     Bitboard straight = Attacks::AttacksSliding(ROOK, square, blockers) & ~pawnRestrictions;
 
-                    int pop = PopCount(diagonal | straight);
-                    score.Add( sign * params.MOBILITY_QUEEN[MG][pop],
-                               sign * params.MOBILITY_QUEEN[EG][pop] );
+                    int mob = PopCount(diagonal | straight);
+                    score.Add(
+                        sign * params.MOBILITY_QUEEN[MG][mob],
+                        sign * params.MOBILITY_QUEEN[EG][mob]
+                    );
                 }
             }
-        }
-    }
+        } //pieceType
+    } //color
+
     score.Add     (heavyMaterial[WHITE]);
     score.Subtract(heavyMaterial[BLACK]);
 
