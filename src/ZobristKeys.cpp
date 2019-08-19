@@ -97,7 +97,8 @@ void ZobristKey::UpdateCastling(CASTLING_TYPE castlingType) {
 }
 
 //Pseudo RNG for 64-bitwords
-PRNG::PRNG() : m_mersenne(m_device()) {}
+//Random seed: m_mersenne(m_device())
+PRNG::PRNG() : m_mersenne(70) {}
 
 //Generate a random 64-bitword
 U64 PRNG::Random() {
