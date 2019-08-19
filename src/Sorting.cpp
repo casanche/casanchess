@@ -112,7 +112,7 @@ namespace {
                 if     (see > 1000) see = 1000;
                 else if(see < -1000) see = -1000;
                 see += 1000; //0-2000
-                const float factor = 255. / 2000;
+                const float factor = 255.f / 2000;
                 float score = see * factor;
 
                 assert(score >= 0 && score <= 255);

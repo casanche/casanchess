@@ -419,6 +419,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     for(auto move : moves) {
         moveNumber++;
         int score, reduction = 0;
+        int localExtension = 0;
 
         assert(move.MoveType());
 
@@ -433,11 +434,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         //     extension++;
 
         // ----- Recapture extension ------
-        // if(move.IsCapture() && isPV
-        //     && move.CapturedType() == board.LastMove().CapturedType()
-        //     && move.ToSq() == board.LastMove().ToSq()
-        // )
-        //     extension++;
+        if(isPV && !extension && move.MoveType() == CAPTURE
+            && move.ToSq() == board.LastMove().ToSq()
+            && move.CapturedType() == board.LastMove().CapturedType()
+        )
+            localExtension++;
 
         board.MakeMove(move);
         m_ply++; m_nodes++;
@@ -474,7 +475,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // }
 
         // -------- Principal Variation Search -----------
-        int extendedDepth = depth - 1 + extension;
+        int extendedDepth = depth - 1 + extension + localExtension;
         int reducedDepth = extendedDepth - reduction;
         if(moveNumber == 1) {
             score = -NegaMax(board, extendedDepth, -beta, -alpha); //full window, no reduction
