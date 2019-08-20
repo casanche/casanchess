@@ -333,11 +333,14 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
     }
 
+    //Calculate evaluation once at start
+    int eval = Evaluation::Evaluate(board);
+
     // --- Static null-move pruning (aka Reverse futility) ---
     if(depth <= 3 && !isPV && !inCheck
         && Evaluation::AreHeavyPiecesOnBothSides(board)
     ) {
-        int evalMargin = Evaluation::Evaluate(board) - STATIC_MARGIN[depth];
+        int evalMargin = eval - STATIC_MARGIN[depth];
         if(evalMargin >= beta)
             return evalMargin;
     }
@@ -364,12 +367,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Null-move pruning -----------
     if(!TURNOFF_NULLMOVE_PRUNING
+        && eval >= beta  //very good score
         && m_nullmoveAllowed
         // && board.LastMove().MoveType != NULLMOVE
         && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=12)  //enough depth
         && !inCheck
         && Evaluation::AreHeavyPiecesOnBothSides(board)  //there are pieces on the board (to avoid zugzwang in K+P endgames)
-        && Evaluation::Evaluate(board) >= beta           //very good score
     ) {
         #ifdef DEBUG
         debug_nullmove++;
