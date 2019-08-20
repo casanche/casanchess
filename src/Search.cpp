@@ -115,7 +115,7 @@ void Search::IterativeDeepening(Board &board) {
             for(int depth = 1; depth <= m_depth; ++depth) {
                 TTEntry *ttEntry = m_tt.ProbeEntry(newBoard.ZKey(), 0);
                 if(!ttEntry) continue;
-                // if(!ttEntry->bestMove.MoveType()) break;
+                if(ttEntry->bestMove.MoveType() == NULLMOVE) break;
 
                 Move bestMove = ttEntry->bestMove;
                 PV += bestMove.Notation();
@@ -389,8 +389,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_ply--;
         m_nullmoveAllowed = true;
 
-        if(nullScore >= beta)
+        if(nullScore >= beta) {
+            m_tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_counter);
             return nullScore;   //nullScore or beta
+        }
     }
     //Allow non-consecutive null-move pruning
     m_nullmoveAllowed = true;
