@@ -370,7 +370,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         && eval >= beta  //very good score
         && m_nullmoveAllowed
         // && board.LastMove().MoveType != NULLMOVE
-        && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=12)  //enough depth
+        && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=9)  //enough depth
         && !inCheck
         && Evaluation::AreHeavyPiecesOnBothSides(board)  //there are pieces on the board (to avoid zugzwang in K+P endgames)
     ) {
@@ -382,7 +382,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_ply++;
         m_nullmoveAllowed = false;
 
-        int nullDepth = depth - 1 - NULLMOVE_REDUCTION_FACTOR - (depth>=12);
+        int nullDepth = depth - 1 - NULLMOVE_REDUCTION_FACTOR - (depth>=9);
         int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1);
 
         board.TakeNull();
