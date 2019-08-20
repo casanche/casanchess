@@ -68,7 +68,7 @@ namespace Evaluation {
 
     int Evaluate(const Board& board);
 
-    bool AreHeavyPiecesOnBothSides(const Board& board);
+    bool AreHeavyPieces(const Board& board);
     bool IsSemiopenFile(const Board& board, COLORS color, int square);
     void PawnAttacks(const Board& board, Bitboard* pawnAttacks);
 

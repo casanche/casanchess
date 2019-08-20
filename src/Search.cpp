@@ -338,7 +338,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --- Static null-move pruning (aka Reverse futility) ---
     if(depth <= 3 && !isPV && !inCheck
-        && Evaluation::AreHeavyPiecesOnBothSides(board)
+        && Evaluation::AreHeavyPieces(board)
     ) {
         int evalMargin = eval - STATIC_MARGIN[depth];
         if(evalMargin >= beta)
@@ -372,7 +372,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // && board.LastMove().MoveType != NULLMOVE
         && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=9)  //enough depth
         && !inCheck
-        && Evaluation::AreHeavyPiecesOnBothSides(board)  //there are pieces on the board (to avoid zugzwang in K+P endgames)
+        && Evaluation::AreHeavyPieces(board)  //active player has pieces on the board (to avoid zugzwang in K+P endgames)
     ) {
         #ifdef DEBUG
         debug_nullmove++;

@@ -97,9 +97,9 @@ void Evaluation::Init() {
     }
 }
 
-bool Evaluation::AreHeavyPiecesOnBothSides(const Board& board) {
-    return board.Piece(WHITE,ALL_PIECES) ^ (board.Piece(WHITE,PAWN) | board.Piece(WHITE,KING))
-        && board.Piece(BLACK,ALL_PIECES) ^ (board.Piece(BLACK,PAWN) | board.Piece(BLACK,KING));
+bool Evaluation::AreHeavyPieces(const Board& board) {
+    COLORS color = board.ActivePlayer();
+    return board.Piece(color, ALL_PIECES) ^ (board.Piece(color, PAWN) | board.Piece(color, KING));
 }
 
 bool Evaluation::IsSemiopenFile(const Board& board, COLORS color, int square) {
