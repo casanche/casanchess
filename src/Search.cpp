@@ -21,7 +21,7 @@ const int NULLMOVE_REDUCTION_FACTOR = 2;
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
 
-const int STATIC_MARGIN[4] = {0, 150, 300, 450};
+const int STATIC_MARGIN[4] = {0, 150, 300, 500};
 
 // #define SEARCH_VERBOSE
 // #define DEBUG_SEARCH
