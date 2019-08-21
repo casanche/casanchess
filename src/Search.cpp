@@ -458,8 +458,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             //   && !board.IsCheck()
         ) {
             reduction++;
-            if(m_ply >= 6 && depth >= 3)
-                reduction++;
         }
 
         // ------- Futility pruning ---------
