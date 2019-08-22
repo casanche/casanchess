@@ -2,6 +2,7 @@
 
 #include "Board.h"
 #include "Evaluation.h"
+#include "Hash.h"
 
 #include <iostream>
 #include <string>
@@ -32,12 +33,15 @@ void Uci::Launch() {
         stream >> std::skipws >> token;
 
         if(token == "uci") {
-            std::cout << "id name " << ENGINE_NAME << " " << VERSION_MAJOR << "."
-                      << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
+            std::cout << "id name " << ENGINE_NAME << " " << VERSION_MAJOR << "." << VERSION_MINOR;
+            if(VERSION_PATCH != "0")
+                std::cout << "." << VERSION_PATCH;
+            std::cout << std::endl;
             std::cout << "id author " << AUTHOR << std::endl;
             std::cout << std::endl;
 
             //Options
+            std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
 
             std::cout << "uciok" << std::endl;
         }
@@ -48,7 +52,7 @@ void Uci::Launch() {
             std::cout << "readyok" << std::endl;
         }
         else if(token == "setoption") {
-
+            SetOption(stream);
         }
         else if(token == "ucinewgame") {
             m_board.Init();
@@ -152,10 +156,6 @@ void Uci::Go(std::istringstream &stream) {
     thread.detach();
 }
 
-void Uci::StartSearch() {
-    m_search.IterativeDeepening(m_board);
-}
-
 void Uci::Position(std::istringstream &stream) {
     std::string token;
 
@@ -182,4 +182,32 @@ void Uci::Position(std::istringstream &stream) {
         m_board.Print();
     }
 
+}
+
+void Uci::SetOption(std::istringstream &stream) {
+    std::string token;
+
+    stream >> token; //should be 'name'
+    if(token != "name")
+        return;
+
+    while(stream >> token) {
+        if(token == "Hash") {
+            stream >> token; //should be 'value'
+            if(token != "value")
+                return;
+
+            stream >> token;
+            P(token);
+            Hash::tt.SetSize( stoi(token) );
+        }
+        else {
+            std::cout << "Unknown option: " << token << std::endl;
+            return;
+        }
+    }
+}
+
+void Uci::StartSearch() {
+    m_search.IterativeDeepening(m_board);
 }

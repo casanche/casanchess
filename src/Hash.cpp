@@ -1,5 +1,9 @@
 #include "Hash.h"
 
+// Extern declarations
+TT Hash::tt;
+PawnHash Hash::pawnHash;
+
 // -- Transposition table
 
 void TTEntry::Clear() {
@@ -12,8 +16,7 @@ void TTEntry::Clear() {
 }
 
 TT::TT() {
-    m_entries = new TTEntry[MAX_HASH_ENTRIES];
-    Clear();
+    SetSize(DEFAULT_HASH_SIZE);
 }
 
 TT::~TT() {
@@ -21,18 +24,17 @@ TT::~TT() {
 }
 
 void TT::Clear() {
-    for(U64 i=0; i < MAX_HASH_ENTRIES; ++i) {
+    for(U64 i=0; i < m_size; ++i) {
         m_entries[i].Clear();
     }
 }
 
 void TT::AddEntry(U64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age) {
-
     assert(bestMove.MoveType());
     assert(abs(score) <= INFINITE_SCORE);
     assert(depth <= MAX_DEPTH);
 
-    U64 index = zkey % MAX_HASH_ENTRIES;
+    U64 index = zkey % m_size;
 
     //Replacement scheme
     if(age != m_entries[index].age || depth >= m_entries[index].depth) {
@@ -49,7 +51,7 @@ void TT::AddEntry(U64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int dep
 }
 
 TTEntry* TT::ProbeEntry(U64 zkey, int depth) {
-    U64 index = zkey % MAX_HASH_ENTRIES;
+    U64 index = zkey % m_size;
     TTEntry entry = m_entries[index];
     if(entry.zkey == zkey && entry.depth >= depth) {
         return &m_entries[index];
@@ -68,16 +70,23 @@ int TT::OccupancyPerMil() {
 
 U64 TT::NumEntries() {
     U64 count = 0;
-    for(U64 i = 0; i < MAX_HASH_ENTRIES; ++i) {
-        // count += (m_entries[i].type != TTENTRY_TYPE::NONE);
+    for(U64 i = 0; i < m_size; ++i) {
         count += (m_entries[i].zkey != 0);
     }
     return count;
 }
 
-// -- Pawn-hash
+void TT::SetSize(int size) {  // size in MB
+    const U64 hashEntries = size * (1024*1024) / sizeof(TTEntry);
 
-PawnHash Hash::pawnHash;
+    delete [] m_entries;
+    m_entries = new TTEntry[hashEntries];
+    
+    m_size = hashEntries;
+    Clear();
+}
+
+// -- Pawn-hash
 
 void PawnEntry::Clear() {
     zkey = 0;

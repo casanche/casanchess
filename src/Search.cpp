@@ -43,7 +43,7 @@ Search::Search() {
     m_counter = 0;
 
     ClearSearch();
-    m_tt.Clear();
+    Hash::tt.Clear();
     Hash::pawnHash.Clear();
 }
 
@@ -113,7 +113,7 @@ void Search::IterativeDeepening(Board &board) {
             assert(newBoard == m_initialBoard);
             PV = "";
             for(int depth = 1; depth <= m_depth; ++depth) {
-                TTEntry *ttEntry = m_tt.ProbeEntry(newBoard.ZKey(), 0);
+                TTEntry *ttEntry = Hash::tt.ProbeEntry(newBoard.ZKey(), 0);
                 if(!ttEntry) continue;
                 if(ttEntry->bestMove.MoveType() == NULLMOVE) break;
 
@@ -159,7 +159,7 @@ void Search::UciOutput(std::string PV) {
     std::cout << " nodes " << m_nodes;
     std::cout << " nps " << m_nps;
     if(m_elapsedTime > 1000)
-        std::cout << " hashfull " << m_tt.OccupancyPerMil();
+        std::cout << " hashfull " << Hash::tt.OccupancyPerMil();
     std::cout << " pv " << PV;
     std::cout << std::endl;
 }
@@ -194,7 +194,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     MoveGenerator gen;
     MoveList moves = gen.GenerateMoves(board);
 
-    SortMoves(board, moves, m_tt, m_heuristics, m_ply);
+    SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
 
     int count = 0;
     for(size_t i = 0; i < moves.size(); i++) {
@@ -255,7 +255,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         m_bestMove = bestMove;
         m_bestScore = alpha;
 
-        m_tt.AddEntry(board.ZKey(), m_bestScore, TTENTRY_TYPE::EXACT, m_bestMove, depth, m_counter);
+        Hash::tt.AddEntry(board.ZKey(), m_bestScore, TTENTRY_TYPE::EXACT, m_bestMove, depth, m_counter);
     }
 
     return alpha;
@@ -319,7 +319,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     int bestScore = -INFINITE_SCORE;
     int alphaOriginal = alpha; //for later calculation of TTENTRY_TYPE
     //ttEntry access
-    TTEntry* ttEntry = m_tt.ProbeEntry(board.ZKey(), depth);
+    TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), depth);
     if(ttEntry) {
         #ifdef DEBUG
         debug_tthits++;
@@ -390,7 +390,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_nullmoveAllowed = true;
 
         if(nullScore >= beta) {
-            m_tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_counter);
+            Hash::tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_counter);
             return nullScore;   //nullScore or beta
         }
     }
@@ -418,7 +418,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     // --------- Sort moves -----------
-    SortMoves(board, moves, m_tt, m_heuristics, m_ply);
+    SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
 
     int moveNumber = 0;
     for(auto move : moves) {
@@ -504,7 +504,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
                 debug_negaMax_cutoffs++;
                 #endif
 
-                m_tt.AddEntry(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_counter);
+                Hash::tt.AddEntry(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_counter);
 
                 //update heuristics
                 if( move.IsQuiet() ) {
@@ -521,7 +521,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     } //move loop
 
     TTENTRY_TYPE type = (alpha > alphaOriginal) ? TTENTRY_TYPE::EXACT : TTENTRY_TYPE::UPPER_BOUND;
-    m_tt.AddEntry(board.ZKey(), alpha, type, bestMove, depth, m_counter); //alpha or bestScore?
+    Hash::tt.AddEntry(board.ZKey(), alpha, type, bestMove, depth, m_counter); //alpha or bestScore?
 
     return alpha;
 }
@@ -552,7 +552,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
     
     // --------- Transposition table lookup -----------
-    TTEntry* ttEntry = m_tt.ProbeEntry(board.ZKey(), 0);
+    TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), 0);
     if(ttEntry) {
         #ifdef DEBUG
         debug_quiescence_tthits++;
@@ -679,7 +679,7 @@ void Search::ProbeBoard() {
 
     for(auto move : moves)  {
         board.MakeMove(move);
-        TTEntry* ttEntry = m_tt.ProbeEntry(board.ZKey(), 0);
+        TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), 0);
         if(ttEntry) {
             P(move.Notation() << " " << ttEntry->type << "\t" << ttEntry->score);
         }
@@ -702,6 +702,6 @@ void Search::ShowDebugInfo() {
         << " (" << std::setprecision(1) << std::fixed << (float)debug_negaMax_generation / debug_negaMax * 100 << "%)");
     P("\t NegaMax beta cutoffs " << debug_negaMax_cutoffs << " / " << debug_negaMax \
         << " (" << std::setprecision(1) << std::fixed << (float)debug_negaMax_cutoffs / debug_negaMax * 100 << "%)");
-    P("\t TT fill " << m_tt.NumEntries() << " / " << MAX_HASH_ENTRIES \
-        << " (" << std::setprecision(1) << std::fixed << (float)m_tt.NumEntries() / MAX_HASH_ENTRIES * 100 << "%)");
+    P("\t TT fill " << Hash::tt.NumEntries() << " / " << Hash::tt.Size() \
+        << " (" << std::setprecision(1) << std::fixed << (float)Hash::tt.NumEntries() / Hash::tt.Size() * 100 << "%)");
 }

@@ -82,8 +82,6 @@ private:
 
     //Fundamental variables
     Board m_initialBoard;
-    //Hash
-    TT m_tt;
 
     //Info variables
     int m_depth;

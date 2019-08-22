@@ -25,8 +25,7 @@ struct TTEntry {
     void Clear();
 };
 
-const int HASH_SIZE_MB = 16;
-constexpr uint MAX_HASH_ENTRIES = HASH_SIZE_MB * (1024*1024) / sizeof(TTEntry);
+const uint DEFAULT_HASH_SIZE = 16;
 
 class TT {
 public:
@@ -37,9 +36,12 @@ public:
     TTEntry* ProbeEntry(U64 zkey, int depth);
     int OccupancyPerMil();
     U64 NumEntries();
+    void SetSize(int size);
+    U64 Size() { return m_size; };
 private:
 
     TTEntry* m_entries;
+    U64 m_size;
 };
 
 // =====================
@@ -67,6 +69,7 @@ private:
 };
 
 namespace Hash {
+    extern TT tt;
     extern PawnHash pawnHash;
 }
 
