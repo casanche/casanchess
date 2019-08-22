@@ -10,8 +10,10 @@
 ////https://ucichessengine.wordpress.com/2011/03/16/description-of-uci-protocol/
 
 namespace {
+    const std::string ENGINE_NAME = "Casanchess";
+    const std::string AUTHOR = "Carlos Sanchez Mayordomo";
     const std::string VERSION_MAJOR = "0";
-    const std::string VERSION_MINOR = "0";
+    const std::string VERSION_MINOR = "5";
     const std::string VERSION_PATCH = "0";
 }
 
@@ -30,9 +32,9 @@ void Uci::Launch() {
         stream >> std::skipws >> token;
 
         if(token == "uci") {
-            std::cout << "id name Casanchess " << VERSION_MAJOR << "."
+            std::cout << "id name " << ENGINE_NAME << " " << VERSION_MAJOR << "."
                       << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
-            std::cout << "id author Carlos Sanchez Mayordomo" << std::endl;
+            std::cout << "id author " << AUTHOR << std::endl;
             std::cout << std::endl;
 
             //Options
