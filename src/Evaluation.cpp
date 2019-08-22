@@ -102,6 +102,12 @@ bool Evaluation::AreHeavyPieces(const Board& board) {
     return board.Piece(color, ALL_PIECES) ^ (board.Piece(color, PAWN) | board.Piece(color, KING));
 }
 
+bool Evaluation::InsufficientMaterial(const Board &board, int whitePawns, int blackPawns) {
+    return !whitePawns && !blackPawns  //no pawns
+        && PopCount( board.AllPieces() ) == 3  //one heavy piece (ignoring kings)...
+        && PopCount( board.Piece(WHITE, KNIGHT) | board.Piece(WHITE, BISHOP) | board.Piece(BLACK, KNIGHT) | board.Piece(BLACK, BISHOP) );  //...knight or bishop
+}
+
 bool Evaluation::IsSemiopenFile(const Board& board, COLORS color, int square) {
     return !( board.Piece(color, PAWN) & MaskFile[ File(square) ] );
 }
@@ -275,15 +281,20 @@ int Evaluation::Evaluate(const Board& board) {
     //Pawn material
     int whitePawns = PopCount(board.Piece(WHITE,PAWN));
     int blackPawns = PopCount(board.Piece(BLACK,PAWN));
-    score.Add( (whitePawns-blackPawns) * params.MATERIAL_VALUES[MG][PAWN],
-               (whitePawns-blackPawns) * params.MATERIAL_VALUES[EG][PAWN] );
+    score.Add(
+        (whitePawns-blackPawns) * params.MATERIAL_VALUES[MG][PAWN],
+        (whitePawns-blackPawns) * params.MATERIAL_VALUES[EG][PAWN]
+    );
+
+    //Automatic draw
+    if(InsufficientMaterial(board, whitePawns, blackPawns))
+        return 0;
 
     //Pawn attacks
     Bitboard pawnAttacks[2]; //[COLORS]
     PawnAttacks(board, pawnAttacks);
 
     //Heavy material, phase, psqt and mobility
-    TaperedScore heavyMaterial[2];
     for(COLORS color : {WHITE, BLACK}) {
         const int sign = color == WHITE ? 1 : -1;
         Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color]; //for mobility
@@ -292,8 +303,10 @@ int Evaluation::Evaluate(const Board& board) {
             Bitboard bb = board.Piece(color, pieceType);
             int popcnt = PopCount(bb);
             //Material
-            heavyMaterial[color].mg += params.MATERIAL_VALUES[MG][pieceType] * popcnt;
-            heavyMaterial[color].eg += params.MATERIAL_VALUES[EG][pieceType] * popcnt;
+            score.Add(
+                sign * params.MATERIAL_VALUES[MG][pieceType] * popcnt,
+                sign * params.MATERIAL_VALUES[EG][pieceType] * popcnt
+            );
             //Phase
             phase += PHASE_WEIGHT[pieceType] * popcnt;
             
@@ -351,13 +364,6 @@ int Evaluation::Evaluate(const Board& board) {
             }
         } //pieceType
     } //color
-
-    score.Add     (heavyMaterial[WHITE]);
-    score.Subtract(heavyMaterial[BLACK]);
-
-    //Insufficient material
-    if(!whitePawns && !blackPawns && (heavyMaterial[WHITE].mg + heavyMaterial[BLACK].mg) < 400)
-        return 0;
 
     //Pawns
     score.Add( EvalPawns(board) );
