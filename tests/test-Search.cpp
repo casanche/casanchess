@@ -126,4 +126,16 @@ TEST_F(ShortSearch, RG15_weirdMove) {
     EXPECT_LE(search.ElapsedTime(), time);
 }
 // Other engine eval raise. c5 +0.12 d13/3s
-//r1bqr1k1/ppp2ppp/3p1n2/4n3/2PNP3/2P2P2/P3B1PP/1RBQ1RK1 b - - 1 11
+TEST_F(ShortSearch, RG16) {
+    board.SetFen("r1bqr1k1/ppp2ppp/3p1n2/4n3/2PNP3/2P2P2/P3B1PP/1RBQ1RK1 b - - 1 11");
+    search.FixDepth(depth);
+    search.IterativeDeepening(board);
+    EXPECT_LE(search.ElapsedTime(), time);
+}
+// Failed with e5 +1.99 d10/2s
+TEST_F(ShortSearch, RG17) {
+    board.SetFen("2b3r1/6rk/2NR3p/1pN2p2/4Pp1P/1PP2Pn1/P5PK/4R3 w - - 0 41");
+    search.FixDepth(depth);
+    search.IterativeDeepening(board);
+    EXPECT_LE(search.ElapsedTime(), time);
+}
