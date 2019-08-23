@@ -452,7 +452,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if( !TURNOFF_LMR
               && m_ply >= 3
               && depth >= 2         //avoid negative depths
-              && extension == 0     //not in check
+              && !extension && !localExtension     //no extensions (including not in check)
               && moves.size() >= 6
               && move.Score() == 0  //uninteresting move
             //   && !board.IsCheck()
