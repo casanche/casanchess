@@ -345,26 +345,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             return evalMargin;
     }
 
-    // ------- Futility pruning ---------
-    // if( !TURNOFF_FUTILITY
-    //     && depth == 1       //frontier (d=1) and pre-frontier (d=2)
-    //     && !inCheck
-    //     && board.LastMove().Score() == 0  //uninteresting move
-    //     && !IsMateValue(alpha)
-    // ) {
-    //     int score = Evaluation::Evaluate(board);
-    //     const int futilityMargin[2] = {250, 450};
-    //     if( alpha > score + futilityMargin[0] )
-    //         return QuiescenceSearch(board, alpha, beta);
-    // }
-
-    // --------- Razoring -----------
-    // if(depth == 2 && !inCheck && !isPV && !m_nullmoveAllowed) {
-    //     int score = Evaluation::Evaluate(board);
-    //     if(score >= beta + RAZORING_DELTA)
-    //         return score;
-    // }
-
     // --------- Null-move pruning -----------
     if(!TURNOFF_NULLMOVE_PRUNING
         && eval >= beta  //very good score
@@ -420,6 +400,16 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // --------- Sort moves -----------
     SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
 
+    // ------- Futility pruning --------
+    //Prune quiet moves in the loop?
+    bool doFutility = false;
+    if (depth <= 2 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
+        const int margin[3] = {0, 300, 500};
+        if(eval + margin[depth] < alpha) {
+            doFutility = true;
+        }
+    }
+
     int moveNumber = 0;
     for(auto move : moves) {
         moveNumber++;
@@ -431,6 +421,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         #ifdef DEBUG_NEGAMAX
         P("  NegamaxLoop, ply " << m_ply << " move: " << move.Notation());
         #endif
+
+        // ------- Futility pruning --------
+        //Don't prune: hash move, promotions, SEE > 0 captures
+        if(doFutility && move.Score() < 251) {
+            continue;
+        }
 
         // ---- Pawn to 7th/8th extension -----
         // if(move.PieceType() == PAWN
@@ -448,18 +444,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         board.MakeMove(move);
         m_ply++; m_nodes++;
 
-        //-------- Late Move Reductions ----------
-        if( !TURNOFF_LMR
-              && m_ply >= 3
-              && depth >= 2         //avoid negative depths
-              && !extension && !localExtension     //no extensions (including not in check)
-              && moves.size() >= 6
-              && move.Score() == 0  //uninteresting move
-            //   && !board.IsCheck()
-        ) {
-            reduction++;
-        }
-
         // ------- Futility pruning ---------
         // m_futility = false;
         // P( !IsMateValue(alpha) );
@@ -476,6 +460,18 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         //         m_futility = true;
         //         // return QuiescenceSearch(board, alpha, beta);
         // }
+
+        //-------- Late Move Reductions ----------
+        if( !TURNOFF_LMR
+              && m_ply >= 3
+              && depth >= 2         //avoid negative depths
+              && !extension && !localExtension     //no extensions (including not in check)
+              && moves.size() >= 6
+              && move.Score() == 0  //uninteresting move
+            //   && !board.IsCheck()
+        ) {
+            reduction++;
+        }
 
         // -------- Principal Variation Search -----------
         int extendedDepth = depth - 1 + extension + localExtension;
