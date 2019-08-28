@@ -345,6 +345,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             return evalMargin;
     }
 
+    // --------- Razoring -------------
+    if(depth == 3 && eval + 1150 <= alpha && !isPV && !extension && Evaluation::AreHeavyPieces(board))
+    {
+        depth--;
+    }
+
     // --------- Null-move pruning -----------
     if(!TURNOFF_NULLMOVE_PRUNING
         && eval >= beta  //very good score
