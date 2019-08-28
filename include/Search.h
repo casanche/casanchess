@@ -58,7 +58,7 @@ public:
     Move BestMove() const { return m_bestMove; };
 
     //Debug
-    void ProbeBoard();
+    void ProbeBoard(Board& board);
 
 private:
     int QuiescenceSearch(Board &board, int alpha, int beta);
@@ -79,9 +79,6 @@ private:
     int m_allocatedTime;
     int m_forcedTime;
     U64 m_forcedNodes;
-
-    //Fundamental variables
-    Board m_initialBoard;
 
     //Info variables
     int m_depth;

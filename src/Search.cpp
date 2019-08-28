@@ -47,10 +47,6 @@ Search::Search() {
     Hash::pawnHash.Clear();
 }
 
-Search::Search(Board board) : m_initialBoard(board) {
-    Search();
-}
-
 void Search::ClearSearch() {
     m_elapsedTime = 0;
     m_nodes = 0;
@@ -67,7 +63,6 @@ void Search::ClearSearch() {
 }
 
 void Search::IterativeDeepening(Board &board) {
-    m_initialBoard = board;
     ++m_counter;
 
     ClearSearch();
@@ -92,13 +87,13 @@ void Search::IterativeDeepening(Board &board) {
             beta  =  INFINITE_SCORE;
         }
 
-        score = RootMax(m_initialBoard, m_depth, alpha, beta);
+        score = RootMax(board, m_depth, alpha, beta);
         
         //Out of aspiration bounds. Repeat search with infinite limits
         while(score <= alpha || score >= beta) {
             alpha = -INFINITE_SCORE;
             beta  = INFINITE_SCORE;
-            score = RootMax(m_initialBoard, m_depth, alpha, beta);
+            score = RootMax(board, m_depth, alpha, beta);
         }
 
         //Filling variables
@@ -109,8 +104,8 @@ void Search::IterativeDeepening(Board &board) {
         std::string PV = m_bestMove.Notation();
         bool showPV = 1;
         if(showPV) {
-            Board newBoard = m_initialBoard;
-            assert(newBoard == m_initialBoard);
+            Board newBoard = board;
+            assert(newBoard == board);
             PV = "";
             for(int depth = 1; depth <= m_depth; ++depth) {
                 TTEntry *ttEntry = Hash::tt.ProbeEntry(newBoard.ZKey(), 0);
@@ -124,9 +119,6 @@ void Search::IterativeDeepening(Board &board) {
                 newBoard.MakeMove(bestMove);
             }
 
-            // Print move at depth i
-            // int sign = (m_initialBoard.ActivePlayer() == WHITE) ? +1 : -1;
-            // P( m_depth << "\t"<< CentipawnsToString(m_bestScore * sign) << "\t" << m_nodes << "\t" << m_elapsedTime << "\t" << PV );
         }
 
         if(m_stop)
@@ -673,9 +665,7 @@ void Search::AllocateLimits(Board &board, Limits limits) {
         std::cout << "info string AllocateTime " <<  myTime << " " << yourTime << " " << m_allocatedTime << std::endl;
 }
 
-void Search::ProbeBoard() {
-    Board board = m_initialBoard;
-
+void Search::ProbeBoard(Board& board) {
     MoveGenerator gen;
     MoveList moves = gen.GenerateMoves(board);
 

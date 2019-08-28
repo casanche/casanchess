@@ -20,7 +20,7 @@ namespace {
 
 Uci::Uci() :
     m_board(Board()),
-    m_search(Search(m_board))
+    m_search(Search())
 {}
 
 void Uci::Launch() {
@@ -97,7 +97,7 @@ void Uci::Launch() {
             m_board.Mirror();
         }
         else if(token == "probe") {
-            m_search.ProbeBoard();
+            m_search.ProbeBoard(m_board);
         }
         else if(token == "print") {
             m_board.Print();
@@ -179,7 +179,7 @@ void Uci::Position(std::istringstream &stream) {
             m_board.MakeMove(token);
         }
 
-        m_board.Print();
+        // m_board.Print();
     }
 
 }
