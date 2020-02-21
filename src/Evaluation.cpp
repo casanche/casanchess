@@ -22,12 +22,20 @@ const int PHASE_WEIGHT[8] = {
     0 //KING
 };
 
+const int KS_BONUS_PIECETYPE[2][8] = {
+    {0, 0, 40, 40, 60, 100, 0},
+    {0, 0, 10, 10, 20, 30, 0}
+}; //[INNER/OUTER][PIECE_TYPE]
+
 //Precomputed tables
 Bitboard Evaluation::ADJACENT_FILES[8] = {0};
 Bitboard Evaluation::ADJACENT_RANKS[8] = {0};
 Bitboard Evaluation::PASSED_PAWN_FRONT[2][64] = {{0}};
 Bitboard Evaluation::PASSED_PAWN_SIDES[2][64] = {{0}};
 Bitboard Evaluation::PASSED_PAWN_AREA[2][64] = {{0}};
+Bitboard Evaluation::KING_INNER_RING[64] = {0};
+Bitboard Evaluation::KING_OUTER_RING[64] = {0};
+Bitboard Evaluation::KING_SAFETY_TABLE[128] = {0};
 
 class Evaluation::Score {
 public:
@@ -95,6 +103,21 @@ void Evaluation::Init() {
         PASSED_PAWN_AREA[WHITE][square] = PASSED_PAWN_FRONT[WHITE][square] | PASSED_PAWN_SIDES[WHITE][square];
         PASSED_PAWN_AREA[BLACK][square] = PASSED_PAWN_FRONT[BLACK][square] | PASSED_PAWN_SIDES[BLACK][square];
     }
+    //King inner and outer rings
+    for(int square = 0; square < 64; square++) {
+        KING_INNER_RING[square] = Attacks::AttacksKing(square);
+        //Outer ring is the sum of the attacks from each square of the inner ring, minus the inner ring and the king square
+        Bitboard bb = KING_INNER_RING[square];
+        while(bb) {
+            int innerSquare = ResetLsb(bb);
+            KING_OUTER_RING[square] |= Attacks::AttacksKing(innerSquare);
+        }
+        KING_OUTER_RING[square] ^= KING_INNER_RING[square] | SquareBB(square);
+    }
+    //King safety
+    for(int i = 0; i < 128; i++) {
+        KING_SAFETY_TABLE[i] = Evaluation::Sigmoid(i, KS_MAXBONUS, KS_MIDPOINT, KS_SLOPE);
+    }
 }
 
 bool Evaluation::AreHeavyPieces(const Board& board) {
@@ -112,11 +135,11 @@ bool Evaluation::IsSemiopenFile(const Board& board, COLORS color, int square) {
     return !( board.Piece(color, PAWN) & MaskFile[ File(square) ] );
 }
 
-void Evaluation::PawnAttacks(const Board& board, Bitboard* pawnAttacks) {
+void Evaluation::PawnAttacks(const Board& board, Bitboard attacksMobility[2][8]) {
     Bitboard thePawns = board.Piece(WHITE, PAWN);
-    pawnAttacks[WHITE] = (thePawns & ClearFile[FILEA]) << 7 | (thePawns & ClearFile[FILEH]) << 9;
+    attacksMobility[WHITE][PAWN] = (thePawns & ClearFile[FILEA]) << 7 | (thePawns & ClearFile[FILEH]) << 9;
     thePawns = board.Piece(BLACK, PAWN);
-    pawnAttacks[BLACK] = (thePawns & ClearFile[FILEH]) >> 7 | (thePawns & ClearFile[FILEA]) >> 9;
+    attacksMobility[BLACK][PAWN] = (thePawns & ClearFile[FILEH]) >> 7 | (thePawns & ClearFile[FILEA]) >> 9;
 }
 
 int Evaluation::Phase(const Board& board) {
@@ -138,6 +161,37 @@ TaperedScore Evaluation::EvalBishopPair(const Board &board, COLORS color) {
         score.eg = params.BISHOP_PAIR[EG];
     }
     return score;
+}
+
+void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][8], Score& score) {
+    int kingSafetyUnits[2] = {0}; //[COLOR]
+
+    for(COLORS color : {WHITE, BLACK}) {
+        Bitboard enemyKing = board.Piece((COLORS)!color, KING);
+        int kingSquare = BitscanForward(enemyKing);
+        Bitboard kingInnerRing = KING_INNER_RING[kingSquare];
+        Bitboard kingOuterRing = KING_OUTER_RING[kingSquare];
+
+        Bitboard enemyPawnAttacks = attacksMobility[(COLORS)!color][PAWN];
+        Bitboard pawnRestrictions = board.Piece(color, PAWN) | enemyPawnAttacks;
+
+        Bitboard enemyAttacks = attacksMobility[(COLORS)!color][ALL_PIECES];
+
+        for(PIECE_TYPE pieceType = KNIGHT; pieceType <= QUEEN; ++pieceType) {
+            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingInnerRing & ~pawnRestrictions & ~enemyAttacks) * KS_BONUS_PIECETYPE[0][pieceType] * 2;
+            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingInnerRing & ~pawnRestrictions & enemyAttacks) * KS_BONUS_PIECETYPE[0][pieceType];
+            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingOuterRing & ~pawnRestrictions) * KS_BONUS_PIECETYPE[1][pieceType];
+        }
+    }
+
+    kingSafetyUnits[WHITE] /= 10;
+    kingSafetyUnits[BLACK] /= 10;
+
+    if(kingSafetyUnits[WHITE] > 127) kingSafetyUnits[WHITE] = 127;
+    if(kingSafetyUnits[BLACK] > 127) kingSafetyUnits[BLACK] = 127;
+
+    score.Add     ( KING_SAFETY_TABLE[ kingSafetyUnits[WHITE] ], 0 );
+    score.Subtract( KING_SAFETY_TABLE[ kingSafetyUnits[BLACK] ], 0 );
 }
 
 void Evaluation::EvalMaterial(const Board& board, Score& score) {
@@ -298,6 +352,7 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
 
 int Evaluation::Evaluate(const Board& board) {
     Score score;
+    Bitboard attacksMobility[2][8] = {{0}}; //[COLOR][PIECE_TYPE]
 
     //Automatic draws
     if( InsufficientMaterial(board) )
@@ -306,14 +361,16 @@ int Evaluation::Evaluate(const Board& board) {
     //Material
     EvalMaterial(board, score);
 
-    //Pawn attacks
-    Bitboard pawnAttacks[2]; //[COLORS]
-    PawnAttacks(board, pawnAttacks);
+    PawnAttacks(board, attacksMobility);
 
-    //Psqt, mobility and king safety
+    //Psqt and mobility
     for(COLORS color : {WHITE, BLACK}) {
         const int sign = color == WHITE ? 1 : -1;
-        Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color]; //for mobility
+
+        //Pawn restrictions for mobility and king safety
+        Bitboard ownPawns = board.Piece(color, PAWN);
+        Bitboard enemyPawnAttacks = attacksMobility[(COLORS)!color][PAWN];
+        Bitboard pawnRestrictions = ownPawns | enemyPawnAttacks;
 
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= KING; ++pieceType) {
               
@@ -330,8 +387,10 @@ int Evaluation::Evaluate(const Board& board) {
 
                 //Mobility
                 if(pieceType == KNIGHT) {
-                    Bitboard attacks = Attacks::AttacksKnights(square) & ~pawnRestrictions;
-                    int mob = PopCount(attacks);
+                    Bitboard attacks = Attacks::AttacksKnights(square);
+                    attacksMobility[color][pieceType] |= attacks;
+                    attacksMobility[color][ALL_PIECES] |= attacks;
+                    int mob = PopCount(attacks & ~pawnRestrictions);
                     score.Add(
                         sign * params.MOBILITY_KNIGHT[MG][mob],
                         sign * params.MOBILITY_KNIGHT[EG][mob]
@@ -339,8 +398,10 @@ int Evaluation::Evaluate(const Board& board) {
                 }
                 else if(pieceType == BISHOP) {
                     Bitboard blockers = board.AllPieces() ^ (board.Piece(color, BISHOP) | board.Piece(color, QUEEN));
-                    Bitboard attacks = Attacks::AttacksSliding(BISHOP, square, blockers) & ~pawnRestrictions;
-                    int mob = PopCount(attacks);
+                    Bitboard attacks = Attacks::AttacksSliding(BISHOP, square, blockers);
+                    attacksMobility[color][pieceType] |= attacks;
+                    attacksMobility[color][ALL_PIECES] |= attacks;
+                    int mob = PopCount(attacks & ~pawnRestrictions);
                     score.Add(
                         sign * params.MOBILITY_BISHOP[MG][mob],
                         sign * params.MOBILITY_BISHOP[EG][mob]
@@ -348,8 +409,10 @@ int Evaluation::Evaluate(const Board& board) {
                 }
                 else if(pieceType == ROOK) {
                     Bitboard blockers = board.AllPieces() ^ (board.Piece(color, ROOK) | board.Piece(color, QUEEN));
-                    Bitboard attacks = Attacks::AttacksSliding(ROOK, square, blockers) & ~pawnRestrictions;
-                    int mob = PopCount(attacks);
+                    Bitboard attacks = Attacks::AttacksSliding(ROOK, square, blockers);
+                    attacksMobility[color][pieceType] |= attacks;
+                    attacksMobility[color][ALL_PIECES] |= attacks;
+                    int mob = PopCount(attacks & ~pawnRestrictions);
                     score.Add(
                         sign * params.MOBILITY_ROOK[MG][mob],
                         sign * params.MOBILITY_ROOK[EG][mob]
@@ -358,12 +421,16 @@ int Evaluation::Evaluate(const Board& board) {
                 else if(pieceType == QUEEN) {
                     //Bishop-like movement
                     Bitboard blockers = board.AllPieces() ^ (board.Piece(color, BISHOP) | board.Piece(color, QUEEN));
-                    Bitboard diagonal = Attacks::AttacksSliding(BISHOP, square, blockers) & ~pawnRestrictions;
+                    Bitboard diagonal = Attacks::AttacksSliding(BISHOP, square, blockers);
                     //Rook-like movement
                     blockers = board.AllPieces() ^ (board.Piece(color, ROOK) | board.Piece(color, QUEEN));
-                    Bitboard straight = Attacks::AttacksSliding(ROOK, square, blockers) & ~pawnRestrictions;
+                    Bitboard straight = Attacks::AttacksSliding(ROOK, square, blockers);
 
-                    int mob = PopCount(diagonal | straight);
+                    Bitboard attacks = diagonal | straight;
+                    attacksMobility[color][pieceType] |= attacks;
+                    attacksMobility[color][ALL_PIECES] |= attacks;
+
+                    int mob = PopCount(attacks & ~pawnRestrictions);
                     score.Add(
                         sign * params.MOBILITY_QUEEN[MG][mob],
                         sign * params.MOBILITY_QUEEN[EG][mob]
@@ -372,6 +439,8 @@ int Evaluation::Evaluate(const Board& board) {
             }
         } //pieceType
     } //color
+
+    EvalKingSafety(board, attacksMobility, score);
 
     //Pawns
     score.Add( EvalPawns(board) );

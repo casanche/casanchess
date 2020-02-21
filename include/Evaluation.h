@@ -22,6 +22,17 @@ namespace Evaluation {
 
     class Score;
 
+    //King Safety formulas
+    const double KS_MAXBONUS = 250;
+    const double KS_MIDPOINT = 45;
+    const double KS_SLOPE = 0.09;
+    //S-shaped function that starts at zero and grows until the maximum
+    inline double Sigmoid(double x, double maximum, double midPoint, double slope) {
+        //f(x) = g(x) - g(0), where g(x) = a / (1 + exp(-c * (x-b)) )
+        return maximum / (1 + exp( -slope * (x - midPoint) ) )
+             - maximum / (1 + exp( -slope * (0 - midPoint) ) ); 
+    }
+
     //Mobility formulas
     #define LINEAR(a, b) (std::lrint( a + b*mob )) //a + bx
     #define QUADRATIC(a, b, c) (std::lrint( a + b*mob + c*mob*mob )) //a + bx + cx^2
@@ -64,6 +75,9 @@ namespace Evaluation {
     extern Bitboard PASSED_PAWN_FRONT[2][64]; //[COLOR][SQUARE]
     extern Bitboard PASSED_PAWN_SIDES[2][64]; //[COLOR][SQUARE]
     extern Bitboard PASSED_PAWN_AREA[2][64]; //[COLOR][SQUARE]
+    extern Bitboard KING_INNER_RING[64]; //[SQUARE]
+    extern Bitboard KING_OUTER_RING[64]; //[SQUARE]
+    extern Bitboard KING_SAFETY_TABLE[128]; //[KING_SAFETY_POINTS]
     void Init();
 
     int Evaluate(const Board& board);
@@ -71,10 +85,11 @@ namespace Evaluation {
     bool AreHeavyPieces(const Board& board);
     bool InsufficientMaterial(const Board &board);
     bool IsSemiopenFile(const Board& board, COLORS color, int square);
-    void PawnAttacks(const Board& board, Bitboard* pawnAttacks);
+    void PawnAttacks(const Board& board, Bitboard attacksMobility[2][8]);
     int Phase(const Board& board);
 
     TaperedScore EvalBishopPair(const Board &board, COLORS color);
+    void EvalKingSafety(const Board &board, Bitboard attacksMobility[2][8], Score& score);
     void EvalMaterial(const Board& board, Score& score);
     TaperedScore EvalPawns(const Board& board);
     TaperedScore EvalPawnsCalculation(const Board& board, COLORS color);
