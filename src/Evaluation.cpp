@@ -102,8 +102,8 @@ bool Evaluation::AreHeavyPieces(const Board& board) {
     return board.Piece(color, ALL_PIECES) ^ (board.Piece(color, PAWN) | board.Piece(color, KING));
 }
 
-bool Evaluation::InsufficientMaterial(const Board &board, int whitePawns, int blackPawns) {
-    return !whitePawns && !blackPawns  //no pawns
+bool Evaluation::InsufficientMaterial(const Board &board) {
+    return !board.Piece(WHITE, PAWN) && !board.Piece(BLACK, PAWN)  //no pawns
         && PopCount( board.AllPieces() ) == 3  //one heavy piece (ignoring kings)...
         && PopCount( board.Piece(WHITE, KNIGHT) | board.Piece(WHITE, BISHOP) | board.Piece(BLACK, KNIGHT) | board.Piece(BLACK, BISHOP) );  //...knight or bishop
 }
@@ -299,14 +299,12 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
 int Evaluation::Evaluate(const Board& board) {
     Score score;
 
+    //Automatic draws
+    if( InsufficientMaterial(board) )
+        return 0;
+        
     //Material
     EvalMaterial(board, score);
-
-    //Automatic draws
-    int whitePawns = PopCount(board.Piece(WHITE,PAWN));
-    int blackPawns = PopCount(board.Piece(BLACK,PAWN));
-    if(InsufficientMaterial(board, whitePawns, blackPawns)) 
-        return 0;
 
     //Pawn attacks
     Bitboard pawnAttacks[2]; //[COLORS]
