@@ -134,7 +134,7 @@ int test_hit = 0;
 int test_miss = 0;
 #endif
 
-//Try to retrieve the pawn structure from hash. If not found, calculate evaluation for the first time
+//Try to retrieve the pawn structure from hash. If not found, perform the calculation
 TaperedScore Evaluation::EvalPawns(const Board &board) {
     #ifdef DEBUG_PAWN_HASH
     if(test_total % 1000 == 0) {

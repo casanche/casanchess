@@ -25,7 +25,7 @@ struct TTEntry {
     void Clear();
 };
 
-const uint DEFAULT_HASH_SIZE = 16;
+const uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
 
 class TT {
 public:
@@ -47,7 +47,7 @@ private:
 // =====================
 // == Pawn-hash entry ==
 // =====================
-const int PAWN_HASH_SIZE = 8192;
+const int PAWN_HASH_SIZE = 8192; //In number of entries
 
 struct PawnEntry {
     U64 zkey;
