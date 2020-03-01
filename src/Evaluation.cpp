@@ -140,6 +140,16 @@ TaperedScore Evaluation::EvalBishopPair(const Board &board, COLORS color) {
     return score;
 }
 
+void Evaluation::EvalMaterial(const Board& board, Score& score) {
+    for(PIECE_TYPE pieceType : {PAWN, KNIGHT, BISHOP, ROOK, QUEEN}) {
+        int countBalance = PopCount( board.Piece(WHITE,pieceType) ) - PopCount( board.Piece(BLACK,pieceType) );
+        score.Add(
+            countBalance * params.MATERIAL_VALUES[MG][pieceType],
+            countBalance * params.MATERIAL_VALUES[EG][pieceType]
+        );
+    }
+}
+
 #ifdef DEBUG_PAWN_HASH
 int test_total = 0;
 int test_hit = 0;
@@ -289,36 +299,27 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
 int Evaluation::Evaluate(const Board& board) {
     Score score;
 
-    //Pawn material
+    //Material
+    EvalMaterial(board, score);
+
+    //Automatic draws
     int whitePawns = PopCount(board.Piece(WHITE,PAWN));
     int blackPawns = PopCount(board.Piece(BLACK,PAWN));
-    score.Add(
-        (whitePawns-blackPawns) * params.MATERIAL_VALUES[MG][PAWN],
-        (whitePawns-blackPawns) * params.MATERIAL_VALUES[EG][PAWN]
-    );
-
-    //Automatic draw
-    if(InsufficientMaterial(board, whitePawns, blackPawns))
+    if(InsufficientMaterial(board, whitePawns, blackPawns)) 
         return 0;
 
     //Pawn attacks
     Bitboard pawnAttacks[2]; //[COLORS]
     PawnAttacks(board, pawnAttacks);
 
-    //Heavy material, phase, psqt and mobility
+    //Psqt, mobility and king safety
     for(COLORS color : {WHITE, BLACK}) {
         const int sign = color == WHITE ? 1 : -1;
         Bitboard pawnRestrictions = board.Piece(color, PAWN) | pawnAttacks[(COLORS)!color]; //for mobility
 
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= KING; ++pieceType) {
+              
             Bitboard bb = board.Piece(color, pieceType);
-            int popcnt = PopCount(bb);
-            //Material
-            score.Add(
-                sign * params.MATERIAL_VALUES[MG][pieceType] * popcnt,
-                sign * params.MATERIAL_VALUES[EG][pieceType] * popcnt
-            );
-            
             while(bb) {
                 int square = ResetLsb(bb);
 

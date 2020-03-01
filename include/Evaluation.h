@@ -75,6 +75,7 @@ namespace Evaluation {
     int Phase(const Board& board);
 
     TaperedScore EvalBishopPair(const Board &board, COLORS color);
+    void EvalMaterial(const Board& board, Score& score);
     TaperedScore EvalPawns(const Board& board);
     TaperedScore EvalPawnsCalculation(const Board& board, COLORS color);
     TaperedScore EvalRookOpen(const Board& board, COLORS color);
