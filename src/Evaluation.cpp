@@ -119,6 +119,18 @@ void Evaluation::PawnAttacks(const Board& board, Bitboard* pawnAttacks) {
     pawnAttacks[BLACK] = (thePawns & ClearFile[FILEH]) >> 7 | (thePawns & ClearFile[FILEA]) >> 9;
 }
 
+int Evaluation::Phase(const Board& board) {
+    return PHASE_WEIGHT[KNIGHT] * PopCount(board.Piece(WHITE, KNIGHT))
+         + PHASE_WEIGHT[BISHOP] * PopCount(board.Piece(WHITE, BISHOP))
+         + PHASE_WEIGHT[ROOK] * PopCount(board.Piece(WHITE, ROOK))
+         + PHASE_WEIGHT[QUEEN] * PopCount(board.Piece(WHITE, QUEEN))
+
+         + PHASE_WEIGHT[KNIGHT] * PopCount(board.Piece(BLACK, KNIGHT))
+         + PHASE_WEIGHT[BISHOP] * PopCount(board.Piece(BLACK, BISHOP))
+         + PHASE_WEIGHT[ROOK] * PopCount(board.Piece(BLACK, ROOK))
+         + PHASE_WEIGHT[QUEEN] * PopCount(board.Piece(BLACK, QUEEN));
+}
+
 TaperedScore Evaluation::EvalBishopPair(const Board &board, COLORS color) {
     TaperedScore score;
     if( (board.Piece(color, BISHOP) & LIGHT_SQUARES) && (board.Piece(color, BISHOP) & DARK_SQUARES) ) {
@@ -276,7 +288,6 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
 
 int Evaluation::Evaluate(const Board& board) {
     Score score;
-    int phase = 0;
 
     //Pawn material
     int whitePawns = PopCount(board.Piece(WHITE,PAWN));
@@ -307,8 +318,6 @@ int Evaluation::Evaluate(const Board& board) {
                 sign * params.MATERIAL_VALUES[MG][pieceType] * popcnt,
                 sign * params.MATERIAL_VALUES[EG][pieceType] * popcnt
             );
-            //Phase
-            phase += PHASE_WEIGHT[pieceType] * popcnt;
             
             while(bb) {
                 int square = ResetLsb(bb);
@@ -377,5 +386,5 @@ int Evaluation::Evaluate(const Board& board) {
     score.Subtract( EvalBishopPair(board, BLACK) );
 
     const int sign = board.ActivePlayer() == WHITE ? 1 : -1;
-    return sign * score.Tapered(phase);
+    return sign * score.Tapered( Phase(board) );
 }
