@@ -36,37 +36,23 @@ namespace Evaluation {
     //Mobility formulas
     #define LINEAR(a, b) (std::lrint( a + b*mob )) //a + bx
     #define QUADRATIC(a, b, c) (std::lrint( a + b*mob + c*mob*mob )) //a + bx + cx^2
-    #define CUBIC(f, a, b, c, d) (std::lrint( f*(a + b*mob + c*mob*mob + d*mob*mob*mob) )) //f*(a + bx + cx^2 + dx^3)
+    #define SCALED_CUBIC(f, a, b, c, d) (std::lrint( f*(a + b*mob + c*mob*mob + d*mob*mob*mob) )) //f*(a + bx + cx^2 + dx^3)
 
-    template<GAME_PHASE ph>
-    constexpr int MOB_N(U8 mob) {
-        if constexpr(ph == MIDDLEGAME)
-            return CUBIC(1, -25.3, 4.53, -0.67, -0.0715);
-        else
-            return (mob < 3) * LINEAR(-41.7, 4.0) + (mob >= 3) * QUADRATIC(-63.6, 19.8, -1.34);
-            // return CUBIC(1, -33.3, 2.96, 1.42, -0.141);
+    template<GAME_PHASE ph> constexpr int MOB_N(U8 mob) {
+        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(1, -25.3, 4.53, -0.67, -0.0715);
+        else                           return (mob < 3) * LINEAR(-41.7, 4.0) + (mob >= 3) * QUADRATIC(-63.6, 19.8, -1.34);
     }
-    template<GAME_PHASE ph>
-    constexpr int MOB_B(U8 mob) {
-        if constexpr(ph == MIDDLEGAME)
-            return CUBIC(1, -50.9, 17.8, -2, 0.0877);
-        else
-            return CUBIC(1, -95, 26.5, -2.6, 0.0955);
+    template<GAME_PHASE ph> constexpr int MOB_B(U8 mob) {
+        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(1, -50.9, 17.8, -2, 0.0877);
+        else                           return SCALED_CUBIC(1, -95, 26.5, -2.6, 0.0955);
     }
-    template<GAME_PHASE ph>
-    constexpr int MOB_R(U8 mob) {
-        if constexpr(ph == MIDDLEGAME)
-            return CUBIC(1, -14.5, 0.87, 0.29, -0.0095);
-        else
-            return CUBIC(1, -58.6, +12.2, -0.59, +0.0041);
+    template<GAME_PHASE ph> constexpr int MOB_R(U8 mob) {
+        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(1, -14.5, 0.87, 0.29, -0.0095);
+        else                           return SCALED_CUBIC(1, -58.6, +12.2, -0.59, +0.0041);
     }
-    template<GAME_PHASE ph>
-    constexpr int MOB_Q(U8 mob) {
-        if constexpr(ph == MIDDLEGAME)
-            // return (mob <= 21) * LINEAR(-27.8, 2.4) + (mob > 21) * (std::lrint( -27.8 + 2.4 * 21 ));
-            return CUBIC(0.5, -29.5, 2.63, 0.026, -0.002);
-        else
-            return CUBIC(0.5, -27.9, 2.29, 0.026, -0.0018);
+    template<GAME_PHASE ph> constexpr int MOB_Q(U8 mob) {
+        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(0.5, -29.5, 2.63, 0.026, -0.002);
+        else                           return SCALED_CUBIC(0.5, -27.9, 2.29, 0.026, -0.0018);
     }
 
     //Precomputed tables
@@ -91,7 +77,7 @@ namespace Evaluation {
     TaperedScore EvalBishopPair(const Board &board, COLORS color);
     void EvalKingSafety(const Board &board, Bitboard attacksMobility[2][8], Score& score);
     void EvalMaterial(const Board& board, Score& score);
-    TaperedScore EvalPawns(const Board& board);
+    void EvalPawns(const Board& board, Score& score);
     TaperedScore EvalPawnsCalculation(const Board& board, COLORS color);
     TaperedScore EvalRookOpen(const Board& board, COLORS color);
 
@@ -137,17 +123,8 @@ namespace Evaluation {
             {MOB_Q<MG>(0), MOB_Q<MG>(1), MOB_Q<MG>(2), MOB_Q<MG>(3), MOB_Q<MG>(4), MOB_Q<MG>(5), MOB_Q<MG>(6), MOB_Q<MG>(7), MOB_Q<MG>(8), MOB_Q<MG>(9), MOB_Q<MG>(10), MOB_Q<MG>(11), MOB_Q<MG>(12), MOB_Q<MG>(13), MOB_Q<MG>(14), MOB_Q<MG>(15), MOB_Q<MG>(16), MOB_Q<MG>(17), MOB_Q<MG>(18), MOB_Q<MG>(19), MOB_Q<MG>(20), MOB_Q<MG>(21), MOB_Q<MG>(22), MOB_Q<MG>(23), MOB_Q<MG>(24), MOB_Q<MG>(25), MOB_Q<MG>(26), MOB_Q<MG>(27)},
             {MOB_Q<EG>(0), MOB_Q<EG>(1), MOB_Q<EG>(2), MOB_Q<EG>(3), MOB_Q<EG>(4), MOB_Q<EG>(5), MOB_Q<EG>(6), MOB_Q<EG>(7), MOB_Q<EG>(8), MOB_Q<EG>(9), MOB_Q<EG>(10), MOB_Q<EG>(11), MOB_Q<EG>(12), MOB_Q<EG>(13), MOB_Q<EG>(14), MOB_Q<EG>(15), MOB_Q<EG>(16), MOB_Q<EG>(17), MOB_Q<EG>(18), MOB_Q<EG>(19), MOB_Q<EG>(20), MOB_Q<EG>(21), MOB_Q<EG>(22), MOB_Q<EG>(23), MOB_Q<EG>(24), MOB_Q<EG>(25), MOB_Q<EG>(26), MOB_Q<EG>(27)}
         };
-        // int MOBILITY_QUEEN[2][28] = {
-        //     {-22, -22, -20, -20, -22,   -14, -14, -10, -5, -4,
-        //      0, 0, 1, 1, 3,   3, 13, 13, 14, 18,
-        //      23, 18, 18, 18, 19,   19, 20, 21},
-        //     {-27, -25, -23, -21, -18,   -16, -12, -11, -10, -6,
-        //      -2, -1, 0, 1, 2,   2, 8, 9, 13, 21,
-        //      14, 15, 17, 18, 19,   16, 16, 17}
-        // };
     } params;
 
-    //from https://www.chessprogramming.org/Simplified_Evaluation_Function
     const int PSQT[8][64] = {
         //NO_PIECE
         {0},

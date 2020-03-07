@@ -23,10 +23,10 @@ const int PHASE_WEIGHT[8] = {
 };
 
 const int KS_BONUS_PIECETYPE[4][6] = { //[][PIECE_TYPE]
-    {0, 0, 70, 95, 63,105}, //Inner, Non-defended squares
-    {0, 0,109, 30, 35,167}, //Outer, Non-defended squares
-    {0, 0, 95, 49, 41, 48}, //Inner, Defended squares
-    {0, 0, 92, 20, 45, 35}  //Outer, Defended squares
+    {0, 0, 70, 95, 63,105}, //Inner ring, Non-defended squares
+    {0, 0,109, 30, 35,167}, //Outer ring, Non-defended squares
+    {0, 0, 95, 49, 41, 48}, //Inner ring, Defended squares
+    {0, 0, 92, 20, 45, 35}  //Outer ring, Defended squares
 };
 
 //Precomputed tables
@@ -169,15 +169,16 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
     int kingSafetyUnits[2] = {0}; //[COLOR]
 
     for(COLORS color : {WHITE, BLACK}) {
+        COLORS enemyColor = (COLORS)!color;
         Bitboard enemyKing = board.Piece((COLORS)!color, KING);
         int kingSquare = BitscanForward(enemyKing);
         Bitboard kingInnerRing = KING_INNER_RING[kingSquare];
         Bitboard kingOuterRing = KING_OUTER_RING[kingSquare];
 
-        Bitboard enemyPawnAttacks = attacksMobility[(COLORS)!color][PAWN];
+        Bitboard enemyPawnAttacks = attacksMobility[enemyColor][PAWN];
         Bitboard pawnRestrictions = board.Piece(color, PAWN) | enemyPawnAttacks;
 
-        Bitboard enemyAttacks = attacksMobility[(COLORS)!color][ALL_PIECES];
+        Bitboard enemyAttacks = attacksMobility[enemyColor][ALL_PIECES];
 
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= QUEEN; ++pieceType) {
             kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingInnerRing & ~pawnRestrictions & ~enemyAttacks) * KS_BONUS_PIECETYPE[0][pieceType];
@@ -214,41 +215,44 @@ int test_miss = 0;
 #endif
 
 //Try to retrieve the pawn structure from hash. If not found, perform the calculation
-TaperedScore Evaluation::EvalPawns(const Board &board) {
-    #ifdef DEBUG_PAWN_HASH
+void Evaluation::EvalPawns(const Board &board, Score& score) {
+
+#ifdef DEBUG_PAWN_HASH
     if(test_total % 1000 == 0) {
         P(board.PawnKey());
-        P("PawnHash hitrate: " << test_total << ", " << test_hit << ", " << test_miss \
-                               << ", " << (float)test_hit / test_total * 100 << "%");
+        P("PawnHash hitrate: " << test_total
+                       << ", " << test_hit
+                       << ", " << test_miss \
+                       << ", " << (float)test_hit / test_total * 100 << "%");
     }
     test_total++;
-    #endif
+#endif
 
     PawnEntry* pawnEntry = Hash::pawnHash.ProbeEntry( board.PawnKey() );
     if(pawnEntry) {
-        #ifdef DEBUG_PAWN_HASH
-        test_hit++;
-        #endif
 
-        return TaperedScore( pawnEntry->evalMg,
-                             pawnEntry->evalEg );
+#ifdef DEBUG_PAWN_HASH
+        test_hit++;
+#endif
+
+        score.Add(pawnEntry->evalMg, pawnEntry->evalEg);
     }
     else {
-        //Calculate
-        #ifdef DEBUG_PAWN_HASH
-        test_miss++;
-        #endif
 
+#ifdef DEBUG_PAWN_HASH
+        test_miss++;
+#endif
+
+        //Calculate
         TaperedScore whiteEval = EvalPawnsCalculation(board, WHITE);
         TaperedScore blackEval = EvalPawnsCalculation(board, BLACK);
-        TaperedScore score;
-        score.mg = whiteEval.mg - blackEval.mg;
-        score.eg = whiteEval.eg - blackEval.eg;
+        int scoreMg = whiteEval.mg - blackEval.mg;
+        int scoreEg = whiteEval.eg - blackEval.eg;
 
         //Store in hash
-        Hash::pawnHash.AddEntry(board.PawnKey(), score.mg, score.eg);
+        Hash::pawnHash.AddEntry(board.PawnKey(), scoreMg, scoreEg);
 
-        return score;
+        score.Add(scoreMg, scoreEg);
     }
 }
 
@@ -278,29 +282,13 @@ TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLORS color) 
         score.eg += PSQT_ENDGAME[PAWN][index];
 
         int file = File(square);
-        // Bitboard pushSquare = color == WHITE ? North(SquareBB(square)) : South(SquareBB(square));
         bool isPassed = !(PASSED_PAWN_AREA[color][square] & enemyPawns);
-        // bool isDoubled = thePawns & PASSED_PAWN_FRONT[color][square]; //instead of pushSquare
         bool isIsolated = !(thePawns & ADJACENT_FILES[file]);
-        // bool isBackward = enemyPawnsAttacks & pushSquare;
-        // bool isBackward = thePawns & ADJACENT_FILES[file];
 
         if(isPassed) {
             int rank = ColorlessRank(color, square);
-            // bool isFreePassed = !(PASSED_PAWN_FRONT[color][square] & board.Piece((COLORS)!color, ALL_PIECES));
-            // if(isFreePassed) {
-            //     const bool isUnstoppable = false;
-            //     if(isUnstoppable) {
-            //         score.mg += 800;
-            //         score.eg += 800;
-            //     } else {
-            //         score.mg += 2 * PASSED_PAWN[MG][rank];
-            //         score.eg += 2 * PASSED_PAWN[EG][rank];
-            //     }
-            // } else {
-                score.mg += params.PASSED_PAWN[MG][rank];
-                score.eg += params.PASSED_PAWN[EG][rank];
-            // }
+            score.mg += params.PASSED_PAWN[MG][rank];
+            score.eg += params.PASSED_PAWN[EG][rank];
         }
         if(isIsolated) {
             int rank = ColorlessRank(color, square);
@@ -444,15 +432,11 @@ int Evaluation::Evaluate(const Board& board) {
     } //color
 
     EvalKingSafety(board, attacksMobility, score);
+    EvalPawns(board, score);
 
-    //Pawns
-    score.Add( EvalPawns(board) );
-
-    //Rook open files
     score.Add     ( EvalRookOpen(board, WHITE) );
     score.Subtract( EvalRookOpen(board, BLACK) );
     
-    //Bishop pair
     score.Add     ( EvalBishopPair(board, WHITE) );
     score.Subtract( EvalBishopPair(board, BLACK) );
 
