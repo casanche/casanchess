@@ -22,10 +22,12 @@ const int PHASE_WEIGHT[8] = {
     0 //KING
 };
 
-const int KS_BONUS_PIECETYPE[2][8] = {
-    {0, 0, 40, 40, 60, 100, 0},
-    {0, 0, 10, 10, 20, 30, 0}
-}; //[INNER/OUTER][PIECE_TYPE]
+const int KS_BONUS_PIECETYPE[4][6] = { //[][PIECE_TYPE]
+    {0, 0, 70, 95, 63,105}, //Inner, Non-defended squares
+    {0, 0,109, 30, 35,167}, //Outer, Non-defended squares
+    {0, 0, 95, 49, 41, 48}, //Inner, Defended squares
+    {0, 0, 92, 20, 45, 35}  //Outer, Defended squares
+};
 
 //Precomputed tables
 Bitboard Evaluation::ADJACENT_FILES[8] = {0};
@@ -178,9 +180,10 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
         Bitboard enemyAttacks = attacksMobility[(COLORS)!color][ALL_PIECES];
 
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= QUEEN; ++pieceType) {
-            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingInnerRing & ~pawnRestrictions & ~enemyAttacks) * KS_BONUS_PIECETYPE[0][pieceType] * 2;
-            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingInnerRing & ~pawnRestrictions & enemyAttacks) * KS_BONUS_PIECETYPE[0][pieceType];
-            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingOuterRing & ~pawnRestrictions) * KS_BONUS_PIECETYPE[1][pieceType];
+            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingInnerRing & ~pawnRestrictions & ~enemyAttacks) * KS_BONUS_PIECETYPE[0][pieceType];
+            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingOuterRing & ~pawnRestrictions & ~enemyAttacks) * KS_BONUS_PIECETYPE[1][pieceType];
+            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingInnerRing & ~pawnRestrictions & enemyAttacks) * KS_BONUS_PIECETYPE[2][pieceType];
+            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingOuterRing & ~pawnRestrictions & enemyAttacks) * KS_BONUS_PIECETYPE[3][pieceType];
         }
     }
 
