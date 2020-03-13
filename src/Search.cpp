@@ -347,7 +347,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     if(!TURNOFF_NULLMOVE_PRUNING
         && eval >= beta  //very good score
         && m_nullmoveAllowed
-        // && board.LastMove().MoveType != NULLMOVE
         && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=9)  //enough depth
         && !inCheck
         && Evaluation::AreHeavyPieces(board)  //active player has pieces on the board (to avoid zugzwang in K+P endgames)
@@ -369,7 +368,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         if(nullScore >= beta) {
             Hash::tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_counter);
-            return nullScore;   //nullScore or beta
+            return nullScore;
         }
     }
     //Allow non-consecutive null-move pruning
@@ -423,7 +422,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // ------- Futility pruning --------
         //Don't prune: hash move, promotions, SEE > 0 captures
         if(doFutility && move.Score() < 251) {
-            continue;
+            break;
         }
 
         // ---- Pawn to 7th/8th extension -----
@@ -587,7 +586,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             const int SEE_EQUAL = 127;
             const int deltaMargin = 100;
             bool isCapture = move.MoveType() == CAPTURE;
-            if(isCapture && move.Score() == SEE_EQUAL && standPat < (alpha - deltaMargin) ) {
+            if(isCapture && move.Score() == SEE_EQUAL && standPat + deltaMargin < alpha) {
                 continue;
             }
 

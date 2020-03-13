@@ -31,8 +31,8 @@ namespace {
                 continue;
             }
 
-            //Promotion captures: 254
-            //Promotions: 253
+            //Queen promotion captures: 254
+            //Queen promotions: 253
             if(move.IsPromotion() && move.PromotionType() == PROMOTION_QUEEN) {
                 if(move.MoveType() == PROMOTION_CAPTURE) {
                     move.SetScore(254); continue;

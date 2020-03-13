@@ -30,7 +30,6 @@ void TT::Clear() {
 }
 
 void TT::AddEntry(U64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age) {
-    assert(bestMove.MoveType());
     assert(abs(score) <= INFINITE_SCORE);
     assert(depth <= MAX_DEPTH);
 

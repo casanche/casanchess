@@ -66,7 +66,7 @@ void Interface::Start(std::string fenString) {
         //Think and make a move
         else if(input == "think" || input == "t") {
             Search search;
-            search.FixDepth(8);
+            search.FixDepth(10);
             search.IterativeDeepening(m_board);
             search.MakeMove(m_board);
         }

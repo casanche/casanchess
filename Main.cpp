@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
     //Testing position
     if(argc > 1 && argv[1] == std::string("-j")) {
         Interface interface;
-        interface.Start("r2Nqb1r/pQ1bp1pp/1pn1p3/1k1p4/2p2B2/2P5/PPP2PPP/R3KB1R w - - 1 0");
+        interface.Start("2r1rbk1/p1p2pp1/1p4p1/n1P3P1/3Pq3/P3B2P/R3BP2/3QR1K1 w - - 1 25");
         return 0;
     }
 

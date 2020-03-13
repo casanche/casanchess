@@ -37,7 +37,7 @@ Bitboard Evaluation::PASSED_PAWN_SIDES[2][64] = {{0}};
 Bitboard Evaluation::PASSED_PAWN_AREA[2][64] = {{0}};
 Bitboard Evaluation::KING_INNER_RING[64] = {0};
 Bitboard Evaluation::KING_OUTER_RING[64] = {0};
-Bitboard Evaluation::KING_SAFETY_TABLE[128] = {0};
+int Evaluation::KING_SAFETY_TABLE[128] = {0};
 
 class Evaluation::Score {
 public:
@@ -118,7 +118,7 @@ void Evaluation::Init() {
     }
     //King safety
     for(int i = 0; i < 128; i++) {
-        KING_SAFETY_TABLE[i] = Evaluation::Sigmoid(i, KS_MAXBONUS, KS_MIDPOINT, KS_SLOPE);
+        KING_SAFETY_TABLE[i] = static_cast<int>(Evaluation::Sigmoid(i, KS_MAXBONUS, KS_MIDPOINT, KS_SLOPE));
     }
 }
 

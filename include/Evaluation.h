@@ -63,7 +63,7 @@ namespace Evaluation {
     extern Bitboard PASSED_PAWN_AREA[2][64]; //[COLOR][SQUARE]
     extern Bitboard KING_INNER_RING[64]; //[SQUARE]
     extern Bitboard KING_OUTER_RING[64]; //[SQUARE]
-    extern Bitboard KING_SAFETY_TABLE[128]; //[KING_SAFETY_POINTS]
+    extern int KING_SAFETY_TABLE[128]; //[KING_SAFETY_POINTS]
     void Init();
 
     int Evaluate(const Board& board);

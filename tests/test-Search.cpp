@@ -65,7 +65,7 @@ TEST_F(ShortSearch, RG6_crowdy) {
 // Failed with Rc8, depth 8, 8s
 TEST_F(ShortSearch, RG7) {
     board.SetFen("4r1k1/1p3ppp/b7/3R4/1pn5/4P3/3N1PPP/R5K1 b - - 0 30");
-    search.FixDepth(depth+2);
+    search.FixDepth(depth+1);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
