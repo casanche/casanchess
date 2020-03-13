@@ -87,19 +87,15 @@ U64 Board::Perft(int depth) {
     for(auto &move : moves) {
         
         //Integrity check: before
-        #ifdef DEBUG
-        Board boardBefore = *this;
-        #endif
+        D( Board boardBefore = *this; );
 
         MakeMove(move);
         nodes += Perft(depth - 1);
         TakeMove(move);
 
         //Integrity check: after
-        #ifdef DEBUG
-        Board boardAfter = *this;
-        assert(boardBefore == boardAfter);
-        #endif
+        D( Board boardAfter = *this; );
+        D( assert(boardBefore == boardAfter); );
     }
 
     return nodes;

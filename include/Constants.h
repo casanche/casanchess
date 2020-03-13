@@ -51,6 +51,13 @@ const Bitboard ALL = (Bitboard)~0; //universal bitboard (all ones)
 #define P(x) std::cout << x << std::endl;
 #define PL(x) std::cout << x << " " << std::flush;
 
+//Debug
+#ifdef DEBUG
+    #define D(x) x
+#else
+    #define D(x) do {} while(0)
+#endif
+
 enum SQUARES {
     A1=0,  B1, C1, D1, E1, F1, G1, H1,
     A2=8,  B2, C2, D2, E2, F2, G2, H2,

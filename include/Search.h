@@ -20,6 +20,15 @@ struct RootMove {
 
 class Search {
     typedef std::chrono::steady_clock Clock;
+
+    class Debug {
+    public:
+        void Increment(std::string theVariable) { debugVariables[theVariable]++; };
+        void Print();
+    private:
+        void Transform();
+        std::map<std::string, int> debugVariables;
+    };
     
 public:
     Search();
@@ -95,6 +104,7 @@ private:
 
     //Helpers
     int m_ply;
+    int m_selPly;
     U8 m_counter;
     bool m_nullmoveAllowed;
     bool m_futility = false;
@@ -106,16 +116,7 @@ private:
     std::vector<RootMove> m_rootMoves;
 
     //Debug
-    uint debug_rootMax = 0;
-    uint debug_negaMax = 0;
-    uint debug_quiescence = 0;
-    uint debug_negaMaxRep = 0;
-    uint debug_MDP = 0;
-    uint debug_tthits = 0;
-    uint debug_nullmove = 0;
-    uint debug_negaMax_generation = 0;
-    uint debug_negaMax_cutoffs = 0;
-    uint debug_quiescence_tthits = 0;
+    Debug m_debug;
 };
 
 struct Limits {

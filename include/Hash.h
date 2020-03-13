@@ -63,6 +63,7 @@ public:
     ~PawnHash();
     void Clear();
     void AddEntry(U64 zkey, int evalMg, int evalEg);
+    float Occupancy();
     PawnEntry* ProbeEntry(U64 zkey);
 private:
     PawnEntry* m_pawnEntries;

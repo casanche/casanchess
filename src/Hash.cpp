@@ -122,6 +122,14 @@ void PawnHash::AddEntry(U64 zkey, int evalMg, int evalEg) {
     m_pawnEntries[index] = pawnEntry;
 }
 
+float PawnHash::Occupancy() {
+    int count = 0;
+    for(int i = 0; i < PAWN_HASH_SIZE; ++i) {
+        count += (m_pawnEntries[i].zkey != 0);
+    }
+    return (float)count / PAWN_HASH_SIZE;
+}
+
 PawnEntry* PawnHash::ProbeEntry(U64 zkey) {
     U64 index = zkey % PAWN_HASH_SIZE;
     PawnEntry entry = m_pawnEntries[index];

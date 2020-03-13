@@ -29,6 +29,11 @@ const int KS_BONUS_PIECETYPE[4][6] = { //[][PIECE_TYPE]
     {0, 0, 92, 20, 45, 35}  //Outer ring, Defended squares
 };
 
+//Debug
+int test_total = 0;
+int test_hit = 0;
+int test_miss = 0;
+
 //Precomputed tables
 Bitboard Evaluation::ADJACENT_FILES[8] = {0};
 Bitboard Evaluation::ADJACENT_RANKS[8] = {0};
@@ -72,8 +77,6 @@ private:
 };
 
 int Evaluation::Score::TaperedCalculation(int mgScore, int egScore, int phase) {
-    assert(phase <= MAX_PHASEMATERIAL);
-
     int score = mgScore * phase + egScore * (MAX_PHASEMATERIAL - phase);
     score /= 2 * MAX_PHASEMATERIAL;
     return score;
@@ -208,40 +211,30 @@ void Evaluation::EvalMaterial(const Board& board, Score& score) {
     }
 }
 
-#ifdef DEBUG_PAWN_HASH
-int test_total = 0;
-int test_hit = 0;
-int test_miss = 0;
-#endif
-
 //Try to retrieve the pawn structure from hash. If not found, perform the calculation
 void Evaluation::EvalPawns(const Board &board, Score& score) {
 
-#ifdef DEBUG_PAWN_HASH
-    if(test_total % 1000 == 0) {
-        P(board.PawnKey());
-        P("PawnHash hitrate: " << test_total
-                       << ", " << test_hit
-                       << ", " << test_miss \
-                       << ", " << (float)test_hit / test_total * 100 << "%");
-    }
-    test_total++;
-#endif
+    //Debug
+    D(
+        if(test_total % 10000000 == 0) {
+            P("PawnKey: " << board.PawnKey());
+            P("PawnHash hitrate: calls " << test_total \
+                        << ", hit " << test_hit \
+                        << ", miss " << test_miss \
+                        << ", rate " << 100 * (float)test_hit / test_total << "%" \
+                        << ", fill " << 100 * Hash::pawnHash.Occupancy() << "%");
+        }
+        test_total++;
+    );
 
     PawnEntry* pawnEntry = Hash::pawnHash.ProbeEntry( board.PawnKey() );
     if(pawnEntry) {
-
-#ifdef DEBUG_PAWN_HASH
-        test_hit++;
-#endif
+        D(test_hit++);
 
         score.Add(pawnEntry->evalMg, pawnEntry->evalEg);
     }
     else {
-
-#ifdef DEBUG_PAWN_HASH
-        test_miss++;
-#endif
+        D(test_miss++);
 
         //Calculate
         TaperedScore whiteEval = EvalPawnsCalculation(board, WHITE);
