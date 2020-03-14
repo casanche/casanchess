@@ -420,7 +420,7 @@ int Evaluation::Evaluate(const Board& board) {
                         sign * params.MOBILITY_QUEEN[EG][mob]
                     );
                 }
-            }
+            } //piece
         } //pieceType
     } //color
 
