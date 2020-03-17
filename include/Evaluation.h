@@ -23,9 +23,6 @@ namespace Evaluation {
     class Score;
 
     //King Safety formulas
-    const double KS_MAXBONUS = 270;
-    const double KS_MIDPOINT = 38;
-    const double KS_SLOPE = 0.08;
     //S-shaped function that starts at zero and grows until the maximum
     inline double Sigmoid(double x, double maximum, double midPoint, double slope) {
         //f(x) = g(x) - g(0), where g(x) = a / (1 + exp(-c * (x-b)) )
