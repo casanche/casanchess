@@ -41,21 +41,29 @@ namespace {
                 }
             }
 
-            //SEE positive: 251
-            //SEE neutral: 250
-            //SEE negative: 181
+            //SEE positive: [241, 249]
+            //SEE neutral: 240
+            //SEE negative: [181-189]
             const bool useSEE = 1;
             if(useSEE) {
                 PIECE_TYPE capturedType = move.CapturedType();
                 if(capturedType) {
                     int see = board.SEE(move);
+
                     if(see > 0) {
-                        move.SetScore(251); continue;
-                    } else if(see == 0) {
-                        move.SetScore(250); continue;
-                    } else if(see < 0) {
-                        move.SetScore(181); continue;
+                        int score = ((see - 1) * 8 / 1024) + 241;
+                        score = std::min(score, 249); 
+                        move.SetScore(score); continue;
                     }
+                    else if(see == 0) {
+                        move.SetScore(240); continue;
+                    }
+                    else if(see < 0) {
+                        int score = ((see + 1) * 8 / 1024) + 189;
+                        score = std::max(score, 181);
+                        move.SetScore(score); continue;
+                    }
+                    
                 }
             }
             else {

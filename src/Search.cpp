@@ -423,7 +423,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // ------- Futility pruning --------
         //Don't prune: hash move, promotions, SEE > 0 captures
-        if(doFutility && move.Score() < 251) {
+        if(doFutility && move.Score() < 241) {
             break;
         }
 
