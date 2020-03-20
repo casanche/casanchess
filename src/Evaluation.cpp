@@ -26,12 +26,11 @@ const int PHASE_WEIGHT[8] = {
 const double KS_MAXBONUS = 310;
 const double KS_MIDPOINT = 38;
 const double KS_SLOPE = 85;
-const int KS_BONUS_PIECETYPE[5][6] = { //[][PIECE_TYPE]
+const int KS_BONUS_PIECETYPE[4][6] = { //[][PIECE_TYPE]
     {0, 0, 220, 146, 146, 125}, //Undefended squares, checks
-    {0, 0, 59, 46, 20, 85}, //Undefended squares
-    {0, 0, 100, 80, 86, 60}, //Defended by pieces of equal-or-higher value, checks
-    {0, 0, 55, 15, 50, 44}, //Defended by pieces of equal-or-higher value
-    {0, 0, 0, 0, 0, 25} //Defended by pieces of lower value, checks
+    {0, 0, 59, 46, 15, 85}, //Undefended squares
+    {0, 0, 95, 80, 93, 60}, //Defended by pieces of equal-or-higher value, checks
+    {0, 0, 55, 15, 50, 44} //Defended by pieces of equal-or-higher value
 };
 
 //Debug
@@ -178,8 +177,7 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
 
     for(COLORS color : {WHITE, BLACK}) {
         COLORS enemyColor = (COLORS)!color;
-        Bitboard enemyKing = board.Piece((COLORS)!color, KING);
-        int kingSquare = BitscanForward(enemyKing);
+        int kingSquare = BitscanForward( board.Piece(enemyColor, KING) );
         Bitboard kingRing = KING_INNER_RING[kingSquare] | KING_OUTER_RING[kingSquare];
 
         Bitboard enemyPawnAttacks = attacksMobility[enemyColor][PAWN];
@@ -189,32 +187,31 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
 
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= QUEEN; ++pieceType) {
 
-            //Checks
+            Bitboard allowedAttacks = attacksMobility[color][pieceType] & kingRing & ~pawnRestrictions;
+            if(!allowedAttacks)
+                continue;
+
+            //Checks and squares defended by lower-value pieces
             Bitboard checks = ZERO;
+            Bitboard enemyAttacksLower = ZERO;
             switch(pieceType) {
                 case KNIGHT:
-                    checks = Attacks::AttacksKnights(kingSquare);
-                break;
-                case BISHOP: case ROOK: case QUEEN:
-                    checks = Attacks::AttacksSliding(pieceType, kingSquare, board.AllPieces());
-                break;
-                default: break;
+                    checks = Attacks::AttacksKnights(kingSquare); break;
+                case BISHOP:
+                    checks = Attacks::AttacksSliding(pieceType, kingSquare, board.AllPieces()); break;
+                case ROOK:
+                    checks = Attacks::AttacksSliding(pieceType, kingSquare, board.AllPieces()); 
+                    enemyAttacksLower = attacksMobility[enemyColor][KNIGHT] | attacksMobility[enemyColor][BISHOP]; break;
+                case QUEEN:
+                    checks = Attacks::AttacksSliding(pieceType, kingSquare, board.AllPieces()); 
+                    enemyAttacksLower = attacksMobility[enemyColor][KNIGHT] | attacksMobility[enemyColor][BISHOP] | attacksMobility[enemyColor][ROOK]; break;
+                default: assert(false);
             };
 
-            //Squares defended by lower-value pieces
-            Bitboard enemyAttacksLower = ZERO;
-            if(pieceType == ROOK) {
-                enemyAttacksLower = attacksMobility[enemyColor][KNIGHT] | attacksMobility[enemyColor][BISHOP];
-            }
-            else if(pieceType == QUEEN) {
-                enemyAttacksLower = attacksMobility[enemyColor][KNIGHT] | attacksMobility[enemyColor][BISHOP] | attacksMobility[enemyColor][ROOK];
-            }
-
-            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingRing & ~pawnRestrictions & ~enemyAttacks &  checks) * KS_BONUS_PIECETYPE[0][pieceType];
-            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingRing & ~pawnRestrictions & ~enemyAttacks & ~checks) * KS_BONUS_PIECETYPE[1][pieceType];
-            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingRing & ~pawnRestrictions &  enemyAttacks & ~enemyAttacksLower &  checks) * KS_BONUS_PIECETYPE[2][pieceType];
-            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingRing & ~pawnRestrictions &  enemyAttacks & ~enemyAttacksLower & ~checks) * KS_BONUS_PIECETYPE[3][pieceType];
-            kingSafetyUnits[color] += PopCount(attacksMobility[color][pieceType] & kingRing & ~pawnRestrictions &  enemyAttacks &  enemyAttacksLower &  checks) * KS_BONUS_PIECETYPE[4][pieceType];
+            kingSafetyUnits[color] += PopCount(allowedAttacks & ~enemyAttacks &  checks) * KS_BONUS_PIECETYPE[0][pieceType];
+            kingSafetyUnits[color] += PopCount(allowedAttacks & ~enemyAttacks & ~checks) * KS_BONUS_PIECETYPE[1][pieceType];
+            kingSafetyUnits[color] += PopCount(allowedAttacks &  enemyAttacks & ~enemyAttacksLower &  checks) * KS_BONUS_PIECETYPE[2][pieceType];
+            kingSafetyUnits[color] += PopCount(allowedAttacks &  enemyAttacks & ~enemyAttacksLower & ~checks) * KS_BONUS_PIECETYPE[3][pieceType];
         }
     }
 
