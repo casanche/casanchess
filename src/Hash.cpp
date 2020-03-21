@@ -30,7 +30,7 @@ void TT::Clear() {
 }
 
 void TT::AddEntry(U64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age) {
-    assert(abs(score) <= INFINITE_SCORE);
+    assert(abs(score) <= MATESCORE);
     assert(depth <= MAX_DEPTH);
 
     U64 index = zkey % m_size;
@@ -109,8 +109,8 @@ void PawnHash::Clear() {
 }
 
 void PawnHash::AddEntry(U64 zkey, int evalMg, int evalEg) {
-    assert( abs(evalMg) <= INFINITE_SCORE );
-    assert( abs(evalEg) <= INFINITE_SCORE );
+    assert( abs(evalMg) <= MATESCORE );
+    assert( abs(evalEg) <= MATESCORE );
 
     U64 index = zkey % PAWN_HASH_SIZE;
 

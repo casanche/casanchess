@@ -72,7 +72,7 @@ public:
 private:
     int QuiescenceSearch(Board &board, int alpha, int beta);
     int NegaMax(Board  &board, int depth, int alpha, int beta);
-    int RootMax(Board &board, int depth, int alpha = -INFINITE_SCORE, int beta = INFINITE_SCORE);
+    int RootMax(Board &board, int depth, int alpha, int beta);
 
     bool TimeOver();
 

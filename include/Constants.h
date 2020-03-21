@@ -16,13 +16,16 @@ typedef uint64_t U64;
 typedef uint64_t Bitboard;
 #define INFINITE __INT_MAX__
 #define INFINITE_U64 __UINT64_MAX__
-#define INFINITE_SCORE __INT16_MAX__
+#define INFINITE_I16 __INT16_MAX__
 
 #ifdef _MSC_VER
     #define __INT_MAX__ INT_MAX
     #define __UINT64_MAX__ ULLONG_MAX
     #define __INT16_MAX__ SHRT_MAX
 #endif
+
+const int INFINITE_SCORE = INFINITE_I16 - 1000;
+const int MATESCORE = INFINITE_SCORE - 1000;
 
 enum COLORS { WHITE, BLACK, NO_COLOR };
 enum FILES { FILEA, FILEB, FILEC, FILED, FILEE, FILEF, FILEG, FILEH };
@@ -45,7 +48,7 @@ const Bitboard ALL = (Bitboard)~0; //universal bitboard (all ones)
 #define IsValidPieceType(piece) (piece != NO_PIECE && piece != ALL_PIECES)
 #define IsValidPiece(piece) (piece != A_NOPIECE && piece != W_ALLPIECES && piece != B_ALLPIECES && piece != A_ALLPIECES)
 
-#define IsMateValue(score) (abs(score) > (INFINITE_SCORE - 1000))
+#define IsMateValue(score) (abs(score) > (MATESCORE - 1000))
 
 //Output
 #define P(x) std::cout << x << std::endl;

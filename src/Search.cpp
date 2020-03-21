@@ -94,7 +94,7 @@ void Search::IterativeDeepening(Board &board) {
         //Out of aspiration bounds. Repeat search with infinite limits
         while(score <= alpha || score >= beta) {
             alpha = -INFINITE_SCORE;
-            beta  = INFINITE_SCORE;
+            beta  =  INFINITE_SCORE;
             score = RootMax(board, m_depth, alpha, beta);
 
             D( m_debug.Increment("IterativeDeepening Out of AspirationWindow") );
@@ -144,8 +144,8 @@ void Search::UciOutput(std::string PV) {
     std::cout << " seldepth " << m_selPly;
     if(IsMateValue(m_bestScore)) {
         int mateScore = 0;
-        if     (m_bestScore > 0) mateScore = INFINITE_SCORE - m_bestScore + 1; //ply+1
-        else if(m_bestScore < 0) mateScore = -INFINITE_SCORE - m_bestScore - 1; //-ply-1
+        if     (m_bestScore > 0) mateScore =  MATESCORE - m_bestScore + 1; //ply+1
+        else if(m_bestScore < 0) mateScore = -MATESCORE - m_bestScore - 1; //-ply-1
         std::cout << " score mate " << mateScore / 2; //return score in moves, not in plies
     } else {
         std::cout << " score cp " << m_bestScore;
@@ -282,8 +282,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     //---------- Mate distance pruning ------------- //Different for PV nodes?
-    alpha = std::max(alpha, -INFINITE_SCORE + m_ply);
-    beta = std::min(beta, +INFINITE_SCORE - m_ply - 1);
+    alpha = std::max(alpha, -MATESCORE + m_ply);
+    beta = std::min(beta, +MATESCORE - m_ply - 1);
     if(alpha >= beta) {
         D( m_debug.Increment("MateDistancePruning Hits") );
         return alpha;
@@ -387,7 +387,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     if( moves.empty() ) {
         if(inCheck) {
             D( m_debug.Increment("NegaMax Checkmate") );
-            return -INFINITE_SCORE + m_ply; //checkmate
+            return -MATESCORE + m_ply; //checkmate
         }
         else {
             D( m_debug.Increment("NegaMax Stalemate") );
@@ -569,7 +569,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     if( moves.empty() ) {
         if(inCheck) {
             D( m_debug.Increment("Quiescence Checkmate") );
-            return -INFINITE_SCORE + m_ply; //checkmate
+            return -MATESCORE + m_ply; //checkmate
         }
         else {
             D( m_debug.Increment("Quiescence Stalemate") );
