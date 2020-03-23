@@ -12,7 +12,8 @@ const int MAX_PLY = 128;
 const int RESET_HISTORY = INFINITE / 30;
 
 namespace Sorting {
-    void SortCaptureMoves(Board &board, MoveList &moveList);
+    void SortCaptures(Board &board, MoveList &moveList);
+    void SortEvasions(Board &board, MoveList &moveList);
     void SortMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply);
     void SortRootMoves(std::vector<RootMove>& rootMoves);
 }

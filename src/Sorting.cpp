@@ -112,7 +112,7 @@ namespace {
         }
     }
 
-    void RateQuiescence(Board &board, MoveList& moveList) {
+    void RateCaptures(Board &board, MoveList& moveList) {
         for(auto &move : moveList) {
             if(move.CapturedType()) {
                 int see = board.SEE(move);
@@ -126,6 +126,16 @@ namespace {
                 assert(score >= 0 && score <= 255);
                 move.SetScore( (U8)score );
             }
+        }
+    }
+
+    void RateEvasions(Board &board, MoveList& moveList) {
+        // Captures > Other moves
+        for(auto &move : moveList) {
+            if(move.CapturedType())
+                move.SetScore(1);
+            else
+                move.SetScore(0);
         }
     }
 
@@ -155,16 +165,22 @@ namespace {
 }
 
 //Sorting namespace (public interface)
-void Sorting::SortCaptureMoves(Board &board, MoveList &moveList) {
+void Sorting::SortCaptures(Board &board, MoveList &moveList) {
     const bool useSEE = 1;
     if(useSEE) {
-        RateQuiescence(board, moveList);
+        RateCaptures(board, moveList);
         std::sort(moveList.begin(), moveList.end(), ByScore);
     }
     else {
         std::sort(moveList.begin(), moveList.end(), MVV);
     }
 }
+
+void Sorting::SortEvasions(Board &board, MoveList &moveList) {
+    RateEvasions(board, moveList);
+    std::sort(moveList.begin(), moveList.end(), ByScore);
+}
+
 
 void Sorting::SortMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply) {
     RateMoves(board, moveList, tt, heuristics, ply);
