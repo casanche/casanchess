@@ -23,14 +23,15 @@ const int PHASE_WEIGHT[8] = {
 };
 
 //King Safety formulas
-const double KS_MAXBONUS = 310;
+const double KS_MAXBONUS = 315;
 const double KS_MIDPOINT = 38;
-const double KS_SLOPE = 85;
+const double KS_SLOPE = 75;
 const int KS_BONUS_PIECETYPE[4][6] = { //[][PIECE_TYPE]
-    {0, 0, 220, 146, 146, 125}, //Undefended squares, checks
-    {0, 0, 59, 46, 15, 85}, //Undefended squares
-    {0, 0, 95, 80, 93, 60}, //Defended by pieces of equal-or-higher value, checks
-    {0, 0, 55, 15, 50, 44} //Defended by pieces of equal-or-higher value
+    {0, 0, 220, 140, 140, 125}, //Undefended squares, checks
+    {0, 0, 44, 31, 5, 85}, //Undefended squares
+    {0, 0, 75, 65, 86, 60}, //Defended by pieces of equal-or-higher value, checks
+    {0, 0, 55, 10, 50, 45} //Defended by pieces of equal-or-higher value
+    //{0, 0, 0, 0, 0, 25} //Defended by pieces of lower value, checks
 };
 
 //Debug
@@ -215,6 +216,8 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
         }
     }
 
+    EvalKingSafety_RookOpen(board, kingSafetyUnits);
+
     kingSafetyUnits[WHITE] /= 10;
     kingSafetyUnits[BLACK] /= 10;
 
@@ -223,6 +226,36 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
 
     score.Add     ( KING_SAFETY_TABLE[ kingSafetyUnits[WHITE] ], 0 );
     score.Subtract( KING_SAFETY_TABLE[ kingSafetyUnits[BLACK] ], 0 );
+}
+
+//Assign a bonus if we have rooks and there are open/semiopen files near the enemy king
+void Evaluation::EvalKingSafety_RookOpen(const Board& board, int (&kingSafetyUnits)[2]) {
+    for(COLORS color : {WHITE, BLACK}) {
+        if( board.Piece(color, ROOK) ) {
+            COLORS enemyColor = (COLORS)!color;
+            Bitboard enemyKing = board.Piece(enemyColor, KING);
+            int kingSquare = BitscanForward(enemyKing);
+            int kingFile = File(kingSquare);
+
+            //King file
+            bool isSemiopen = false;
+            if( IsSemiopenFile(board, color, kingSquare) ) {
+                isSemiopen = true;
+                kingSafetyUnits[color] += params.KS_KING_SEMIOPEN[0];
+            }
+            if( IsSemiopenFile(board, enemyColor, kingSquare) ) {
+                kingSafetyUnits[color] += params.KS_KING_SEMIOPEN[1];
+                if(isSemiopen)
+                    kingSafetyUnits[color] += params.KS_KING_OPEN;
+            }
+            //Adjacent left: missing pawn
+            if( kingFile != FILEA && IsSemiopenFile(board, enemyColor, kingSquare - 1) )
+                kingSafetyUnits[color] += params.KS_KING_SEMIOPEN_ADJACENT;
+            //Adjacent right: missing pawn
+            if( kingFile != FILEH && IsSemiopenFile(board, enemyColor, kingSquare + 1) )
+                kingSafetyUnits[color] += params.KS_KING_SEMIOPEN_ADJACENT;
+        }//rook?
+    } //color
 }
 
 void Evaluation::EvalMaterial(const Board& board, Score& score) {
@@ -326,32 +359,9 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
         if( IsSemiopenFile(board, color, square) ) {
             score.mg += params.ROOK_SEMIOPEN[MG];
             score.eg += params.ROOK_SEMIOPEN[EG];
-
-            COLORS enemyColor = (COLORS)!color;
-            Bitboard theKing = board.Piece(enemyColor, KING);
-            int file = File(square);
-            bool inKingFile = theKing & MaskFile[file];
-            bool inAdjacentKingFile = theKing & ADJACENT_FILES[file];
-            if(inKingFile) {
-                score.mg += params.KING_SEMIOPEN[MG];
-                score.eg += params.KING_SEMIOPEN[EG];
-            }
-            else if(inAdjacentKingFile) {
-                score.mg += params.KING_SEMIOPEN_ADJACENT[MG];
-                score.eg += params.KING_SEMIOPEN_ADJACENT[EG];
-            }
-            //Open Files
-            if( IsSemiopenFile(board, enemyColor, square) ) {
+            if( IsSemiopenFile(board, (COLORS)!color, square) ) {
                 score.mg += params.ROOK_OPEN[MG];
                 score.eg += params.ROOK_OPEN[EG];
-                if(inKingFile) {
-                    score.mg += params.KING_OPEN[MG];
-                    score.eg += params.KING_OPEN[EG];
-                }
-                else if(inAdjacentKingFile) {
-                    score.mg += params.KING_OPEN_ADJACENT[MG];
-                    score.eg += params.KING_OPEN_ADJACENT[EG];
-                }
             }
         }
     }

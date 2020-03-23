@@ -73,6 +73,7 @@ namespace Evaluation {
 
     TaperedScore EvalBishopPair(const Board &board, COLORS color);
     void EvalKingSafety(const Board &board, Bitboard attacksMobility[2][8], Score& score);
+    void EvalKingSafety_RookOpen(const Board& board, int (&kingSafetyUnits)[2]);
     void EvalMaterial(const Board& board, Score& score);
     void EvalPawns(const Board& board, Score& score);
     TaperedScore EvalPawnsCalculation(const Board& board, COLORS color);
@@ -96,11 +97,11 @@ namespace Evaluation {
         };
 
         int ROOK_SEMIOPEN[2] = {26, 8};
-        int ROOK_OPEN[2] = {37, -6};
-        int KING_SEMIOPEN[2] = {18, 0};
-        int KING_OPEN[2] = {41, 6};
-        int KING_SEMIOPEN_ADJACENT[2] = {8, -8};
-        int KING_OPEN_ADJACENT[2] = {20, 0};
+        int ROOK_OPEN[2] = {32, -7};
+
+        int KS_KING_SEMIOPEN[2] = {20, 60}; //Semiopen for [COLOR]
+        int KS_KING_OPEN = 60;
+        int KS_KING_SEMIOPEN_ADJACENT = 40;
 
         int BISHOP_PAIR[2] = {35, 52};
 
