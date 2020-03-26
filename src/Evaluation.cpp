@@ -22,18 +22,6 @@ const int PHASE_WEIGHT[8] = {
     0 //KING
 };
 
-//King Safety formulas
-const double KS_MAXBONUS = 315;
-const double KS_MIDPOINT = 38;
-const double KS_SLOPE = 75;
-const int KS_BONUS_PIECETYPE[4][6] = { //[][PIECE_TYPE]
-    {0, 0, 220, 140, 140, 125}, //Undefended squares, checks
-    {0, 0, 44, 31, 5, 85}, //Undefended squares
-    {0, 0, 75, 65, 86, 60}, //Defended by pieces of equal-or-higher value, checks
-    {0, 0, 55, 10, 50, 45} //Defended by pieces of equal-or-higher value
-    //{0, 0, 0, 0, 0, 25} //Defended by pieces of lower value, checks
-};
-
 //Debug
 int test_total = 0;
 int test_hit = 0;
@@ -113,7 +101,7 @@ void Evaluation::Init() {
         PASSED_PAWN_AREA[WHITE][square] = PASSED_PAWN_FRONT[WHITE][square] | PASSED_PAWN_SIDES[WHITE][square];
         PASSED_PAWN_AREA[BLACK][square] = PASSED_PAWN_FRONT[BLACK][square] | PASSED_PAWN_SIDES[BLACK][square];
     }
-    //King inner and outer rings
+    //King safety
     for(int square = 0; square < 64; square++) {
         KING_INNER_RING[square] = Attacks::AttacksKing(square);
         //Outer ring is the sum of the attacks from each square of the inner ring, minus the inner ring and the king square
@@ -124,9 +112,10 @@ void Evaluation::Init() {
         }
         KING_OUTER_RING[square] ^= KING_INNER_RING[square] | SquareBB(square);
     }
-    //King safety
     for(int i = 0; i < 128; i++) {
-        KING_SAFETY_TABLE[i] = static_cast<int>(Evaluation::Sigmoid(i, KS_MAXBONUS, KS_MIDPOINT, (double)KS_SLOPE / 1000.f));
+        KING_SAFETY_TABLE[i] = static_cast<int>(
+            Evaluation::Sigmoid(i, parameters.KS_SIGMOID[0], parameters.KS_SIGMOID[1], parameters.KS_SIGMOID[2] / 1000.f)
+        );
     }
 }
 
@@ -167,8 +156,8 @@ int Evaluation::Phase(const Board& board) {
 TaperedScore Evaluation::EvalBishopPair(const Board &board, COLORS color) {
     TaperedScore score;
     if( (board.Piece(color, BISHOP) & LIGHT_SQUARES) && (board.Piece(color, BISHOP) & DARK_SQUARES) ) {
-        score.mg = params.BISHOP_PAIR[MG];
-        score.eg = params.BISHOP_PAIR[EG];
+        score.mg = parameters.BISHOP_PAIR[MG];
+        score.eg = parameters.BISHOP_PAIR[EG];
     }
     return score;
 }
@@ -209,10 +198,10 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
                 default: assert(false);
             };
 
-            kingSafetyUnits[color] += PopCount(allowedAttacks & ~enemyAttacks &  checks) * KS_BONUS_PIECETYPE[0][pieceType];
-            kingSafetyUnits[color] += PopCount(allowedAttacks & ~enemyAttacks & ~checks) * KS_BONUS_PIECETYPE[1][pieceType];
-            kingSafetyUnits[color] += PopCount(allowedAttacks &  enemyAttacks & ~enemyAttacksLower &  checks) * KS_BONUS_PIECETYPE[2][pieceType];
-            kingSafetyUnits[color] += PopCount(allowedAttacks &  enemyAttacks & ~enemyAttacksLower & ~checks) * KS_BONUS_PIECETYPE[3][pieceType];
+            kingSafetyUnits[color] += PopCount(allowedAttacks & ~enemyAttacks &  checks) * parameters.KS_BONUS_PIECETYPE[0][pieceType];
+            kingSafetyUnits[color] += PopCount(allowedAttacks & ~enemyAttacks & ~checks) * parameters.KS_BONUS_PIECETYPE[1][pieceType];
+            kingSafetyUnits[color] += PopCount(allowedAttacks &  enemyAttacks & ~enemyAttacksLower &  checks) * parameters.KS_BONUS_PIECETYPE[2][pieceType];
+            kingSafetyUnits[color] += PopCount(allowedAttacks &  enemyAttacks & ~enemyAttacksLower & ~checks) * parameters.KS_BONUS_PIECETYPE[3][pieceType];
         }
     }
 
@@ -241,19 +230,19 @@ void Evaluation::EvalKingSafety_RookOpen(const Board& board, int (&kingSafetyUni
             bool isSemiopen = false;
             if( IsSemiopenFile(board, color, kingSquare) ) {
                 isSemiopen = true;
-                kingSafetyUnits[color] += params.KS_KING_SEMIOPEN[0];
+                kingSafetyUnits[color] += parameters.KS_KING_SEMIOPEN[0];
             }
             if( IsSemiopenFile(board, enemyColor, kingSquare) ) {
-                kingSafetyUnits[color] += params.KS_KING_SEMIOPEN[1];
+                kingSafetyUnits[color] += parameters.KS_KING_SEMIOPEN[1];
                 if(isSemiopen)
-                    kingSafetyUnits[color] += params.KS_KING_OPEN;
+                    kingSafetyUnits[color] += parameters.KS_KING_OPEN;
             }
             //Adjacent left: missing pawn
             if( kingFile != FILEA && IsSemiopenFile(board, enemyColor, kingSquare - 1) )
-                kingSafetyUnits[color] += params.KS_KING_SEMIOPEN_ADJACENT;
+                kingSafetyUnits[color] += parameters.KS_KING_SEMIOPEN_ADJACENT;
             //Adjacent right: missing pawn
             if( kingFile != FILEH && IsSemiopenFile(board, enemyColor, kingSquare + 1) )
-                kingSafetyUnits[color] += params.KS_KING_SEMIOPEN_ADJACENT;
+                kingSafetyUnits[color] += parameters.KS_KING_SEMIOPEN_ADJACENT;
         }//rook?
     } //color
 }
@@ -262,8 +251,8 @@ void Evaluation::EvalMaterial(const Board& board, Score& score) {
     for(PIECE_TYPE pieceType : {PAWN, KNIGHT, BISHOP, ROOK, QUEEN}) {
         int countBalance = PopCount( board.Piece(WHITE,pieceType) ) - PopCount( board.Piece(BLACK,pieceType) );
         score.Add(
-            countBalance * params.MATERIAL_VALUES[MG][pieceType],
-            countBalance * params.MATERIAL_VALUES[EG][pieceType]
+            countBalance * parameters.MATERIAL_VALUES[MG][pieceType],
+            countBalance * parameters.MATERIAL_VALUES[EG][pieceType]
         );
     }
 }
@@ -315,12 +304,12 @@ TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLORS color) 
     //--Double pawns
     //1-rank distance
     int doubledPawns = PopCount(thePawns & North(thePawns));
-    score.mg += doubledPawns * params.DOUBLED_PAWN[MG];
-    score.eg += doubledPawns * params.DOUBLED_PAWN[EG];
+    score.mg += doubledPawns * parameters.DOUBLED_PAWN[MG];
+    score.eg += doubledPawns * parameters.DOUBLED_PAWN[EG];
     //2-rank distance: half bonus
     doubledPawns = PopCount(thePawns & North(thePawns, 2));
-    score.mg += doubledPawns * params.DOUBLED_PAWN[MG] / 2;
-    score.eg += doubledPawns * params.DOUBLED_PAWN[EG] / 2;
+    score.mg += doubledPawns * parameters.DOUBLED_PAWN[MG] / 2;
+    score.eg += doubledPawns * parameters.DOUBLED_PAWN[EG] / 2;
 
     Bitboard bb = thePawns;
     while(bb) {
@@ -337,13 +326,13 @@ TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLORS color) 
 
         if(isPassed) {
             int rank = ColorlessRank(color, square);
-            score.mg += params.PASSED_PAWN[MG][rank];
-            score.eg += params.PASSED_PAWN[EG][rank];
+            score.mg += parameters.PASSED_PAWN[MG][rank];
+            score.eg += parameters.PASSED_PAWN[EG][rank];
         }
         if(isIsolated) {
             int rank = ColorlessRank(color, square);
-            score.mg += params.ISOLATED_PAWN[MG][rank];
-            score.eg += params.ISOLATED_PAWN[EG][rank];
+            score.mg += parameters.ISOLATED_PAWN[MG][rank];
+            score.eg += parameters.ISOLATED_PAWN[EG][rank];
         }
     }
 
@@ -357,11 +346,11 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
         int square = ResetLsb(bb);
         //Semi-open files
         if( IsSemiopenFile(board, color, square) ) {
-            score.mg += params.ROOK_SEMIOPEN[MG];
-            score.eg += params.ROOK_SEMIOPEN[EG];
+            score.mg += parameters.ROOK_SEMIOPEN[MG];
+            score.eg += parameters.ROOK_SEMIOPEN[EG];
             if( IsSemiopenFile(board, (COLORS)!color, square) ) {
-                score.mg += params.ROOK_OPEN[MG];
-                score.eg += params.ROOK_OPEN[EG];
+                score.mg += parameters.ROOK_OPEN[MG];
+                score.eg += parameters.ROOK_OPEN[EG];
             }
         }
     }
@@ -410,8 +399,8 @@ int Evaluation::Evaluate(const Board& board) {
                     attacksMobility[color][ALL_PIECES] |= attacks;
                     int mob = PopCount(attacks & ~pawnRestrictions);
                     score.Add(
-                        sign * params.MOBILITY_KNIGHT[MG][mob],
-                        sign * params.MOBILITY_KNIGHT[EG][mob]
+                        sign * calculations.MOBILITY_KNIGHT[MG][mob],
+                        sign * calculations.MOBILITY_KNIGHT[EG][mob]
                     );
                 }
                 else if(pieceType == BISHOP) {
@@ -421,8 +410,8 @@ int Evaluation::Evaluate(const Board& board) {
                     attacksMobility[color][ALL_PIECES] |= attacks;
                     int mob = PopCount(attacks & ~pawnRestrictions);
                     score.Add(
-                        sign * params.MOBILITY_BISHOP[MG][mob],
-                        sign * params.MOBILITY_BISHOP[EG][mob]
+                        sign * calculations.MOBILITY_BISHOP[MG][mob],
+                        sign * calculations.MOBILITY_BISHOP[EG][mob]
                     );
                 }
                 else if(pieceType == ROOK) {
@@ -432,8 +421,8 @@ int Evaluation::Evaluate(const Board& board) {
                     attacksMobility[color][ALL_PIECES] |= attacks;
                     int mob = PopCount(attacks & ~pawnRestrictions);
                     score.Add(
-                        sign * params.MOBILITY_ROOK[MG][mob],
-                        sign * params.MOBILITY_ROOK[EG][mob]
+                        sign * calculations.MOBILITY_ROOK[MG][mob],
+                        sign * calculations.MOBILITY_ROOK[EG][mob]
                     );
                 }
                 else if(pieceType == QUEEN) {
@@ -450,8 +439,8 @@ int Evaluation::Evaluate(const Board& board) {
 
                     int mob = PopCount(attacks & ~pawnRestrictions);
                     score.Add(
-                        sign * params.MOBILITY_QUEEN[MG][mob],
-                        sign * params.MOBILITY_QUEEN[EG][mob]
+                        sign * calculations.MOBILITY_QUEEN[MG][mob],
+                        sign * calculations.MOBILITY_QUEEN[EG][mob]
                     );
                 }
             } //piece

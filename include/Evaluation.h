@@ -7,6 +7,10 @@
 
 class Board;
 
+#define LINEAR(a, b) (std::lrint( a + b*mob )) //a + bx
+#define QUADRATIC(a, b, c) (std::lrint( a + b*mob + c*mob*mob )) //a + bx + cx^2
+#define SCALED_CUBIC(f, a, b, c, d) (std::lrint( f*(a + b*mob + c*mob*mob + d*mob*mob*mob) )) //f*(a + bx + cx^2 + dx^3)
+
 namespace Evaluation {
 
     enum GAME_PHASE { MIDDLEGAME, ENDGAME };
@@ -28,28 +32,6 @@ namespace Evaluation {
         //f(x) = g(x) - g(0), where g(x) = a / (1 + exp(-c * (x-b)) )
         return maximum / (1 + exp( -slope * (x - midPoint) ) )
              - maximum / (1 + exp( -slope * (0 - midPoint) ) ); 
-    }
-
-    //Mobility formulas
-    #define LINEAR(a, b) (std::lrint( a + b*mob )) //a + bx
-    #define QUADRATIC(a, b, c) (std::lrint( a + b*mob + c*mob*mob )) //a + bx + cx^2
-    #define SCALED_CUBIC(f, a, b, c, d) (std::lrint( f*(a + b*mob + c*mob*mob + d*mob*mob*mob) )) //f*(a + bx + cx^2 + dx^3)
-
-    template<GAME_PHASE ph> constexpr int MOB_N(U8 mob) {
-        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(1, -25.3, 4.53, -0.67, 0.0715);
-        else                           return (mob < 3) * LINEAR(-41.7, 4.0) + (mob >= 3) * QUADRATIC(-63.6, 19.8, -1.34);
-    }
-    template<GAME_PHASE ph> constexpr int MOB_B(U8 mob) {
-        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(1, -50.9, 17.8, -2, 0.0877);
-        else                           return SCALED_CUBIC(1, -95, 26.5, -2.6, 0.0955);
-    }
-    template<GAME_PHASE ph> constexpr int MOB_R(U8 mob) {
-        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(1, -14.5, 0.87, 0.29, -0.0095);
-        else                           return SCALED_CUBIC(1, -58.6, +12.2, -0.59, +0.0041);
-    }
-    template<GAME_PHASE ph> constexpr int MOB_Q(U8 mob) {
-        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(0.5, -29.5, 2.63, 0.026, -0.002);
-        else                           return SCALED_CUBIC(0.5, -27.9, 2.29, 0.026, -0.0018);
     }
 
     //Precomputed tables
@@ -85,6 +67,7 @@ namespace Evaluation {
             {0, 98, 397, 385, 490, 1150, 0},
             {0, 94, 345, 360, 600, 1150, 0}
         };
+        int BISHOP_PAIR[2] = {35, 52};
 
         int DOUBLED_PAWN[2] = {-15, -12};
         int PASSED_PAWN[2][8] = {  //[RANK]
@@ -99,29 +82,57 @@ namespace Evaluation {
         int ROOK_SEMIOPEN[2] = {26, 8};
         int ROOK_OPEN[2] = {32, -7};
 
+        int KS_SIGMOID[3] = {315, 38, 75};
         int KS_KING_SEMIOPEN[2] = {20, 60}; //Semiopen for [COLOR]
         int KS_KING_OPEN = 60;
         int KS_KING_SEMIOPEN_ADJACENT = 40;
+        int KS_BONUS_PIECETYPE[4][6] = { //[][PIECE_TYPE]
+            {0, 0, 220, 140, 140, 125}, //Undefended squares, checks
+            {0, 0, 44, 31, 5, 85}, //Undefended squares
+            {0, 0, 75, 65, 86, 60}, //Defended by pieces of equal-or-higher value, checks
+            {0, 0, 55, 10, 50, 45} //Defended by pieces of equal-or-higher value
+        };
 
-        int BISHOP_PAIR[2] = {35, 52};
+    } parameters;
 
-        int MOBILITY_KNIGHT[2][9] = {
-            {MOB_N<MG>(0), MOB_N<MG>(1), MOB_N<MG>(2), MOB_N<MG>(3), MOB_N<MG>(4), MOB_N<MG>(5), MOB_N<MG>(6), MOB_N<MG>(7), MOB_N<MG>(8)},
-            {MOB_N<EG>(0), MOB_N<EG>(1), MOB_N<EG>(2), MOB_N<EG>(3), MOB_N<EG>(4), MOB_N<EG>(5), MOB_N<EG>(6), MOB_N<EG>(7), MOB_N<EG>(8)}
+    const struct Calculations {
+        Calculations() {
+            for(GAME_PHASE ph : {MG, EG}) {
+                for(int mob = 0; mob <  9; mob++) MOBILITY_KNIGHT[ph][mob] = Mobility(KNIGHT, ph, mob);
+                for(int mob = 0; mob < 14; mob++) MOBILITY_BISHOP[ph][mob] = Mobility(BISHOP, ph, mob);
+                for(int mob = 0; mob < 15; mob++) MOBILITY_ROOK[ph][mob] = Mobility(ROOK, ph, mob);
+                for(int mob = 0; mob < 28; mob++) MOBILITY_QUEEN[ph][mob] = Mobility(QUEEN, ph, mob);
+            }
         };
-        int MOBILITY_BISHOP[2][14] = {
-            {MOB_B<MG>(0), MOB_B<MG>(1), MOB_B<MG>(2), MOB_B<MG>(3), MOB_B<MG>(4), MOB_B<MG>(5), MOB_B<MG>(6), MOB_B<MG>(7), MOB_B<MG>(8), MOB_B<MG>(9), MOB_B<MG>(10), MOB_B<MG>(11), MOB_B<MG>(12), MOB_B<MG>(13)},
-            {MOB_B<EG>(0), MOB_B<EG>(1), MOB_B<EG>(2), MOB_B<EG>(3), MOB_B<EG>(4), MOB_B<EG>(5), MOB_B<EG>(6), MOB_B<EG>(7), MOB_B<EG>(8), MOB_B<EG>(9), MOB_B<EG>(10), MOB_B<EG>(11), MOB_B<EG>(12), MOB_B<EG>(13)}
-        };
-        int MOBILITY_ROOK[2][15] = {
-            {MOB_R<MG>(0), MOB_R<MG>(1), MOB_R<MG>(2), MOB_R<MG>(3), MOB_R<MG>(4), MOB_R<MG>(5), MOB_R<MG>(6), MOB_R<MG>(7), MOB_R<MG>(8), MOB_R<MG>(9), MOB_R<MG>(10), MOB_R<MG>(11), MOB_R<MG>(12), MOB_R<MG>(13), MOB_R<MG>(14)},
-            {MOB_R<EG>(0), MOB_R<EG>(1), MOB_R<EG>(2), MOB_R<EG>(3), MOB_R<EG>(4), MOB_R<EG>(5), MOB_R<EG>(6), MOB_R<EG>(7), MOB_R<EG>(8), MOB_R<EG>(9), MOB_R<EG>(10), MOB_R<EG>(11), MOB_R<EG>(12), MOB_R<EG>(13), MOB_R<MG>(14)}
-        };
-        int MOBILITY_QUEEN[2][28] = {
-            {MOB_Q<MG>(0), MOB_Q<MG>(1), MOB_Q<MG>(2), MOB_Q<MG>(3), MOB_Q<MG>(4), MOB_Q<MG>(5), MOB_Q<MG>(6), MOB_Q<MG>(7), MOB_Q<MG>(8), MOB_Q<MG>(9), MOB_Q<MG>(10), MOB_Q<MG>(11), MOB_Q<MG>(12), MOB_Q<MG>(13), MOB_Q<MG>(14), MOB_Q<MG>(15), MOB_Q<MG>(16), MOB_Q<MG>(17), MOB_Q<MG>(18), MOB_Q<MG>(19), MOB_Q<MG>(20), MOB_Q<MG>(21), MOB_Q<MG>(22), MOB_Q<MG>(23), MOB_Q<MG>(24), MOB_Q<MG>(25), MOB_Q<MG>(26), MOB_Q<MG>(27)},
-            {MOB_Q<EG>(0), MOB_Q<EG>(1), MOB_Q<EG>(2), MOB_Q<EG>(3), MOB_Q<EG>(4), MOB_Q<EG>(5), MOB_Q<EG>(6), MOB_Q<EG>(7), MOB_Q<EG>(8), MOB_Q<EG>(9), MOB_Q<EG>(10), MOB_Q<EG>(11), MOB_Q<EG>(12), MOB_Q<EG>(13), MOB_Q<EG>(14), MOB_Q<EG>(15), MOB_Q<EG>(16), MOB_Q<EG>(17), MOB_Q<EG>(18), MOB_Q<EG>(19), MOB_Q<EG>(20), MOB_Q<EG>(21), MOB_Q<EG>(22), MOB_Q<EG>(23), MOB_Q<EG>(24), MOB_Q<EG>(25), MOB_Q<EG>(26), MOB_Q<EG>(27)}
-        };
-    } params;
+
+        int Mobility(PIECE_TYPE pieceType, GAME_PHASE ph, int mob) {
+            if(ph == MG) {
+                switch(pieceType) {
+                case KNIGHT:    return SCALED_CUBIC(1, -25.3, 4.53, -0.67, 0.0715); break;
+                case BISHOP:    return SCALED_CUBIC(1, -50.9, 17.8, -2, 0.0877); break;
+                case ROOK:      return SCALED_CUBIC(1, -14.5, 0.87, 0.29, -0.0095); break;
+                case QUEEN:     return SCALED_CUBIC(0.5, -29.5, 2.63, 0.026, -0.002); break;
+                default: assert(false);
+                };
+            }
+            else if(ph == EG) {
+                switch(pieceType) {
+                case KNIGHT:    return (mob < 3) * LINEAR(-41.7, 4.0) + (mob >= 3) * QUADRATIC(-63.6, 19.8, -1.34); break;
+                case BISHOP:    return SCALED_CUBIC(1, -95, 26.5, -2.6, 0.0955); break;
+                case ROOK:      return SCALED_CUBIC(1, -58.6, +12.2, -0.59, +0.0041); break;
+                case QUEEN:     return SCALED_CUBIC(0.5, -27.9, 2.29, 0.026, -0.0018); break;
+                default: assert(false);
+                };
+            }
+            assert(false);
+            return 0;
+        }
+
+        int MOBILITY_KNIGHT[2][9];
+        int MOBILITY_BISHOP[2][14];
+        int MOBILITY_ROOK[2][15];
+        int MOBILITY_QUEEN[2][28];
+    } calculations;
 
     const int PSQT[8][64] = {
         //NO_PIECE
