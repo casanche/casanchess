@@ -36,7 +36,7 @@ namespace Evaluation {
     #define SCALED_CUBIC(f, a, b, c, d) (std::lrint( f*(a + b*mob + c*mob*mob + d*mob*mob*mob) )) //f*(a + bx + cx^2 + dx^3)
 
     template<GAME_PHASE ph> constexpr int MOB_N(U8 mob) {
-        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(1, -25.3, 4.53, -0.67, -0.0715);
+        if constexpr(ph == MIDDLEGAME) return SCALED_CUBIC(1, -25.3, 4.53, -0.67, 0.0715);
         else                           return (mob < 3) * LINEAR(-41.7, 4.0) + (mob >= 3) * QUADRATIC(-63.6, 19.8, -1.34);
     }
     template<GAME_PHASE ph> constexpr int MOB_B(U8 mob) {
