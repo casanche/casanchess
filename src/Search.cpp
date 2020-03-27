@@ -518,8 +518,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         
     } //move loop
 
-    TTENTRY_TYPE type = (alpha > alphaOriginal) ? TTENTRY_TYPE::EXACT : TTENTRY_TYPE::UPPER_BOUND;
-    Hash::tt.AddEntry(board.ZKey(), alpha, type, bestMove, depth, m_counter); //alpha or bestScore?
+    if(bestScore != -INFINITE_SCORE) {
+        TTENTRY_TYPE type = (alpha > alphaOriginal) ? TTENTRY_TYPE::EXACT : TTENTRY_TYPE::UPPER_BOUND;
+        Hash::tt.AddEntry(board.ZKey(), bestScore, type, bestMove, depth, m_counter);
+    }
 
     return alpha;
 }
