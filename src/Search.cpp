@@ -308,9 +308,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     Move bestMove; //for later storage in the Transposition Table
     int bestScore = -INFINITE_SCORE;
     int alphaOriginal = alpha; //for later calculation of TTENTRY_TYPE
-    //ttEntry access
+    
     TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), depth);
-    if(ttEntry) {
+    if(ttEntry && !isPV) {
         if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && ttEntry->score <= alpha)
             || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && ttEntry->score >= beta)
             || (ttEntry->type == TTENTRY_TYPE::EXACT && ttEntry->score >= alpha && ttEntry->score <= beta) )
