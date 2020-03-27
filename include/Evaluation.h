@@ -56,6 +56,7 @@ namespace Evaluation {
     TaperedScore EvalBishopPair(const Board &board, COLORS color);
     void EvalKingSafety(const Board &board, Bitboard attacksMobility[2][8], Score& score);
     void EvalKingSafety_RookOpen(const Board& board, int (&kingSafetyUnits)[2]);
+    void EvalKingSafety_WeakSquares(const Board& board, int (&kingSafetyUnits)[2], Bitboard attacksMobility[2][8]);
     void EvalMaterial(const Board& board, Score& score);
     void EvalPawns(const Board& board, Score& score);
     TaperedScore EvalPawnsCalculation(const Board& board, COLORS color);
@@ -92,6 +93,7 @@ namespace Evaluation {
             {0, 0, 75, 65, 86, 60}, //Defended by pieces of equal-or-higher value, checks
             {0, 0, 55, 10, 50, 45} //Defended by pieces of equal-or-higher value
         };
+        int KS_WEAK_SQUARES_GROW = 75;
 
     } parameters;
 
@@ -103,6 +105,7 @@ namespace Evaluation {
                 for(int mob = 0; mob < 15; mob++) MOBILITY_ROOK[ph][mob] = Mobility(ROOK, ph, mob);
                 for(int mob = 0; mob < 28; mob++) MOBILITY_QUEEN[ph][mob] = Mobility(QUEEN, ph, mob);
             }
+            for(int x = 0; x < 13; x++) KS_WEAK_SQUARES[x] = WeakSquares(x);
         };
 
         int Mobility(PIECE_TYPE pieceType, GAME_PHASE ph, int mob) {
@@ -127,11 +130,17 @@ namespace Evaluation {
             assert(false);
             return 0;
         }
+        int WeakSquares(int x) {
+            if(x < 2) return 0;
+            if(x > 6) x = 6;
+            return parameters.KS_WEAK_SQUARES_GROW * sqrt(x-2);
+        }
 
         int MOBILITY_KNIGHT[2][9];
         int MOBILITY_BISHOP[2][14];
         int MOBILITY_ROOK[2][15];
         int MOBILITY_QUEEN[2][28];
+        int KS_WEAK_SQUARES[13];
     } calculations;
 
     const int PSQT[8][64] = {

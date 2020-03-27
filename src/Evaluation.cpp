@@ -206,6 +206,7 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
     }
 
     EvalKingSafety_RookOpen(board, kingSafetyUnits);
+    EvalKingSafety_WeakSquares(board, kingSafetyUnits, attacksMobility);
 
     kingSafetyUnits[WHITE] /= 10;
     kingSafetyUnits[BLACK] /= 10;
@@ -244,6 +245,29 @@ void Evaluation::EvalKingSafety_RookOpen(const Board& board, int (&kingSafetyUni
             if( kingFile != FILEH && IsSemiopenFile(board, enemyColor, kingSquare + 1) )
                 kingSafetyUnits[color] += parameters.KS_KING_SEMIOPEN_ADJACENT;
         }//rook?
+    } //color
+}
+
+//Assign a bonus if there are weak squares around the enemy king, and we have bishop and queen
+//Weak square: not protected by pawns or bishops
+void Evaluation::EvalKingSafety_WeakSquares(const Board& board, int (&kingSafetyUnits)[2], Bitboard attacksMobility[2][8]) {
+    for(COLORS color : {WHITE, BLACK}) {
+        if( board.Piece(color,QUEEN) ) {
+            COLORS enemyColor = (COLORS)!color;
+            int kingSquare = BitscanForward( board.Piece(enemyColor, KING) );
+            Bitboard kingRing = KING_INNER_RING[kingSquare] | KING_OUTER_RING[kingSquare];
+            Bitboard pawnControl = board.Piece(enemyColor, PAWN) | attacksMobility[enemyColor][PAWN];
+            Bitboard bishopControl = board.Piece(enemyColor, BISHOP) | attacksMobility[enemyColor][BISHOP];
+            
+            if(board.Piece(color, BISHOP) & DARK_SQUARES) {
+                int weaknesses = PopCount(kingRing & ~pawnControl & ~bishopControl & DARK_SQUARES);
+                kingSafetyUnits[color] += calculations.KS_WEAK_SQUARES[weaknesses];
+            }
+            if(board.Piece(color, BISHOP) & LIGHT_SQUARES) {
+                int weaknesses = PopCount(kingRing & ~pawnControl & ~bishopControl & LIGHT_SQUARES);
+                kingSafetyUnits[color] += calculations.KS_WEAK_SQUARES[weaknesses];
+            }
+        } //if queen
     } //color
 }
 
