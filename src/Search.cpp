@@ -16,7 +16,7 @@ const int ASPIRATION_WINDOW_DEPTH = 4;
 const int ASPIRATION_WINDOW = 25;
 
 const bool TURNOFF_NULLMOVE_PRUNING = false;
-const int NULLMOVE_REDUCTION_FACTOR = 2;
+const int NULLMOVE_REDUCTION_FACTOR = 3;
 
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
@@ -349,7 +349,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         && !inCheck
         && m_nullmoveAllowed
         && eval >= beta  //very good score
-        && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=9)  //enough depth
+        && depth >= NULLMOVE_REDUCTION_FACTOR + (depth / 5)  //enough depth
         && Evaluation::AreHeavyPieces(board)  //active player has pieces on the board (to avoid zugzwang in K+P endgames)
     ) {
         D( m_debug.Increment("NullMove Hits") );
@@ -358,7 +358,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_ply++;
         m_nullmoveAllowed = false;
 
-        int nullDepth = depth - 1 - NULLMOVE_REDUCTION_FACTOR - (depth>=9);
+        int R = NULLMOVE_REDUCTION_FACTOR + (depth / 5);
+        int nullDepth = depth - R;
         int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1);
 
         board.TakeNull();
