@@ -320,8 +320,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
     }
 
-    //Calculate evaluation once at start
-    int eval = Evaluation::Evaluate(board);
+    //Calculate evaluation once at start, for pruning purposes
+    int eval;
+    if(!inCheck)
+        eval = Evaluation::Evaluate(board);
 
     D( m_debug.Increment("NegaMax Calls to Evaluation") );
 
@@ -344,10 +346,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Null-move pruning -----------
     if(!TURNOFF_NULLMOVE_PRUNING
-        && eval >= beta  //very good score
-        && m_nullmoveAllowed
-        && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=9)  //enough depth
         && !inCheck
+        && m_nullmoveAllowed
+        && eval >= beta  //very good score
+        && depth >= NULLMOVE_REDUCTION_FACTOR + 1 + (depth>=9)  //enough depth
         && Evaluation::AreHeavyPieces(board)  //active player has pieces on the board (to avoid zugzwang in K+P endgames)
     ) {
         D( m_debug.Increment("NullMove Hits") );
