@@ -18,8 +18,8 @@ MoveGenerator::MoveGenerator() { }
 //Legal moves
 MoveList MoveGenerator::GenerateMoves(Board &board) {
     //Attacked squares
-    COLORS color = board.ActivePlayer();
-    COLORS enemyColor = board.InactivePlayer();
+    COLOR color = board.ActivePlayer();
+    COLOR enemyColor = board.InactivePlayer();
     board.m_kingDangerSquares[enemyColor] = GenerateKingDangerAttacks(board, enemyColor);
     board.m_attackedSquares[enemyColor] = board.m_kingDangerSquares[enemyColor] & ~board.Piece(enemyColor,ALL_PIECES);
 
@@ -49,7 +49,7 @@ MoveList MoveGenerator::GeneratePseudoMoves(Board &board) {
     GenerateKnightMoves(board);
     GeneratePawnMoves(board);
 
-    COLORS color = board.ActivePlayer();
+    COLOR color = board.ActivePlayer();
     board.m_kingDangerSquares[color] = board.m_attackedSquares[color];
 
     GenerateSlidingMoves(BISHOP, board);
@@ -62,7 +62,7 @@ MoveList MoveGenerator::GeneratePseudoMoves(Board &board) {
 MoveList MoveGenerator::GenerateEvasionMoves(Board &board) {
     m_moves.reserve(MAX_MOVES_RESERVE);
 
-    COLORS color = board.ActivePlayer();
+    COLOR color = board.ActivePlayer();
     Bitboard checkers = board.m_kingAttackers[color];
 
     int numCheckers = PopCount(checkers);
@@ -196,7 +196,7 @@ void MoveGenerator::GenerateWhitePawnMoves(Board &board) {
         bool pinnedMask = (board.m_pinnedCaptureMask[fromSq] & theChecker) || (board.m_pinnedPushMask[fromSq] & board.m_enPassantSquare);
         toBitboard *= pinnedMask;
 
-        COLORS color = board.ActivePlayer();
+        COLOR color = board.ActivePlayer();
         Bitboard blockers = board.m_allpieces ^ SquareBB(fromSq) ^ theChecker;
         if( board.AttackersTo( color, BitscanForward(board.Piece(color,KING)), blockers ) & ~theChecker )
             continue;
@@ -211,7 +211,7 @@ void MoveGenerator::GenerateWhitePawnMoves(Board &board) {
         bool pinnedMask = (board.m_pinnedCaptureMask[fromSq] & theChecker) || (board.m_pinnedPushMask[fromSq] & board.m_enPassantSquare);
         toBitboard *= pinnedMask;
 
-        COLORS color = board.ActivePlayer();
+        COLOR color = board.ActivePlayer();
         Bitboard blockers = board.m_allpieces ^ SquareBB(fromSq) ^ theChecker;
         if( board.AttackersTo( color, BitscanForward(board.Piece(color,KING)), blockers ) & ~theChecker )
             continue;
@@ -302,7 +302,7 @@ void MoveGenerator::GenerateBlackPawnMoves(Board &board) {
         bool pinnedMask = (board.m_pinnedCaptureMask[fromSq] & theChecker) || (board.m_pinnedPushMask[fromSq] & board.m_enPassantSquare);
         toBitboard *= pinnedMask;
 
-        COLORS color = board.ActivePlayer();
+        COLOR color = board.ActivePlayer();
         Bitboard blockers = board.m_allpieces ^ SquareBB(fromSq) ^ theChecker;
         if( board.AttackersTo( color, BitscanForward(board.Piece(color,KING)), blockers ) & ~theChecker )
             continue;
@@ -317,7 +317,7 @@ void MoveGenerator::GenerateBlackPawnMoves(Board &board) {
         bool pinnedMask = (board.m_pinnedCaptureMask[fromSq] & theChecker) || (board.m_pinnedPushMask[fromSq] & board.m_enPassantSquare);
         toBitboard *= pinnedMask;
 
-        COLORS color = board.ActivePlayer();
+        COLOR color = board.ActivePlayer();
         Bitboard blockers = board.m_allpieces ^ SquareBB(fromSq) ^ theChecker;
         if( board.AttackersTo( color, BitscanForward(board.Piece(color,KING)), blockers ) & ~theChecker )
             continue;
@@ -368,7 +368,7 @@ void MoveGenerator::GenerateKingMoves(Board &board) {
         AddCastlingMoves(board);
 }
 void MoveGenerator::GenerateSlidingMoves(PIECE_TYPE pieceType, Board &board) {
-    COLORS color = board.ActivePlayer();
+    COLOR color = board.ActivePlayer();
     Bitboard thePieces = board.GetPieces( color, pieceType );
     Bitboard ownPieces = board.GetPieces( color, ALL_PIECES );
     Bitboard enemyPieces = board.GetPieces( board.InactivePlayer(), ALL_PIECES );
@@ -450,8 +450,8 @@ void MoveGenerator::AddPromotionMoves(Board &board, int fromSq, Bitboard promoti
     }
 }
 void MoveGenerator::AddCastlingMoves(Board &board) {
-    COLORS color = board.ActivePlayer();
-    U8 castlingRights = board.CastlingRights();
+    COLOR color = board.ActivePlayer();
+    u8 castlingRights = board.CastlingRights();
     int fromSq = 0, toSq = 0;
 
     if(color == WHITE) {
@@ -503,14 +503,14 @@ void MoveGenerator::AddCastlingMoves(Board &board) {
     }
 }
 
-Bitboard MoveGenerator::GenerateAttacks(Board &board, COLORS color) {
+Bitboard MoveGenerator::GenerateAttacks(Board &board, COLOR color) {
     Bitboard ownPieces = board.Piece(color,ALL_PIECES);
     return GenerateKingDangerAttacks(board, color) & ~ownPieces;
 }
 
-Bitboard MoveGenerator::GenerateKingDangerAttacks(Board &board, COLORS color) {
+Bitboard MoveGenerator::GenerateKingDangerAttacks(Board &board, COLOR color) {
     Bitboard attacks = ZERO;
-    Bitboard blockers = board.m_allpieces ^ board.Piece((COLORS)!color, KING);
+    Bitboard blockers = board.m_allpieces ^ board.Piece((COLOR)!color, KING);
     for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
         Bitboard bb = board.Piece(color, pieceType);
         while(bb) {
@@ -532,12 +532,12 @@ Bitboard MoveGenerator::GenerateKingDangerAttacks(Board &board, COLORS color) {
 //Step 1: Generate enemy sliding attacks, in the same direction as our king
 //Step 2: Generate attacks from our king (as the same sliding pieceType)
 //Step 3: A pinned piece would appear in both bitboards
-Bitboard MoveGenerator::PinnedPieces(Board &board, COLORS color) {
+Bitboard MoveGenerator::PinnedPieces(Board &board, COLOR color) {
     Bitboard pinned = ZERO;
     int kingSquare = BitscanForward( board.Piece(color, KING) );
 
     for(PIECE_TYPE pieceType = BISHOP; pieceType <= QUEEN; ++pieceType) {
-        Bitboard bb = board.Piece((COLORS)!color, pieceType);
+        Bitboard bb = board.Piece((COLOR)!color, pieceType);
         while(bb) {
             int square = ResetLsb(bb);
             switch(pieceType) {
@@ -558,7 +558,7 @@ Bitboard MoveGenerator::PinnedPieces(Board &board, COLORS color) {
     return pinned;
 }
 
-Bitboard MoveGenerator::FillPinned(Board& board, COLORS color, PIECE_TYPE slidingType, int square, int kingSquare) {
+Bitboard MoveGenerator::FillPinned(Board& board, COLOR color, PIECE_TYPE slidingType, int square, int kingSquare) {
     assert(slidingType == BISHOP || slidingType == ROOK);
 
     Bitboard pinned = ZERO;

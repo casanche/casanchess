@@ -37,14 +37,14 @@ void Board::Init() {
 }
 
 void Board::Divide(int depth) {
-    U64 nodesTotal = 0;
+    u64 nodesTotal = 0;
 
     MoveGenerator generator;
     MoveList moves = generator.GenerateMoves(*this);
 
     for(auto &move : moves) {
         MakeMove(move);
-        U64 nodes = Perft(depth-1);
+        u64 nodes = Perft(depth-1);
         P( move.Notation() << " \t" << nodes );
         nodesTotal += nodes;
         TakeMove(move);
@@ -54,7 +54,7 @@ void Board::Divide(int depth) {
 }
 
 void Board::Mirror() {
-    m_activePlayer = (COLORS)!m_activePlayer;
+    m_activePlayer = (COLOR)!m_activePlayer;
     for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
         m_pieces[WHITE][pieceType] = BitboardUtils::Mirror(m_pieces[WHITE][pieceType]);
         m_pieces[BLACK][pieceType] = BitboardUtils::Mirror(m_pieces[BLACK][pieceType]);
@@ -63,7 +63,7 @@ void Board::Mirror() {
     if(m_enPassantSquare)
         m_enPassantSquare = BitboardUtils::Mirror(m_enPassantSquare);
     if(m_castlingRights) {
-        U8 mirroredCastlingRights = 0;
+        u8 mirroredCastlingRights = 0;
         if(m_castlingRights & CASTLING_K) mirroredCastlingRights ^= CASTLING_k;
         if(m_castlingRights & CASTLING_Q) mirroredCastlingRights ^= CASTLING_q;
         if(m_castlingRights & CASTLING_k) mirroredCastlingRights ^= CASTLING_K;
@@ -75,8 +75,8 @@ void Board::Mirror() {
     UpdateBitboards();
 }
 
-U64 Board::Perft(int depth) {
-    U64 nodes = 0;
+u64 Board::Perft(int depth) {
+    u64 nodes = 0;
 
     MoveGenerator generator;
     MoveList moves = generator.GenerateMoves(*this);
@@ -112,7 +112,7 @@ void Board::Print(bool bits) const {
         squareMap[i] = PIECE_LETTERS[NO_PIECE];
     }
 
-    for(COLORS color : {WHITE, BLACK}) {
+    for(COLOR color : {WHITE, BLACK}) {
         for(PIECE_TYPE piece = PAWN; piece <= KING; ++piece) {
             Bitboard thePieces = m_pieces[color][piece];
             while(thePieces) {
@@ -153,10 +153,10 @@ void Board::ShowMoves() {
 }
 
 //Attackers
-Bitboard Board::AttackersTo(COLORS color, int square) const {
+Bitboard Board::AttackersTo(COLOR color, int square) const {
     Bitboard attackers = ZERO;
 
-    COLORS enemyColor = (COLORS)!color;
+    COLOR enemyColor = (COLOR)!color;
 
     //Non-sliding
     attackers |= AttacksPawns(color, square) & GetPieces(enemyColor, PAWN);
@@ -177,9 +177,9 @@ Bitboard Board::AttackersTo(COLORS color, int square) const {
     return attackers;
 }
 
-Bitboard Board::AttackersTo(COLORS color, int square, Bitboard blockers) const {
+Bitboard Board::AttackersTo(COLOR color, int square, Bitboard blockers) const {
     Bitboard attackers = ZERO;
-    COLORS enemyColor = (COLORS)!color;
+    COLOR enemyColor = (COLOR)!color;
 
     //Non-sliding
     attackers |= AttacksPawns(color, square) & GetPieces(enemyColor, PAWN);
@@ -197,7 +197,7 @@ Bitboard Board::AttackersTo(COLORS color, int square, Bitboard blockers) const {
     return attackers;
 }
 
-PIECE_TYPE Board::GetPieceAtSquare(COLORS color, int square) const {
+PIECE_TYPE Board::GetPieceAtSquare(COLOR color, int square) const {
     Bitboard bit = SquareBB(square);
 
     PIECE_TYPE piece = NO_PIECE;
@@ -212,8 +212,8 @@ PIECE_TYPE Board::GetPieceAtSquare(COLORS color, int square) const {
     return piece;
 }
 
-bool Board::IsAttacked(COLORS color, int square) const {
-    COLORS enemyColor = (COLORS)!color;
+bool Board::IsAttacked(COLOR color, int square) const {
+    COLOR enemyColor = (COLOR)!color;
 
     if( AttacksPawns(color, square) & Piece(enemyColor, PAWN) ) return true;
     if( AttacksKnights(square) & Piece(enemyColor, KNIGHT) ) return true;
@@ -229,7 +229,7 @@ bool Board::IsAttacked(COLORS color, int square) const {
 }
 
 bool Board::IsCheck() {
-    COLORS color = ActivePlayer();
+    COLOR color = ActivePlayer();
     if(!m_checkCalculated) {
         UpdateKingAttackers(color);
         m_checkCalculated = true;
@@ -267,10 +267,10 @@ int Board::SquareToIndex(std::string square) const {
     return index;
 }
 
-Bitboard Board::XRayAttackersTo(COLORS color, int square) {
+Bitboard Board::XRayAttackersTo(COLOR color, int square) {
     Bitboard attackers = ZERO;
 
-    COLORS enemyColor = (COLORS)!color;
+    COLOR enemyColor = (COLOR)!color;
 
     //Non-sliding
     Bitboard pawnAttackers = AttacksPawns(color, square) & Piece(enemyColor, PAWN);
@@ -299,8 +299,8 @@ Bitboard Board::XRayAttackersTo(COLORS color, int square) {
 int Board::SEE(Move move) {
     
     // retrieve info
-    COLORS color = ActivePlayer();
-    COLORS enemyColor = InactivePlayer();
+    COLOR color = ActivePlayer();
+    COLOR enemyColor = InactivePlayer();
     MoveData data = move.Data();
 
     // list of scores to be filled
@@ -319,8 +319,8 @@ int Board::SEE(Move move) {
     int pieceValue = SEE_MATERIAL_VALUES[data.pieceType]; //what is actually on the square
 
     // switch the active player
-    color = (COLORS)!color;
-    enemyColor = (COLORS)!enemyColor;
+    color = (COLOR)!color;
+    enemyColor = (COLOR)!enemyColor;
 
     //the main loop, where all the captures are simulated
     while(attackers) {
@@ -340,8 +340,8 @@ int Board::SEE(Move move) {
         pieceValue = SEE_MATERIAL_VALUES[pieceType];
 
         // switch the active player
-        color = (COLORS)!color;
-        enemyColor = (COLORS)!enemyColor;
+        color = (COLOR)!color;
+        enemyColor = (COLOR)!enemyColor;
     }
 
     // add hidden pieces
@@ -358,7 +358,7 @@ int Board::SEE(Move move) {
     return scores[0];
 }
 
-Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLORS color, PIECE_TYPE& pieceType) {
+Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) {
     assert(attackers);
     for(PIECE_TYPE ipiece = PAWN; ipiece <= KING; ++ipiece) {
         Bitboard pieceAttackers = attackers & Piece(color, ipiece);
@@ -374,7 +374,7 @@ Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLORS color, PIECE_TY
 //Operators
 bool Board::operator==(const Board& rhs) const {
     bool pieceIntegrity = true;
-    for(COLORS color : {WHITE, BLACK}) {
+    for(COLOR color : {WHITE, BLACK}) {
         for(PIECE_TYPE piece = PAWN; piece <= KING; ++piece) {
             if( this->GetPieces(color, piece) != rhs.GetPieces(color, piece) )
                 pieceIntegrity = false;
@@ -394,7 +394,7 @@ bool Board::operator==(const Board& rhs) const {
 
 //Private
 void Board::ClearBits() {
-    for(COLORS color : {WHITE, BLACK}) {
+    for(COLOR color : {WHITE, BLACK}) {
         m_attackedSquares[color] = 0;
         m_pinnedPieces[color] = 0;
         m_kingAttackers[color] = 0;
@@ -443,7 +443,7 @@ void Board::UpdateBitboards() {
     m_allpieces = m_pieces[WHITE][ALL_PIECES] | m_pieces[BLACK][ALL_PIECES];
 }
 
-void Board::UpdateKingAttackers(COLORS color) {
+void Board::UpdateKingAttackers(COLOR color) {
     Bitboard theKing = GetPieces(color, KING);
     int kingSquare = BitscanForward(theKing);
 

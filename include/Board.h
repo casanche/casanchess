@@ -22,9 +22,9 @@ class Board {
 
     struct History {
         unsigned int fiftyrule;
-        U8 castling;
-        U64 zkey;
-        U64 enpassant;
+        u8 castling;
+        u64 zkey;
+        u64 enpassant;
         Move move;
         
         History() { Clear(); }
@@ -43,7 +43,7 @@ public:
     
     void Divide(int depth);
     void Mirror();
-    U64 Perft(int depth);
+    u64 Perft(int depth);
     void Print(bool bits = false) const;
     void ShowHistory();
     void ShowMoves();
@@ -65,14 +65,14 @@ public:
     Bitboard AttackersTo(int square) const {
         return AttackersTo(ActivePlayer(), square);
     }
-    Bitboard AttackersTo(COLORS color, int square) const;
-    Bitboard AttackersTo(COLORS color, int square, Bitboard blockers) const;
-    PIECE_TYPE GetPieceAtSquare(COLORS color, int square) const;
-    bool IsAttacked(COLORS color, int square) const;
+    Bitboard AttackersTo(COLOR color, int square) const;
+    Bitboard AttackersTo(COLOR color, int square, Bitboard blockers) const;
+    PIECE_TYPE GetPieceAtSquare(COLOR color, int square) const;
+    bool IsAttacked(COLOR color, int square) const;
     bool IsCheck();
     bool IsRepetitionDraw(int searchPly = 0);
     int SquareToIndex(std::string square) const;
-    Bitboard XRayAttackersTo(COLORS color, int square);
+    Bitboard XRayAttackersTo(COLOR color, int square);
 
     // Debug
     bool CheckIntegrity() const;
@@ -81,20 +81,20 @@ public:
     int SEE(Move move);
 
     //Getters
-    inline COLORS ActivePlayer() const      { return m_activePlayer; }
+    inline COLOR ActivePlayer() const      { return m_activePlayer; }
     inline Bitboard AllPieces() const       { return m_allpieces; }
-    inline Bitboard AttackedSquares(COLORS color) const                 { return m_kingDangerSquares[color]; };
-    inline U8 CastlingRights() const        { return m_castlingRights; }
+    inline Bitboard AttackedSquares(COLOR color) const                 { return m_kingDangerSquares[color]; };
+    inline u8 CastlingRights() const        { return m_castlingRights; }
     inline Bitboard EnPassantSquare() const { return m_enPassantSquare; };
     inline unsigned int FiftyRule() const   { return m_fiftyrule; };
-    inline Bitboard GetPieces(COLORS color, PIECE_TYPE pieceType) const { return m_pieces[color][pieceType]; };
-    inline COLORS InactivePlayer() const    { return (COLORS)!m_activePlayer; }
+    inline Bitboard GetPieces(COLOR color, PIECE_TYPE pieceType) const { return m_pieces[color][pieceType]; };
+    inline COLOR InactivePlayer() const    { return (COLOR)!m_activePlayer; }
     inline unsigned int MoveNumber() const  { return m_moveNumber; }
     inline Move LastMove() const            { return m_history[m_ply].move; }
-    inline U64 PawnKey() const              { return m_pawnKey.Key(); }
-    inline Bitboard Piece(COLORS color, PIECE_TYPE pieceType) const     { return m_pieces[color][pieceType]; };
+    inline u64 PawnKey() const              { return m_pawnKey.Key(); }
+    inline Bitboard Piece(COLOR color, PIECE_TYPE pieceType) const     { return m_pieces[color][pieceType]; };
     inline unsigned int Ply() const         { return m_ply; }
-    inline U64 ZKey() const                 { return m_zobristKey.Key(); }
+    inline u64 ZKey() const                 { return m_zobristKey.Key(); }
 
     //Operators
     bool operator==(const Board& rhs) const;
@@ -102,17 +102,17 @@ public:
 private:
     void ClearBits();
     void UpdateBitboards();
-    void UpdateKingAttackers(COLORS color);
+    void UpdateKingAttackers(COLOR color);
 
     //Static Exchange Evaluation
-    Bitboard LeastValuableAttacker(Bitboard attackers, COLORS color, PIECE_TYPE& pieceType);
+    Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType);
 
     //State
-    COLORS m_activePlayer;
+    COLOR m_activePlayer;
     unsigned int m_moveNumber;
     unsigned int m_ply; //a ply is half a move
     unsigned int m_fiftyrule;
-    U8 m_castlingRights; //[0-4] bits: the castling rights
+    u8 m_castlingRights; //[0-4] bits: the castling rights
     Bitboard m_enPassantSquare;
     ZobristKey m_zobristKey;
     ZobristKey m_pawnKey;

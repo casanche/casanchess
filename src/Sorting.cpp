@@ -103,12 +103,6 @@ namespace {
             move.SetScore(heurScore);
             continue;
 
-            // Quiet pieces 150-200 from Psqt
-            // int psqtScore = Evaluation::PIECE_SQUARE_TABLE[move.PieceType()][move.ToSq()];
-            // U8 score = 175 + (psqtScore) / 2;
-            // move.SetScore(score);
-            // continue;
-
         }
     }
 
@@ -124,7 +118,7 @@ namespace {
                 float score = see * factor;
 
                 assert(score >= 0 && score <= 255);
-                move.SetScore( (U8)score );
+                move.SetScore( (u8)score );
             }
         }
     }

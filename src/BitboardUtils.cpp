@@ -111,11 +111,6 @@ void BitboardUtils::PrintBits(Bitboard bitboard) {
     }
 }
 
-U32 BitboardUtils::CreateMask(int startBit, int endBit) {
-    int length = endBit - startBit;
-    return ( (1 <<  length) - 1) << startBit;
-}
-
 //Other implementations
 int BitboardUtils::BitscanForwardSimple(Bitboard bitboard) {
     int count;

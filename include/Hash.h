@@ -16,10 +16,10 @@ enum TTENTRY_TYPE { NONE, EXACT, LOWER_BOUND, UPPER_BOUND };
 
 //64(zkey) + 32(move) + 16(score) + 8(depth) + 2(type) + 6(age) = 128
 struct TTEntry {
-    U64 zkey;
-    I16 score;
-    U8 depth;
-    U8 type: 2, age: 6;
+    u64 zkey;
+    i16 score;
+    u8 depth;
+    u8 type: 2, age: 6;
     Move bestMove;
 
     void Clear();
@@ -32,16 +32,16 @@ public:
     TT();
     ~TT();
     void Clear();
-    void AddEntry(U64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age);
-    TTEntry* ProbeEntry(U64 zkey, int depth);
+    void AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age);
+    TTEntry* ProbeEntry(u64 zkey, int depth);
     int OccupancyPerMil();
-    U64 NumEntries();
+    u64 NumEntries();
     void SetSize(int size);
-    U64 Size() { return m_size; };
+    u64 Size() { return m_size; };
 private:
 
     TTEntry* m_entries;
-    U64 m_size;
+    u64 m_size;
 };
 
 // =====================
@@ -50,9 +50,9 @@ private:
 const int PAWN_HASH_SIZE = 8192; //In number of entries
 
 struct PawnEntry {
-    U64 zkey;
-    I16 evalMg;
-    I16 evalEg;
+    u64 zkey;
+    i16 evalMg;
+    i16 evalEg;
 
     void Clear();
 };
@@ -62,9 +62,9 @@ public:
     PawnHash();
     ~PawnHash();
     void Clear();
-    void AddEntry(U64 zkey, int evalMg, int evalEg);
+    void AddEntry(u64 zkey, int evalMg, int evalEg);
     float Occupancy();
-    PawnEntry* ProbeEntry(U64 zkey);
+    PawnEntry* ProbeEntry(u64 zkey);
 private:
     PawnEntry* m_pawnEntries;
 };

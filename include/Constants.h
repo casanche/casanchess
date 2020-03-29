@@ -7,12 +7,12 @@
 #include <cassert>
 
 typedef unsigned int uint;
-typedef uint8_t U8;
-typedef int16_t I16;
-typedef uint16_t U16;
-typedef int32_t I32;
-typedef uint32_t U32;
-typedef uint64_t U64;
+typedef int8_t i8;
+typedef uint8_t u8;
+typedef int16_t i16;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 typedef uint64_t Bitboard;
 #define INFINITE __INT_MAX__
 #define INFINITE_U64 __UINT64_MAX__
@@ -27,7 +27,7 @@ typedef uint64_t Bitboard;
 const int INFINITE_SCORE = INFINITE_I16 - 1000;
 const int MATESCORE = INFINITE_SCORE - 1000;
 
-enum COLORS { WHITE, BLACK, NO_COLOR };
+enum COLOR { WHITE, BLACK, NO_COLOR };
 enum FILES { FILEA, FILEB, FILEC, FILED, FILEE, FILEF, FILEG, FILEH };
 enum RANKS { RANK1, RANK2, RANK3, RANK4, RANK5, RANK6, RANK7, RANK8 };
 enum PIECE_TYPE { NO_PIECE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, ALL_PIECES };
@@ -71,7 +71,7 @@ enum SQUARES {
     A7=48, B7, C7, D7, E7, F7, G7, H7,
     A8=56, B8, C8, D8, E8, F8, G8, H8
 };
-const int File[64] = {
+const u8 File[64] = {
     FILEA, FILEB, FILEC, FILED, FILEE, FILEF, FILEG, FILEH,
     FILEA, FILEB, FILEC, FILED, FILEE, FILEF, FILEG, FILEH,
     FILEA, FILEB, FILEC, FILED, FILEE, FILEF, FILEG, FILEH,
@@ -83,24 +83,24 @@ const int File[64] = {
 };
 
 const Bitboard MaskRank[8] = {
-    (U64)0xff,
-    (U64)MaskRank[0] << 8*1,
-    (U64)MaskRank[0] << 8*2,
-    (U64)MaskRank[0] << 8*3,
-    (U64)MaskRank[0] << 8*4,
-    (U64)MaskRank[0] << 8*5,
-    (U64)MaskRank[0] << 8*6,
-    (U64)MaskRank[0] << 8*7
+    (u64)0xff,
+    (u64)MaskRank[0] << 8*1,
+    (u64)MaskRank[0] << 8*2,
+    (u64)MaskRank[0] << 8*3,
+    (u64)MaskRank[0] << 8*4,
+    (u64)MaskRank[0] << 8*5,
+    (u64)MaskRank[0] << 8*6,
+    (u64)MaskRank[0] << 8*7
 };
 const Bitboard MaskFile[8] = {
-    (U64)0x101010101010101,
-    (U64)MaskFile[0] << 1,
-    (U64)MaskFile[0] << 2,
-    (U64)MaskFile[0] << 3,
-    (U64)MaskFile[0] << 4,
-    (U64)MaskFile[0] << 5,
-    (U64)MaskFile[0] << 6,
-    (U64)MaskFile[0] << 7
+    (u64)0x101010101010101,
+    (u64)MaskFile[0] << 1,
+    (u64)MaskFile[0] << 2,
+    (u64)MaskFile[0] << 3,
+    (u64)MaskFile[0] << 4,
+    (u64)MaskFile[0] << 5,
+    (u64)MaskFile[0] << 6,
+    (u64)MaskFile[0] << 7
 };
 const Bitboard ClearRank[8] = {
     ~MaskRank[RANK1],
@@ -132,7 +132,7 @@ inline PIECE_TYPE& operator++(PIECE_TYPE& pieceType) {
 }
 
 //Global inlined functions
-inline int ColorlessRank(COLORS color, int square) {
+inline int ColorlessRank(COLOR color, int square) {
     return color == WHITE ? Rank(square) : 7 ^ Rank(square);
 }
 

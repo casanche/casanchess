@@ -3,7 +3,7 @@
 
 void MoveMaker::MakeMove(Board& board, Move move) {
     // Get move information
-    COLORS color = board.ActivePlayer();
+    COLOR color = board.ActivePlayer();
     int fromSq = move.FromSq();
     int toSq = move.ToSq();
     PIECE_TYPE pieceType = move.PieceType();
@@ -40,7 +40,7 @@ void MoveMaker::MakeMove(Board& board, Move move) {
         board.m_zobristKey.UpdateEnpassant(board.m_enPassantSquare);
     }
     else if(moveType == ENPASSANT) {
-        COLORS enemyColor = board.InactivePlayer();
+        COLOR enemyColor = board.InactivePlayer();
         int squareShift = -8 + 16*color;
         RemovePiece(board, toSq + squareShift, enemyColor, PAWN);
     }
@@ -92,7 +92,7 @@ void MoveMaker::TakeMove(Board& board, Move move) {
 
     //Change the active player
     board.m_activePlayer = board.InactivePlayer();
-    COLORS color = board.m_activePlayer;
+    COLOR color = board.m_activePlayer;
     board.m_zobristKey.UpdateColor();
 
     //Decrease the move number if black made the move
@@ -122,7 +122,7 @@ void MoveMaker::TakeMove(Board& board, Move move) {
         AddPiece(board, toSq, board.InactivePlayer(), move.CapturedType());
     }
     else if(moveType == ENPASSANT) {
-        COLORS enemyColor = board.InactivePlayer();
+        COLOR enemyColor = board.InactivePlayer();
         int squareShift = -8 + 16*color;
         AddPiece(board, toSq + squareShift, enemyColor, PAWN);
     }
@@ -208,7 +208,7 @@ void MoveMaker::TakeNull(Board& board) {
     board.m_checkCalculated = false;
 }
 
-void MoveMaker::AddPiece(Board& board, int square, COLORS color, PIECE_TYPE pieceType) {
+void MoveMaker::AddPiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType) {
     Bitboard &bb = board.m_pieces[color][pieceType];
     bb |= SquareBB(square); //add bit, OR
     board.m_zobristKey.UpdatePiece(color, pieceType, square); //modify the Zobrist key (XOR)
@@ -216,7 +216,7 @@ void MoveMaker::AddPiece(Board& board, int square, COLORS color, PIECE_TYPE piec
         board.m_pawnKey.UpdatePiece(color, PAWN, square);
     }
 }
-void MoveMaker::RemovePiece(Board& board, int square, COLORS color, PIECE_TYPE pieceType) {
+void MoveMaker::RemovePiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType) {
     Bitboard &bb = board.m_pieces[color][pieceType];
     bb ^= SquareBB(square); //remove bit, XOR
     board.m_zobristKey.UpdatePiece(color, pieceType, square); //modify the Zobrist key (XOR)
@@ -224,7 +224,7 @@ void MoveMaker::RemovePiece(Board& board, int square, COLORS color, PIECE_TYPE p
         board.m_pawnKey.UpdatePiece(color, PAWN, square);
     }
 }
-void MoveMaker::MovePiece(Board& board, int fromSq, int toSq, COLORS color, PIECE_TYPE pieceType) {
+void MoveMaker::MovePiece(Board& board, int fromSq, int toSq, COLOR color, PIECE_TYPE pieceType) {
     AddPiece(board, toSq, color, pieceType);
     RemovePiece(board, fromSq, color, pieceType);
 }
@@ -235,7 +235,7 @@ void MoveMaker::UpdateCastlingRights(Board& board, const Move& move) {
         return;
     }
 
-    COLORS color = board.ActivePlayer();
+    COLOR color = board.ActivePlayer();
     int fromSq = move.FromSq();
     int toSq = move.ToSq();
     PIECE_TYPE pieceType = move.PieceType();
@@ -305,7 +305,7 @@ void MoveMaker::UpdateCastlingRights(Board& board, const Move& move) {
 void MoveMaker::RewindCastlingRights(Board& board, const Move& move) {
 
     if(move.MoveType() == CASTLING) {
-        COLORS color = board.ActivePlayer();
+        COLOR color = board.ActivePlayer();
         switch(move.ToSq()) {
             case G1: MovePiece(board, F1, H1, color, ROOK); break;
             case C1: MovePiece(board, D1, A1, color, ROOK); break;
@@ -316,7 +316,7 @@ void MoveMaker::RewindCastlingRights(Board& board, const Move& move) {
     }
 
     //Update the zkeys
-    U8 changedBits = board.m_castlingRights ^ board.m_history[board.m_ply].castling;
+    u8 changedBits = board.m_castlingRights ^ board.m_history[board.m_ply].castling;
     if(changedBits & 0b0001) board.m_zobristKey.UpdateCastling(CASTLING_K);
     if(changedBits & 0b0010) board.m_zobristKey.UpdateCastling(CASTLING_Q);
     if(changedBits & 0b0100) board.m_zobristKey.UpdateCastling(CASTLING_k);

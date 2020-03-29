@@ -160,7 +160,7 @@ Bitboard Attacks::GetRay(DIRECTIONS direction, int square) {
 }
 
 //Classical approach
-Bitboard Attacks::AttacksPawns(COLORS color, int square) {
+Bitboard Attacks::AttacksPawns(COLOR color, int square) {
     return m_NonSlidingAttacks[color][PAWN][square];
 }
 Bitboard Attacks::AttacksKnights(int square) {

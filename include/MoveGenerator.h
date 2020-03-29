@@ -14,7 +14,7 @@ public:
 
     MoveList GenerateMoves(Board &board);
     inline MoveList Moves() { return m_moves; };
-    U64 Perft(int depth);
+    u64 Perft(int depth);
     Move RandomMove();
 
 private:
@@ -33,10 +33,10 @@ private:
     void AddPromotionMoves(Board &board, int fromSq, Bitboard promotionMoves);
     void AddCastlingMoves(Board &board);
 
-    Bitboard GenerateAttacks(Board &board, COLORS color);
-    Bitboard GenerateKingDangerAttacks(Board &board, COLORS color);
-    Bitboard PinnedPieces(Board &board, COLORS color);
-    Bitboard FillPinned(Board& board, COLORS color, PIECE_TYPE slidingType, int square, int kingSquare);
+    Bitboard GenerateAttacks(Board &board, COLOR color);
+    Bitboard GenerateKingDangerAttacks(Board &board, COLOR color);
+    Bitboard PinnedPieces(Board &board, COLOR color);
+    Bitboard FillPinned(Board& board, COLOR color, PIECE_TYPE slidingType, int square, int kingSquare);
 
     MoveList m_moves;
 };

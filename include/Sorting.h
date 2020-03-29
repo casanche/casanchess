@@ -46,7 +46,7 @@ private:
 
 //Loop over all elements of the history table, to perform operations
 #define LoopHistoryTable(stmt) \
-    for(COLORS color : {WHITE, BLACK}) { \
+    for(COLOR color : {WHITE, BLACK}) { \
         for(int from = 0; from < 64; from++) { \
             for (int to = 0; to < 64; to++) { \
                 stmt; \
@@ -63,15 +63,15 @@ public:
         LoopHistoryTable(m_history[color][from][to] = 0);
         m_maxValue = 0;
     }
-    void GoodHistory(const Move& move, COLORS color, int depth) {
+    void GoodHistory(const Move& move, COLOR color, int depth) {
         m_history[color][move.FromSq()][move.ToSq()] += depth*depth;
         TestOverflow(move, color);
     }
-    void BadHistory(const Move& move, COLORS color, int depth) {
+    void BadHistory(const Move& move, COLOR color, int depth) {
         m_history[color][move.FromSq()][move.ToSq()] -= depth*depth;
         TestOverflow(move, color);
     }
-    int Get(const Move& move, COLORS color) const {
+    int Get(const Move& move, COLOR color) const {
         return m_history[color][move.FromSq()][move.ToSq()];
     }
     int MaxValue() const {
@@ -80,7 +80,7 @@ public:
 private:
     int m_history[2][64][64]; //[COLOR][SQUARE][SQUARE]
     int m_maxValue;
-    void TestOverflow(const Move& move, COLORS activeColor) {
+    void TestOverflow(const Move& move, COLOR activeColor) {
         int value = m_history[activeColor][move.FromSq()][move.ToSq()];
         if(value > m_maxValue) {
             m_maxValue = value;

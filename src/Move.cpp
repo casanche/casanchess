@@ -8,7 +8,7 @@ const char PIECES_NOTATION[] = {'\0', '\0', 'N', 'B', 'R', 'Q', 'K', '\0'};
 
 Move::Move() : m_move(0) {}
 
-Move::Move(U32 from, U32 to, PIECE_TYPE piece, MOVE_TYPE moveType) : m_move(0) {
+Move::Move(u32 from, u32 to, PIECE_TYPE piece, MOVE_TYPE moveType) : m_move(0) {
     m_move =
             (from & 0x3f)
         | ( (to & 0x3f) << 6)
@@ -29,7 +29,7 @@ std::string Move::Notation() {
     //Symbolic notation
     std::string prefix;
     if( data.pieceType == PAWN && IsCapture() ) {
-        prefix = FILES_NOTATION[ File[data.fromSq] ];
+        prefix = FILES_NOTATION[ File(data.fromSq) ];
     } else if(data.moveType == CASTLING) {
         switch(data.toSq) {
             case G1:
@@ -115,7 +115,7 @@ void Move::PrintLine() {
         << std::endl;
 }
 
-void Move::PrintBits32(U32 word, int startBit, int endBit) const {
+void Move::PrintBits32(u32 word, int startBit, int endBit) const {
     for(int i = startBit; i < endBit; ++i) {
         std::cout << GetBit(word, i) << "";
     }
@@ -125,8 +125,8 @@ MoveData Move::Data() const {
     MoveData data;
     data.fromSq = FromSq();
     data.toSq = ToSq();
-    data.moveType = MoveType();
     data.pieceType = PieceType();
+    data.moveType = MoveType();
     data.capturedType = CapturedType();
     return data;
 }

@@ -38,9 +38,8 @@ public:
     inline void MakeMove(Board &board) { board.MakeMove(m_bestMove); }; //Interface
 
     //Flow
-    void Stop() {
-        m_stop = true;
-    }
+    void Stop() { m_stop = true; }
+    void DebugMode() { m_debugMode = true; }
 
     //Helpers
     inline int64_t ElapsedTime() {
@@ -87,12 +86,12 @@ private:
     int m_maxDepth;
     int m_allocatedTime;
     int m_forcedTime;
-    U64 m_forcedNodes;
+    u64 m_forcedNodes;
 
     //Info variables
     int m_depth;
     int64_t m_elapsedTime;
-    U64 m_nodes;
+    u64 m_nodes;
     int m_nps;
     int m_bestScore;
     Move m_bestMove;
@@ -105,9 +104,8 @@ private:
     //Helpers
     int m_ply;
     int m_selPly;
-    U8 m_counter;
+    u8 m_counter;
     bool m_nullmoveAllowed;
-    bool m_futility = false;
 
     //Heuristics
     Heuristics m_heuristics;
@@ -116,6 +114,7 @@ private:
     std::vector<RootMove> m_rootMoves;
 
     //Debug
+    bool m_debugMode;
     Debug m_debug;
 };
 

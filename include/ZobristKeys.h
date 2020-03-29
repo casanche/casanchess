@@ -10,35 +10,35 @@ class Board;
 namespace ZobristKeys {
     void Init();
     
-    extern U64 m_zkeyPieces[2][8][64];
-    extern U64 m_zkeyCastling[2][2];
-    extern U64 m_zkeyEnpassant[8];
-    extern U64 m_zkeyColor;
+    extern u64 m_zkeyPieces[2][8][64];
+    extern u64 m_zkeyCastling[2][2];
+    extern u64 m_zkeyEnpassant[8];
+    extern u64 m_zkeyColor;
 }
 
 class ZobristKey {
 public:
     ZobristKey();
-    inline U64 Key() const { return m_key; };
+    inline u64 Key() const { return m_key; };
     void SetKey(Board& board);
-    inline void SetKey(U64 key) { m_key = key; }
+    inline void SetKey(u64 key) { m_key = key; }
     void SetPawnKey(Board& board);
     void UpdateColor();
     void UpdateEnpassant(Bitboard enpassant);
-    void UpdatePiece(COLORS color, PIECE_TYPE pieceType, int square);
+    void UpdatePiece(COLOR color, PIECE_TYPE pieceType, int square);
     void UpdateCastling(CASTLING_TYPE castlingType);
 private:
-    U64 m_key;
+    u64 m_key;
 };
 
 class PRNG {
 public:
     PRNG(); //seed
-    U64 Random();
+    u64 Random();
 private:
     std::random_device m_device;
     std::mt19937_64 m_mersenne;
-    std::uniform_int_distribution<U64> m_distribution;
+    std::uniform_int_distribution<u64> m_distribution;
 };
 
 #endif //ZOBRIST_KEYS_H

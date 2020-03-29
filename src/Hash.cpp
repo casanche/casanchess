@@ -24,16 +24,16 @@ TT::~TT() {
 }
 
 void TT::Clear() {
-    for(U64 i=0; i < m_size; ++i) {
+    for(u64 i=0; i < m_size; ++i) {
         m_entries[i].Clear();
     }
 }
 
-void TT::AddEntry(U64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age) {
+void TT::AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age) {
     assert(abs(score) <= MATESCORE);
     assert(depth <= MAX_DEPTH);
 
-    U64 index = zkey % m_size;
+    u64 index = zkey % m_size;
 
     //Replacement scheme
     if(age != m_entries[index].age || depth >= m_entries[index].depth) {
@@ -49,8 +49,8 @@ void TT::AddEntry(U64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int dep
     }
 }
 
-TTEntry* TT::ProbeEntry(U64 zkey, int depth) {
-    U64 index = zkey % m_size;
+TTEntry* TT::ProbeEntry(u64 zkey, int depth) {
+    u64 index = zkey % m_size;
     TTEntry entry = m_entries[index];
     if(entry.zkey == zkey && entry.depth >= depth) {
         return &m_entries[index];
@@ -67,16 +67,16 @@ int TT::OccupancyPerMil() {
     return count;
 }
 
-U64 TT::NumEntries() {
-    U64 count = 0;
-    for(U64 i = 0; i < m_size; ++i) {
+u64 TT::NumEntries() {
+    u64 count = 0;
+    for(u64 i = 0; i < m_size; ++i) {
         count += (m_entries[i].zkey != 0);
     }
     return count;
 }
 
 void TT::SetSize(int size) {  // size in MB
-    const U64 hashEntries = size * (1024*1024) / sizeof(TTEntry);
+    const u64 hashEntries = size * (1024*1024) / sizeof(TTEntry);
 
     delete [] m_entries;
     m_entries = new TTEntry[hashEntries];
@@ -103,16 +103,16 @@ PawnHash::~PawnHash() {
 }
 
 void PawnHash::Clear() {
-    for(U64 i=0; i < PAWN_HASH_SIZE; ++i) {
+    for(u64 i=0; i < PAWN_HASH_SIZE; ++i) {
         m_pawnEntries[i].Clear();
     }
 }
 
-void PawnHash::AddEntry(U64 zkey, int evalMg, int evalEg) {
+void PawnHash::AddEntry(u64 zkey, int evalMg, int evalEg) {
     assert( abs(evalMg) <= MATESCORE );
     assert( abs(evalEg) <= MATESCORE );
 
-    U64 index = zkey % PAWN_HASH_SIZE;
+    u64 index = zkey % PAWN_HASH_SIZE;
 
     PawnEntry pawnEntry;
     pawnEntry.zkey = zkey;
@@ -130,8 +130,8 @@ float PawnHash::Occupancy() {
     return (float)count / PAWN_HASH_SIZE;
 }
 
-PawnEntry* PawnHash::ProbeEntry(U64 zkey) {
-    U64 index = zkey % PAWN_HASH_SIZE;
+PawnEntry* PawnHash::ProbeEntry(u64 zkey) {
+    u64 index = zkey % PAWN_HASH_SIZE;
     PawnEntry entry = m_pawnEntries[index];
     if(entry.zkey == zkey) {
         return &m_pawnEntries[index];

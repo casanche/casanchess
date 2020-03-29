@@ -9,7 +9,7 @@ namespace Attacks {
 
     Bitboard GetRay(DIRECTIONS direction, int square);
 
-    Bitboard AttacksPawns(COLORS color, int square);
+    Bitboard AttacksPawns(COLOR color, int square);
     Bitboard AttacksKnights(int square);
     Bitboard AttacksKing(int square);
     Bitboard AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard blockers);

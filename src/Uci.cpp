@@ -46,7 +46,7 @@ void Uci::Launch() {
             std::cout << "uciok" << std::endl;
         }
         else if(token == "debug") {
-
+            m_search.DebugMode();
         }
         else if(token == "isready") {
             std::cout << "readyok" << std::endl;

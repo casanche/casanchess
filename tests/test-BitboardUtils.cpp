@@ -33,31 +33,21 @@ TEST(BitboardUtils, PopCount) {
 TEST(BitboardUtils, ResetLsb) {
     Bitboard b = 0x3102289248220840;
     EXPECT_EQ(ResetLsb(b), 6); //index returned
-    EXPECT_EQ(b, (U64)0x3102289248220800); //LSB reset
+    EXPECT_EQ(b, (u64)0x3102289248220800); //LSB reset
     b = ZERO;
-    EXPECT_EQ(b, (U64)0);
+    EXPECT_EQ(b, (u64)0);
     b = ONE;
-    EXPECT_EQ(b, (U64)1);
+    EXPECT_EQ(b, (u64)1);
 }
 TEST(BitboardUtils, IsolateLsb) {
     Bitboard b = 127;
-    EXPECT_EQ(IsolateLsb(b), (U64)1);
+    EXPECT_EQ(IsolateLsb(b), (u64)1);
     b = 3377802801971200;
-    EXPECT_EQ(IsolateLsb(b), (U64)131072);
+    EXPECT_EQ(IsolateLsb(b), (u64)131072);
 }
 TEST(BitboardUtils, RemoveLsb) {
     Bitboard b = 127;
-    EXPECT_EQ(RemoveLsb(b), (U64)126);
+    EXPECT_EQ(RemoveLsb(b), (u64)126);
     b = 3377802801971200;
-    EXPECT_EQ(RemoveLsb(b), (U64)3377802801840128);
-}
-TEST(BitboardUtils, CreateMask) {
-    U32 max = UINT32_MAX;
-    int masked = 0;
-    masked = max & CreateMask(0, 6);
-    EXPECT_EQ(masked, 0x3f);
-    masked = max & CreateMask(6, 12);
-    EXPECT_EQ(masked, 0xfc0);
-    masked = max & CreateMask(21, 23);
-    EXPECT_EQ(masked, 0x600000);
+    EXPECT_EQ(RemoveLsb(b), (u64)3377802801840128);
 }

@@ -8,8 +8,8 @@ class ZobristKeyTest : public ::testing::Test {
 protected:
     Board board;
     Board boardCastling;
-    U64 initialKey;
-    U64 initialKeyCastling;
+    u64 initialKey;
+    u64 initialKeyCastling;
     MoveGenerator gen;
     MoveList moves;
     void SetUp() override {
@@ -36,7 +36,7 @@ TEST_F(ZobristKeyTest, Capture) {
 
 TEST_F(ZobristKeyTest, Color) {
     board.SetFen("5N2/r3nP2/1P5q/8/k1P2Bp1/4p3/1P4pb/n2K4 b - - 0 1");
-    U64 blackKey = board.ZKey();
+    u64 blackKey = board.ZKey();
     EXPECT_NE(initialKey, blackKey);
     board.SetFen("5N2/r3nP2/1P5q/8/k1P2Bp1/4p3/1P4pb/n2K4 w - - 0 1");
     EXPECT_EQ(initialKey, board.ZKey());

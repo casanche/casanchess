@@ -3,17 +3,17 @@
 #include "BitboardUtils.h"
 #include "Board.h"
 
-U64 ZobristKeys::m_zkeyPieces[2][8][64];
-U64 ZobristKeys::m_zkeyCastling[2][2];
-U64 ZobristKeys::m_zkeyEnpassant[8];
-U64 ZobristKeys::m_zkeyColor;
+u64 ZobristKeys::m_zkeyPieces[2][8][64];
+u64 ZobristKeys::m_zkeyCastling[2][2];
+u64 ZobristKeys::m_zkeyEnpassant[8];
+u64 ZobristKeys::m_zkeyColor;
 
 //Generate the zKey bitwords. Call once before running the program
 void ZobristKeys::Init() {
     PRNG random;
     //color
     m_zkeyColor = random.Random();
-    for(COLORS color : {WHITE, BLACK}) {
+    for(COLOR color : {WHITE, BLACK}) {
         //Castling rights
         for(int castlingType = 0; castlingType <= 1; castlingType++) {
             m_zkeyCastling[color][castlingType] = random.Random();
@@ -47,7 +47,7 @@ void ZobristKey::SetKey(Board& board) {
     if(board.CastlingRights() & CASTLING_k) m_key ^= ZobristKeys::m_zkeyCastling[BLACK][0];
     if(board.CastlingRights() & CASTLING_q) m_key ^= ZobristKeys::m_zkeyCastling[BLACK][1];
 
-    for(COLORS color : {WHITE, BLACK}) {
+    for(COLOR color : {WHITE, BLACK}) {
         //Pieces
         for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
             Bitboard thePieces = board.GetPieces(color, pieceType);
@@ -67,7 +67,7 @@ void ZobristKey::SetKey(Board& board) {
 void ZobristKey::SetPawnKey(Board& board) {
     m_key = 0;
 
-    for(COLORS color : {WHITE, BLACK}) {
+    for(COLOR color : {WHITE, BLACK}) {
         Bitboard thePawns = board.GetPieces(color, PAWN);
         while(thePawns) {
             int square = ResetLsb(thePawns);
@@ -83,7 +83,7 @@ void ZobristKey::UpdateEnpassant(Bitboard enpassant) {
     int file = File( BitscanForward(enpassant) );
     m_key ^= ZobristKeys::m_zkeyEnpassant[file];
 }
-void ZobristKey::UpdatePiece(COLORS color, PIECE_TYPE pieceType, int square) {
+void ZobristKey::UpdatePiece(COLOR color, PIECE_TYPE pieceType, int square) {
     m_key ^= ZobristKeys::m_zkeyPieces[color][pieceType][square];
 }
 void ZobristKey::UpdateCastling(CASTLING_TYPE castlingType) {
@@ -101,6 +101,6 @@ void ZobristKey::UpdateCastling(CASTLING_TYPE castlingType) {
 PRNG::PRNG() : m_mersenne(70) {}
 
 //Generate a random 64-bitword
-U64 PRNG::Random() {
+u64 PRNG::Random() {
     return m_distribution(m_mersenne);
 }

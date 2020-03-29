@@ -18,9 +18,9 @@ public:
     void TakeNull(Board& board);
 
 private:
-    void AddPiece(Board& board, int square, COLORS color, PIECE_TYPE pieceType);
-    void RemovePiece(Board& board, int square, COLORS color, PIECE_TYPE pieceType);
-    void MovePiece(Board& board, int fromSq, int toSq, COLORS color, PIECE_TYPE pieceType);
+    void AddPiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType);
+    void RemovePiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType);
+    void MovePiece(Board& board, int fromSq, int toSq, COLOR color, PIECE_TYPE pieceType);
 
     //Castling
     void UpdateCastlingRights(Board& board, const Move& move);

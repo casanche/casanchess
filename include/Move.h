@@ -15,19 +15,19 @@ struct MoveData;
 class Move {
 public:
     Move();
-    Move(U32 from, U32 to, PIECE_TYPE piece, MOVE_TYPE moveType);
+    Move(u32 from, u32 to, PIECE_TYPE piece, MOVE_TYPE moveType);
 
     std::string Notation();
     void Print();
     void PrintLine();
 
-    inline U32 FromSq() const { return m_move & 0x3f; }; //0x3f = CreateMask(0, 6)
-    inline U32 ToSq() const { return (m_move & 0xfc0) >> 6; };
+    inline u32 FromSq() const { return m_move & 0x3f; };
+    inline u32 ToSq() const { return (m_move & 0xfc0) >> 6; };
     inline PIECE_TYPE PieceType()         const { return (PIECE_TYPE)( (m_move & 0x7000) >> 12);       };
     inline MOVE_TYPE MoveType()           const { return (MOVE_TYPE)( (m_move & 0x38000) >> 15);       };
     inline PIECE_TYPE CapturedType()      const { return (PIECE_TYPE)( (m_move & 0x1c0000) >> 18);     };
     inline PROMOTION_TYPE PromotionType() const { return (PROMOTION_TYPE)( (m_move & 0x600000) >> 21); };
-    inline U8 Score()                     const { return (U8)( (m_move & 0x7f800000) >> 23);           };
+    inline u8 Score()                     const { return (u8)( (m_move & 0x7f800000) >> 23);           };
 
     MoveData Data() const;
 
@@ -51,7 +51,7 @@ public:
         m_move &= ~0x600000; //Clears the bits 21-22
         m_move |= ( (flag & 0x3) << 21 );
     }
-    inline void SetScore(U8 score) {
+    inline void SetScore(u8 score) {
         m_move &= ~0x7f800000; //Clears the bits 23-30
         m_move |= ( (score & 0xff) << 23 );
     }
@@ -68,12 +68,7 @@ private:
     std::string PieceTypeToNotation(PIECE_TYPE pieceType);
     std::string DescriptiveNotation();
 
-    void PrintBits32(U32 word, int start, int length) const;
-
-    //Returns the bits in the range [startBit, startBit + length]
-    // inline U32 GetMoveBits(int startBit, int length) {
-    //     return ( m_move & CreateMask(startBit, startBit + length) ) >> startBit;
-    // };
+    void PrintBits32(u32 word, int start, int length) const;
 
     // Integer that stores all the move data
     //  0-5 bits: From Square (6)
@@ -83,14 +78,14 @@ private:
     //  18-20 bits: Captured Type (3)
     //  21-22 bits: Promotion Flag (2): 0-QUEEN 1-KNIGHT 2-ROOK 3-BISHOP
     //  23-30 bits: Score bits (8): a value 0..255 used for move ordering
-    U32 m_move;
+    u32 m_move;
 };
 
 struct MoveData {
     int fromSq;
     int toSq;
-    MOVE_TYPE moveType;
     PIECE_TYPE pieceType;
+    MOVE_TYPE moveType;
     PIECE_TYPE capturedType;
 };
 

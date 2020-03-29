@@ -5,37 +5,73 @@ using namespace Evaluation;
 #include "Board.h"
 #include "BitboardUtils.h"
 
-//Constants
-const Bitboard LIGHT_SQUARES = 0x55AA55AA55AA55AA;
-const Bitboard DARK_SQUARES = 0xAA55AA55AA55AA55;
+namespace Evaluation {
 
-//Game phase
-//16 is the maximum, we enter endgame with 8
-const int MAX_PHASEMATERIAL = 16;
-const int PHASE_WEIGHT[8] = {
-    0, //NO_PIECE
-    0, //PAWN
-    1, //KNIGHT
-    1, //BISHOP
-    1, //ROOK
-    2, //QUEEN
-    0 //KING
-};
+    //Constants
+    const Bitboard LIGHT_SQUARES = 0x55AA55AA55AA55AA;
+    const Bitboard DARK_SQUARES = 0xAA55AA55AA55AA55;
 
-//Debug
-int test_total = 0;
-int test_hit = 0;
-int test_miss = 0;
+    //Game phase
+    //16 is the maximum, we enter endgame with 8
+    const int MAX_PHASEMATERIAL = 16;
+    const int PHASE_WEIGHT[8] = {
+        0, //NO_PIECE
+        0, //PAWN
+        1, //KNIGHT
+        1, //BISHOP
+        1, //ROOK
+        2, //QUEEN
+        0 //KING
+    };
 
-//Precomputed tables
-Bitboard Evaluation::ADJACENT_FILES[8] = {0};
-Bitboard Evaluation::ADJACENT_RANKS[8] = {0};
-Bitboard Evaluation::PASSED_PAWN_FRONT[2][64] = {{0}};
-Bitboard Evaluation::PASSED_PAWN_SIDES[2][64] = {{0}};
-Bitboard Evaluation::PASSED_PAWN_AREA[2][64] = {{0}};
-Bitboard Evaluation::KING_INNER_RING[64] = {0};
-Bitboard Evaluation::KING_OUTER_RING[64] = {0};
-int Evaluation::KING_SAFETY_TABLE[128] = {0};
+    //Debug
+    int test_total = 0;
+    int test_hit = 0;
+    int test_miss = 0;
+
+    //S-shaped function that starts at zero and grows until the maximum
+    //f(x) = g(x) - g(0), where g(x) = a / (1 + exp(-c * (x-b)) )
+    double Sigmoid(double x, double maximum, double midPoint, double slope) {
+        return maximum / (1 + exp( -slope * (x - midPoint) ) )
+            - maximum / (1 + exp( -slope * (0 - midPoint) ) );
+    }
+
+    //Precomputed tables
+    Bitboard ADJACENT_FILES[8] = {0};
+    Bitboard ADJACENT_RANKS[8] = {0};
+    Bitboard PASSED_PAWN_FRONT[2][64] = {{0}};
+    Bitboard PASSED_PAWN_SIDES[2][64] = {{0}};
+    Bitboard PASSED_PAWN_AREA[2][64] = {{0}};
+    Bitboard KING_INNER_RING[64] = {0};
+    Bitboard KING_OUTER_RING[64] = {0};
+    u16 KING_SAFETY_TABLE[128] = {0};
+
+    const u8 SQUARE_CONVERSION[2][64] = { //[COLOR][SQUARE]
+        //WHITE
+        {
+            56, 57, 58, 59, 60, 61, 62, 63,
+            48, 49, 50, 51, 52, 53, 54, 55,
+            40, 41, 42, 43, 44, 45, 46, 47,
+            32, 33, 34, 35, 36, 37, 38, 39,
+            24, 25, 26, 27, 28, 29, 30, 31,
+            16, 17, 18, 19, 20, 21, 22, 23,
+            8,   9, 10, 11, 12, 13, 14, 15,
+            0,   1,  2,  3,  4,  5,  6,  7
+        },
+        //BLACK
+        {
+            7,   6,  5,  4,  3,  2,  1,  0,
+            15, 14, 13, 12, 11, 10,  9,  8,
+            23, 22, 21, 20, 19, 18, 17, 16,
+            31, 30, 29, 28, 27, 26, 25, 24,
+            39, 38, 37, 36, 35, 34, 33, 32,
+            47, 46, 45, 44, 43, 42, 41, 40,
+            55, 54, 53, 52, 51, 50, 49, 48,
+            63, 62, 61, 60, 59, 58, 57, 56
+        }
+    };
+
+} //namespace Evaluation
 
 class Evaluation::Score {
 public:
@@ -113,14 +149,14 @@ void Evaluation::Init() {
         KING_OUTER_RING[square] ^= KING_INNER_RING[square] | SquareBB(square);
     }
     for(int i = 0; i < 128; i++) {
-        KING_SAFETY_TABLE[i] = static_cast<int>(
+        KING_SAFETY_TABLE[i] = static_cast<u16>(
             Evaluation::Sigmoid(i, parameters.KS_SIGMOID[0], parameters.KS_SIGMOID[1], parameters.KS_SIGMOID[2] / 1000.f)
         );
     }
 }
 
 bool Evaluation::AreHeavyPieces(const Board& board) {
-    COLORS color = board.ActivePlayer();
+    COLOR color = board.ActivePlayer();
     return board.Piece(color, ALL_PIECES) ^ (board.Piece(color, PAWN) | board.Piece(color, KING));
 }
 
@@ -130,7 +166,7 @@ bool Evaluation::InsufficientMaterial(const Board &board) {
         && PopCount( board.Piece(WHITE, KNIGHT) | board.Piece(WHITE, BISHOP) | board.Piece(BLACK, KNIGHT) | board.Piece(BLACK, BISHOP) );  //...knight or bishop
 }
 
-bool Evaluation::IsSemiopenFile(const Board& board, COLORS color, int square) {
+bool Evaluation::IsSemiopenFile(const Board& board, COLOR color, int square) {
     return !( board.Piece(color, PAWN) & MaskFile[ File(square) ] );
 }
 
@@ -142,18 +178,13 @@ void Evaluation::PawnAttacks(const Board& board, Bitboard attacksMobility[2][8])
 }
 
 int Evaluation::Phase(const Board& board) {
-    return PHASE_WEIGHT[KNIGHT] * PopCount(board.Piece(WHITE, KNIGHT))
-         + PHASE_WEIGHT[BISHOP] * PopCount(board.Piece(WHITE, BISHOP))
-         + PHASE_WEIGHT[ROOK] * PopCount(board.Piece(WHITE, ROOK))
-         + PHASE_WEIGHT[QUEEN] * PopCount(board.Piece(WHITE, QUEEN))
-
-         + PHASE_WEIGHT[KNIGHT] * PopCount(board.Piece(BLACK, KNIGHT))
-         + PHASE_WEIGHT[BISHOP] * PopCount(board.Piece(BLACK, BISHOP))
-         + PHASE_WEIGHT[ROOK] * PopCount(board.Piece(BLACK, ROOK))
-         + PHASE_WEIGHT[QUEEN] * PopCount(board.Piece(BLACK, QUEEN));
+    return PHASE_WEIGHT[KNIGHT] * PopCount(board.Piece(WHITE, KNIGHT) | board.Piece(BLACK, KNIGHT))
+         + PHASE_WEIGHT[BISHOP] * PopCount(board.Piece(WHITE, BISHOP) | board.Piece(BLACK, BISHOP))
+         + PHASE_WEIGHT[ROOK] * PopCount(board.Piece(WHITE, ROOK) | board.Piece(BLACK, ROOK))
+         + PHASE_WEIGHT[QUEEN] * PopCount(board.Piece(WHITE, QUEEN) | board.Piece(BLACK, QUEEN));
 }
 
-TaperedScore Evaluation::EvalBishopPair(const Board &board, COLORS color) {
+TaperedScore Evaluation::EvalBishopPair(const Board &board, COLOR color) {
     TaperedScore score;
     if( (board.Piece(color, BISHOP) & LIGHT_SQUARES) && (board.Piece(color, BISHOP) & DARK_SQUARES) ) {
         score.mg = parameters.BISHOP_PAIR[MG];
@@ -165,8 +196,8 @@ TaperedScore Evaluation::EvalBishopPair(const Board &board, COLORS color) {
 void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][8], Score& score) {
     int kingSafetyUnits[2] = {0}; //[COLOR]
 
-    for(COLORS color : {WHITE, BLACK}) {
-        COLORS enemyColor = (COLORS)!color;
+    for(COLOR color : {WHITE, BLACK}) {
+        COLOR enemyColor = (COLOR)!color;
         int kingSquare = BitscanForward( board.Piece(enemyColor, KING) );
         Bitboard kingRing = KING_INNER_RING[kingSquare] | KING_OUTER_RING[kingSquare];
 
@@ -205,7 +236,7 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
         }
     }
 
-    EvalKingSafety_RookOpen(board, kingSafetyUnits);
+    EvalKingSafety_WeakFiles(board, kingSafetyUnits);
     EvalKingSafety_WeakSquares(board, kingSafetyUnits, attacksMobility);
 
     kingSafetyUnits[WHITE] /= 10;
@@ -218,11 +249,11 @@ void Evaluation::EvalKingSafety(const Board &board, Bitboard attacksMobility[2][
     score.Subtract( KING_SAFETY_TABLE[ kingSafetyUnits[BLACK] ], 0 );
 }
 
-//Assign a bonus if we have rooks and there are open/semiopen files near the enemy king
-void Evaluation::EvalKingSafety_RookOpen(const Board& board, int (&kingSafetyUnits)[2]) {
-    for(COLORS color : {WHITE, BLACK}) {
+//Assign a bonus if there are open/semiopen files near the enemy king, and we have a rook
+void Evaluation::EvalKingSafety_WeakFiles(const Board& board, int kingSafetyUnits[2]) {
+    for(COLOR color : {WHITE, BLACK}) {
         if( board.Piece(color, ROOK) ) {
-            COLORS enemyColor = (COLORS)!color;
+            COLOR enemyColor = (COLOR)!color;
             Bitboard enemyKing = board.Piece(enemyColor, KING);
             int kingSquare = BitscanForward(enemyKing);
             int kingFile = File(kingSquare);
@@ -249,22 +280,22 @@ void Evaluation::EvalKingSafety_RookOpen(const Board& board, int (&kingSafetyUni
 }
 
 //Assign a bonus if there are weak squares around the enemy king, and we have bishop and queen
-//Weak square: not protected by pawns or bishops
-void Evaluation::EvalKingSafety_WeakSquares(const Board& board, int (&kingSafetyUnits)[2], Bitboard attacksMobility[2][8]) {
-    for(COLORS color : {WHITE, BLACK}) {
+//Weak square: not defended by pawns or bishops
+void Evaluation::EvalKingSafety_WeakSquares(const Board& board, int kingSafetyUnits[2], Bitboard attacksMobility[2][8]) {
+    for(COLOR color : {WHITE, BLACK}) {
         if( board.Piece(color,QUEEN) ) {
-            COLORS enemyColor = (COLORS)!color;
+            COLOR enemyColor = (COLOR)!color;
             int kingSquare = BitscanForward( board.Piece(enemyColor, KING) );
             Bitboard kingRing = KING_INNER_RING[kingSquare] | KING_OUTER_RING[kingSquare];
-            Bitboard pawnControl = board.Piece(enemyColor, PAWN) | attacksMobility[enemyColor][PAWN];
-            Bitboard bishopControl = board.Piece(enemyColor, BISHOP) | attacksMobility[enemyColor][BISHOP];
+            Bitboard controlledSqures = board.Piece(enemyColor, PAWN) | attacksMobility[enemyColor][PAWN]
+                                        | board.Piece(enemyColor, BISHOP) | attacksMobility[enemyColor][BISHOP];
             
             if(board.Piece(color, BISHOP) & DARK_SQUARES) {
-                int weaknesses = PopCount(kingRing & ~pawnControl & ~bishopControl & DARK_SQUARES);
+                int weaknesses = PopCount(kingRing & ~controlledSqures & DARK_SQUARES);
                 kingSafetyUnits[color] += calculations.KS_WEAK_SQUARES[weaknesses];
             }
             if(board.Piece(color, BISHOP) & LIGHT_SQUARES) {
-                int weaknesses = PopCount(kingRing & ~pawnControl & ~bishopControl & LIGHT_SQUARES);
+                int weaknesses = PopCount(kingRing & ~controlledSqures & LIGHT_SQUARES);
                 kingSafetyUnits[color] += calculations.KS_WEAK_SQUARES[weaknesses];
             }
         } //if queen
@@ -319,11 +350,11 @@ void Evaluation::EvalPawns(const Board &board, Score& score) {
     }
 }
 
-TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLORS color) {
+TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLOR color) {
     TaperedScore score;
 
     Bitboard thePawns = board.Piece(color, PAWN);
-    Bitboard enemyPawns = board.Piece((COLORS)!color, PAWN);
+    Bitboard enemyPawns = board.Piece((COLOR)!color, PAWN);
 
     //--Double pawns
     //1-rank distance
@@ -341,8 +372,8 @@ TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLORS color) 
 
         //Psqt
         int index = SQUARE_CONVERSION[color][square];
-        score.mg += PSQT[PAWN][index];
-        score.eg += PSQT_ENDGAME[PAWN][index];
+        score.mg += parameters.PSQT[PAWN][index];
+        score.eg += parameters.PSQT_ENDGAME[PAWN][index];
 
         int file = File(square);
         bool isPassed = !(PASSED_PAWN_AREA[color][square] & enemyPawns);
@@ -363,7 +394,7 @@ TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLORS color) 
     return score;
 }
 
-TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
+TaperedScore Evaluation::EvalRookOpen(const Board& board, COLOR color) {
     TaperedScore score;
     Bitboard bb = board.Piece(color, ROOK);
     while(bb) {
@@ -372,7 +403,7 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLORS color) {
         if( IsSemiopenFile(board, color, square) ) {
             score.mg += parameters.ROOK_SEMIOPEN[MG];
             score.eg += parameters.ROOK_SEMIOPEN[EG];
-            if( IsSemiopenFile(board, (COLORS)!color, square) ) {
+            if( IsSemiopenFile(board, (COLOR)!color, square) ) {
                 score.mg += parameters.ROOK_OPEN[MG];
                 score.eg += parameters.ROOK_OPEN[EG];
             }
@@ -389,18 +420,17 @@ int Evaluation::Evaluate(const Board& board) {
     if( InsufficientMaterial(board) )
         return 0;
         
-    //Material
     EvalMaterial(board, score);
 
     PawnAttacks(board, attacksMobility);
 
     //Psqt and mobility
-    for(COLORS color : {WHITE, BLACK}) {
+    for(COLOR color : {WHITE, BLACK}) {
         const int sign = color == WHITE ? 1 : -1;
 
         //Pawn restrictions for mobility and king safety
         Bitboard ownPawns = board.Piece(color, PAWN);
-        Bitboard enemyPawnAttacks = attacksMobility[(COLORS)!color][PAWN];
+        Bitboard enemyPawnAttacks = attacksMobility[(COLOR)!color][PAWN];
         Bitboard pawnRestrictions = ownPawns | enemyPawnAttacks;
 
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= KING; ++pieceType) {
@@ -412,8 +442,8 @@ int Evaluation::Evaluate(const Board& board) {
                 //Psqt
                 int index = SQUARE_CONVERSION[color][square];
                 score.Add(
-                    sign * PSQT[pieceType][index],
-                    sign * PSQT_ENDGAME[pieceType][index]
+                    sign * parameters.PSQT[pieceType][index],
+                    sign * parameters.PSQT_ENDGAME[pieceType][index]
                 );
 
                 //Mobility

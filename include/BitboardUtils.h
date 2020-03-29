@@ -28,8 +28,6 @@ namespace BitboardUtils {
 
     void PrintBits(Bitboard bitboard);
 
-    U32 CreateMask(int startBit, int endBit);
-
     //Other implementations
     int BitscanForwardSimple(Bitboard b);
 
