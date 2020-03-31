@@ -241,17 +241,14 @@ bool Board::IsRepetitionDraw(int searchPly) {
     int rep = 0;
 
     int imax = std::max(searchPly, (int)m_fiftyrule);
-    if(imax < 4) //FIXME
-        return false;
+    int ply = m_ply - m_initialPly;
 
-    for(int i = 4; i <= imax; i += 2) {
-        // if(m_ply - (uint)i < 0) return false;
-        if((m_ply - (uint)i) < m_initialPly) return false; //non-defined history
-        // assert(m_ply >= (uint)i);
-
+    int i = 4;
+    while(i <= imax && i <= ply) {
         if(ZKey() == m_history[m_ply - i].zkey) rep++;
         if(rep == 1 && searchPly > i) return true;
         if(rep == 2) return true;
+        i += 2;
     }
     return false;
 }
