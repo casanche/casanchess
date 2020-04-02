@@ -346,9 +346,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // ------- Futility pruning --------
     //Prune quiet moves in the loop?
     bool doFutility = false;
+    const int futilityMargin[3] = {0, 300, 500};
     if (depth <= 2 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
-        const int margin[3] = {0, 300, 500};
-        if(eval + margin[depth] < alpha) {
+        if(eval + futilityMargin[depth] < alpha) {
             doFutility = true;
             D( m_debug.Increment("NegaMax Futility (depth " + std::to_string(depth) + ")") );
         }
@@ -369,6 +369,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // ------- Futility pruning --------
         //Don't prune: hash move, promotions, SEE > 0 captures
         if(doFutility && move.Score() < 241) {
+            if(eval + futilityMargin[depth] > bestScore)
+                bestScore = eval + futilityMargin[depth];
             break;
         }
 
@@ -445,12 +447,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         
     } //move loop
 
-    if(bestScore != -INFINITE_SCORE) {
+    if(bestMove.MoveType() != 0) {
         TTENTRY_TYPE type = (alpha > alphaOriginal) ? TTENTRY_TYPE::EXACT : TTENTRY_TYPE::UPPER_BOUND;
         Hash::tt.AddEntry(board.ZKey(), bestScore, type, bestMove, depth, m_counter);
     }
 
-    return alpha;
+    return bestScore;
 }
 
 int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
@@ -458,6 +460,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     assert(m_ply <= MAX_PLY);
 
     D( m_debug.Increment("Quiescence Hits") );
+
+    int bestScore = -INFINITE_SCORE;
 
     bool inCheck = board.IsCheck();
 
@@ -471,6 +475,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
                 return standPat;
             alpha = standPat;
         }
+        bestScore =  standPat;
     }
     
     // --------- Transposition table lookup -----------
@@ -520,7 +525,11 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             const int SEE_EQUAL = 127;
             const int deltaMargin = 100;
             bool isCapture = move.MoveType() == CAPTURE;
-            if(isCapture && move.Score() == SEE_EQUAL && standPat + deltaMargin < alpha) {
+
+            int standPatMargin = standPat + deltaMargin;
+            if(isCapture && move.Score() == SEE_EQUAL && standPatMargin < alpha) {
+                if(standPatMargin > bestScore)
+                    bestScore = standPatMargin;
                 continue;
             }
 
@@ -541,6 +550,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         D( Board aft = board );
         D( assert(bef == aft) );
 
+        if(score > bestScore)
+            bestScore = score;
+
         if(score > alpha) {
             if(score >= beta)
                 return score;
@@ -548,7 +560,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         }
     }
 
-    return alpha;
+    return bestScore;
 }
 
 bool Search::TimeOver() {
