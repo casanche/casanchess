@@ -29,7 +29,27 @@ void TT::Clear() {
     }
 }
 
-void TT::AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age) {
+//Store mates in hash as relative from the search position (POS)
+//ROOT ---- (Mate in X+ply) ---- POS ---- (Mate in X) ---- MATE
+int TT::ScoreToHash(int score, int ply) {
+    if(IsMateValue(score)) {
+        if(score > 0)   return score + ply;
+        else            return score - ply;
+    }
+    return score;
+}
+
+//Translate mate scores as relative from the root (ROOT')
+//ROOT' ---- (Mate in X+ply') ---- POS ---- (Mate in X) ---- MATE
+int TT::ScoreFromHash(int score, int ply) {
+    if(IsMateValue(score)) {
+        if(score > 0)   return score - ply;
+        else            return score + ply;
+    }
+    return score;
+}
+
+void TT::AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age) {
     assert(abs(score) <= MATESCORE);
     assert(depth <= MAX_DEPTH);
 
@@ -39,7 +59,7 @@ void TT::AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int dep
     if(age != m_entries[index].age || depth >= m_entries[index].depth) {
         TTEntry entry;
         entry.zkey = zkey;
-        entry.score = score;
+        entry.score = ScoreToHash(score, ply);
         entry.depth = depth;
         entry.type = type;
         entry.age = age;

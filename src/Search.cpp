@@ -195,7 +195,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         m_bestMove = bestMove;
         m_bestScore = alpha;
 
-        Hash::tt.AddEntry(board.ZKey(), m_bestScore, TTENTRY_TYPE::EXACT, m_bestMove, depth, m_counter);
+        Hash::tt.AddEntry(board.ZKey(), m_bestScore, TTENTRY_TYPE::EXACT, m_bestMove, depth, m_ply, m_counter);
     }
 
     return alpha;
@@ -253,12 +253,13 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     
     TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), depth);
     if(ttEntry && !isPV) {
-        if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && ttEntry->score <= alpha)
-            || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && ttEntry->score >= beta)
-            || (ttEntry->type == TTENTRY_TYPE::EXACT && ttEntry->score >= alpha && ttEntry->score <= beta) )
+        int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
+        if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+            || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
+            || (ttEntry->type == TTENTRY_TYPE::EXACT && score >= alpha && score <= beta) )
         {
             D( m_debug.Increment("TT Hits (in NegaMax)") );
-            return ttEntry->score;
+            return score;
         }
     }
 
@@ -309,7 +310,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_nullmoveAllowed = true;
 
         if(nullScore >= beta) {
-            Hash::tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_counter);
+            Hash::tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_counter);
             return nullScore;
         }
     }
@@ -431,7 +432,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             if(score >= beta) {
                 D( m_debug.Increment("NegaMax Cutoffs (score >= beta)") );
 
-                Hash::tt.AddEntry(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_counter);
+                Hash::tt.AddEntry(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_counter);
 
                 //update heuristics
                 if( move.IsQuiet() ) {
@@ -449,7 +450,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     if(bestMove.MoveType() != 0) {
         TTENTRY_TYPE type = (alpha > alphaOriginal) ? TTENTRY_TYPE::EXACT : TTENTRY_TYPE::UPPER_BOUND;
-        Hash::tt.AddEntry(board.ZKey(), bestScore, type, bestMove, depth, m_counter);
+        Hash::tt.AddEntry(board.ZKey(), bestScore, type, bestMove, depth, m_ply, m_counter);
     }
 
     return bestScore;
@@ -481,12 +482,13 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // --------- Transposition table lookup -----------
     TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), 0);
     if(ttEntry) {
-        if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && ttEntry->score <= alpha)
-            || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && ttEntry->score >= beta)
-            || (ttEntry->type == TTENTRY_TYPE::EXACT && ttEntry->score >= alpha && ttEntry->score <= beta) )
+        int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
+        if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+            || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
+            || (ttEntry->type == TTENTRY_TYPE::EXACT && score >= alpha && score <= beta) )
         {
             D( m_debug.Increment("TT Hits (in Quiescence)") );
-            return ttEntry->score;
+            return score;
         }
     }
 

@@ -48,7 +48,7 @@ const Bitboard ALL = (Bitboard)~0; //universal bitboard (all ones)
 #define IsValidPieceType(piece) (piece != NO_PIECE && piece != ALL_PIECES)
 #define IsValidPiece(piece) (piece != A_NOPIECE && piece != W_ALLPIECES && piece != B_ALLPIECES && piece != A_ALLPIECES)
 
-#define IsMateValue(score) (abs(score) > (MATESCORE - 1000))
+#define IsMateValue(score) (abs(score) <= MATESCORE && abs(score) > (MATESCORE - 1000))
 
 //Output
 #define P(x) std::cout << x << std::endl;

@@ -32,13 +32,17 @@ public:
     TT();
     ~TT();
     void Clear();
-    void AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int age);
+    void AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age);
     TTEntry* ProbeEntry(u64 zkey, int depth);
     int OccupancyPerMil();
     u64 NumEntries();
     void SetSize(int size);
     u64 Size() { return m_size; };
+
+    int ScoreFromHash(int score, int ply);
+
 private:
+    int ScoreToHash(int score, int ply);
 
     TTEntry* m_entries;
     u64 m_size;
