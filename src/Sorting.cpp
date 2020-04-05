@@ -95,13 +95,10 @@ namespace {
             }
 
             //History heuristics (0-180)
-            int heurScore = heuristics.history.Get(move, board.ActivePlayer());
+            int historyScore = heuristics.history.Get(move, board.ActivePlayer());
             int maxValue = heuristics.history.MaxValue();
-            if(maxValue > 180) {
-                heurScore *= 180 / (maxValue+1);
-            }
-            move.SetScore(heurScore);
-            continue;
+            historyScore = historyScore * 180 / (maxValue+1); //add one to avoid division by zero
+            move.SetScore(historyScore);
 
         }
     }

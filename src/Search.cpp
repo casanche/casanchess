@@ -399,9 +399,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
               && depth >= 2         //avoid negative depths
               && !extension && !localExtension     //no extensions (including not in check)
               && moves.size() >= 6
-              && move.Score() == 0  //uninteresting move
         ) {
-            reduction++;
+            if(move.Score() < 30) //uninteresting move
+                reduction++;
             D( m_debug.Increment("NegaMax Late Move Reductions") );
         }
 
