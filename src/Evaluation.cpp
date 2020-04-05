@@ -107,7 +107,7 @@ private:
 
 int Evaluation::Score::TaperedCalculation(int mgScore, int egScore, int phase) {
     int score = mgScore * phase + egScore * (MAX_PHASEMATERIAL - phase);
-    score /= 2 * MAX_PHASEMATERIAL;
+    score /= MAX_PHASEMATERIAL;
     return score;
 }
 
