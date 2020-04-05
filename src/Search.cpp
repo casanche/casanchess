@@ -402,6 +402,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         ) {
             if(move.Score() < 30) //uninteresting move
                 reduction++;
+            if(move.Score() >= 181 && move.Score() <= 187)
+                reduction++;
             D( m_debug.Increment("NegaMax Late Move Reductions") );
         }
 
