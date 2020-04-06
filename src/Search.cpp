@@ -204,7 +204,6 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
     assert(m_ply <= MAX_PLY);
-    assert(depth >= 0);
 
     bool isPV = (beta - alpha) != 1;
 
@@ -240,7 +239,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     // --------- Quiescence search -----------
-    if(depth == 0 && !inCheck) {
+    if(depth <= 0 && !inCheck) {
         return QuiescenceSearch(board, alpha, beta);
     }
 
@@ -291,7 +290,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         && !inCheck
         && m_nullmoveAllowed
         && eval >= beta  //very good score
-        && depth >= NULLMOVE_REDUCTION_FACTOR + (depth / 5)  //enough depth
+        && depth >= NULLMOVE_REDUCTION_FACTOR
+        // && depth >= NULLMOVE_REDUCTION_FACTOR + (depth / 5)  //enough depth
         && Evaluation::AreHeavyPieces(board)  //active player has pieces on the board (to avoid zugzwang in K+P endgames)
     ) {
         D( m_debug.Increment("NullMove Hits") );
