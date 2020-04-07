@@ -290,7 +290,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         && !inCheck
         && m_nullmoveAllowed
         && eval >= beta  //very good score
-        && depth >= NULLMOVE_REDUCTION_FACTOR
+        && depth > 1
         // && depth >= NULLMOVE_REDUCTION_FACTOR + (depth / 5)  //enough depth
         && Evaluation::AreHeavyPieces(board)  //active player has pieces on the board (to avoid zugzwang in K+P endgames)
     ) {
