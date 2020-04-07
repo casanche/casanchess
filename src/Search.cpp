@@ -272,7 +272,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --- Static null-move pruning (aka Reverse futility) ---
     const int staticMargin = 125;
-    if(depth <= 4 && !isPV && !inCheck && Evaluation::AreHeavyPieces(board)) {
+    if(depth <= 4 && !isPV && !inCheck) {
         int staticEval = eval - depth * staticMargin;
         if(staticEval >= beta) {
             D( m_debug.Increment("Static Null-Move Pruning (depth " + std::to_string(depth) + ")") );
