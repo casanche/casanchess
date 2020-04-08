@@ -300,7 +300,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_ply++;
         m_nullmoveAllowed = false;
 
-        int R = NULLMOVE_REDUCTION_FACTOR + (depth / 5);
+        int R = NULLMOVE_REDUCTION_FACTOR + (depth / 4);
         int nullDepth = depth - R;
         int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1);
 
