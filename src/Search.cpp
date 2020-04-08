@@ -391,7 +391,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         //-------- Late Move Reductions ----------
         if( !TURNOFF_LMR
-              && m_ply >= 2
+              //&& m_ply >= 2
               && depth >= 2         //avoid negative depths
               && !extension     //no extensions (including not in check)
               && moves.size() >= 6
