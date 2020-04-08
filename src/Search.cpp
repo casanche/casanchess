@@ -389,14 +389,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("NegaMax Extension Recapture") );
         }
 
-        board.MakeMove(move);
-        m_ply++; m_nodes++;
-
         //-------- Late Move Reductions ----------
         if( !TURNOFF_LMR
-              && m_ply >= 3
+              && m_ply >= 2
               && depth >= 2         //avoid negative depths
-              && !extension && !localExtension     //no extensions (including not in check)
+              && !extension     //no extensions (including not in check)
               && moves.size() >= 6
         ) {
             if(move.Score() < 30) //uninteresting move
@@ -405,6 +402,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
                 reduction++;
             D( m_debug.Increment("NegaMax Late Move Reductions") );
         }
+
+        board.MakeMove(move);
+        m_ply++; m_nodes++;
 
         // -------- Principal Variation Search -----------
         int extendedDepth = depth - 1 + extension + localExtension;

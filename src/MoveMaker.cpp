@@ -35,13 +35,13 @@ void MoveMaker::MakeMove(Board& board, Move move) {
         RemovePiece(board, toSq, board.InactivePlayer(), move.CapturedType());
     }
     else if(moveType == DOUBLE_PUSH) {
-        int squareShift = -8 + 16*color;
+        int squareShift = color == WHITE ? -8 : 8;
         board.m_enPassantSquare = SquareBB(toSq + squareShift);
         board.m_zobristKey.UpdateEnpassant(board.m_enPassantSquare);
     }
     else if(moveType == ENPASSANT) {
         COLOR enemyColor = board.InactivePlayer();
-        int squareShift = -8 + 16*color;
+        int squareShift = color == WHITE ? -8 : 8;
         RemovePiece(board, toSq + squareShift, enemyColor, PAWN);
     }
     if(moveType == PROMOTION || moveType == PROMOTION_CAPTURE) {
@@ -123,7 +123,7 @@ void MoveMaker::TakeMove(Board& board, Move move) {
     }
     else if(moveType == ENPASSANT) {
         COLOR enemyColor = board.InactivePlayer();
-        int squareShift = -8 + 16*color;
+        int squareShift = color == WHITE ? -8 : 8;
         AddPiece(board, toSq + squareShift, enemyColor, PAWN);
     }
 
