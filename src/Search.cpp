@@ -235,7 +235,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     bool inCheck = board.IsCheck();
     if(inCheck) {
         extension++;
-        D( m_debug.Increment("NegaMax Extension Check") );
+        D( m_debug.Increment("Extension Check") );
     }
 
     // --------- Quiescence search -----------
@@ -252,29 +252,30 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     
     TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), depth);
     if(ttEntry && !isPV) {
+        D( m_debug.Increment("TT Hits (in NegaMax)") );
         int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
         if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
             || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
             || (ttEntry->type == TTENTRY_TYPE::EXACT && score >= alpha && score <= beta) )
         {
-            D( m_debug.Increment("TT Hits (in NegaMax)") );
+            D( m_debug.Increment("TT Cut-Offs (in NegaMax)") );
             return score;
         }
     }
 
     //Calculate evaluation once at start, for pruning purposes
     int eval;
-    if(!inCheck)
+    if(!inCheck) {
+        D( m_debug.Increment("NegaMax Calls to Evaluation") );
         eval = Evaluation::Evaluate(board);
-
-    D( m_debug.Increment("NegaMax Calls to Evaluation") );
+    }
 
     // --- Static null-move pruning (aka Reverse futility) ---
     const int staticMargin = 125;
     if(depth <= 4 && !isPV && !inCheck) {
         int staticEval = eval - depth * staticMargin;
         if(staticEval >= beta) {
-            D( m_debug.Increment("Static Null-Move Pruning (depth " + std::to_string(depth) + ")") );
+            D( m_debug.Increment("Static Null-Move Pruning - Depth " + std::to_string(depth)) );
             return staticEval;
         }
     }
@@ -282,6 +283,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // --------- Razoring -------------
     if(depth == 3 && eval + 1150 <= alpha && !isPV && !extension && Evaluation::AreHeavyPieces(board))
     {
+        D( m_debug.Increment("Razoring - Depth " + std::to_string(depth)) );
         depth--;
     }
 
@@ -294,7 +296,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // && depth >= NULLMOVE_REDUCTION_FACTOR + (depth / 5)  //enough depth
         && Evaluation::AreHeavyPieces(board)  //active player has pieces on the board (to avoid zugzwang in K+P endgames)
     ) {
-        D( m_debug.Increment("NullMove Hits") );
+        D( m_debug.Increment("NullMove Hits - Depth " + std::to_string(depth)) );
 
         board.MakeNull();
         m_ply++;
@@ -309,6 +311,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_nullmoveAllowed = true;
 
         if(nullScore >= beta) {
+            D( m_debug.Increment("NullMove Cut-offs - Depth " + std::to_string(depth)) );
             Hash::tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_counter);
             return nullScore;
         }
@@ -324,8 +327,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     //----- One-reply extension -------
     if(moves.size() == 1) {
+        D( m_debug.Increment("Extension One-reply") );
         extension++;
-        D( m_debug.Increment("NegaMax Extension One-reply") );
     }
 
     // --------- Check for checkmate and stalemate -----------
@@ -349,8 +352,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     const int futilityMargin[3] = {0, 300, 500};
     if (depth <= 2 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
         if(eval + futilityMargin[depth] < alpha) {
+            D( m_debug.Increment("Futility - Depth " + std::to_string(depth)) );
             doFutility = true;
-            D( m_debug.Increment("NegaMax Futility (depth " + std::to_string(depth) + ")") );
         }
     }
 
@@ -369,8 +372,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // ------- Futility pruning --------
         //Don't prune: hash move, promotions, SEE > 0 captures
         if(doFutility && move.Score() < 241) {
-            if(eval + futilityMargin[depth] > bestScore)
+            if(eval + futilityMargin[depth] > bestScore) {
+                D( m_debug.Increment("Futility - FutileMove - " + std::to_string(depth)) );
                 bestScore = eval + futilityMargin[depth];
+            }
             break;
         }
 
@@ -385,8 +390,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             && move.ToSq() == board.LastMove().ToSq()
             && move.CapturedType() == board.LastMove().CapturedType()
         ) {
+            D( m_debug.Increment("Extension Recapture") );
             localExtension++;
-            D( m_debug.Increment("NegaMax Extension Recapture") );
         }
 
         //-------- Late Move Reductions ----------
@@ -396,11 +401,18 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
               && !extension     //no extensions (including not in check)
               && moves.size() >= 6
         ) {
-            if(move.Score() < 30) //uninteresting move
+            //Weak history
+            if(move.Score() < 30) {
+                D(m_debug.Increment("Late Move Reductions - WeakHistory"));
+                D( m_debug.Increment("Late Move Reductions - Depth " + std::to_string(depth)) );
                 reduction++;
-            if(move.Score() >= 181 && move.Score() <= 187)
+            }
+            //SEE negative (larger than pawn)
+            if(move.Score() >= 181 && move.Score() <= 187) {
+                D(m_debug.Increment("Late Move Reductions - SEENegative"));
+                D( m_debug.Increment("Late Move Reductions - Depth " + std::to_string(depth)) );
                 reduction++;
-            D( m_debug.Increment("NegaMax Late Move Reductions") );
+            }
         }
 
         board.MakeMove(move);
