@@ -477,8 +477,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     D( m_debug.Increment("Quiescence Hits") );
 
+    bool isPV = (beta - alpha) != 1;
     int bestScore = -INFINITE_SCORE;
-
     bool inCheck = board.IsCheck();
 
     //--------- Standpat -----------
@@ -496,7 +496,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     
     // --------- Transposition table lookup -----------
     TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), 0);
-    if(ttEntry) {
+    if(ttEntry && !isPV) {
         int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
         if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
             || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
