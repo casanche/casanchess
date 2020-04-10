@@ -21,6 +21,8 @@ const bool TURNOFF_FUTILITY = false;
 
 const int STATIC_MARGIN[5] = {0, 150, 300, 500, 700};
 
+#define DRAW_SCORE(ply) (ply & 1 ? 10 : -10)
+
 Search::Search() {
     m_maxDepth = MAX_DEPTH;
     m_allocatedTime = 3500;
@@ -219,7 +221,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // --------- Repetition draws and 50-move rule -----------
     if(board.IsRepetitionDraw(m_ply) || board.FiftyRule() >= 100) {
         D( m_debug.Increment("NegaMax RepetitionDraw") );
-        return 0;
+        return DRAW_SCORE(m_ply);
     }
 
     //---------- Mate distance pruning ------------- //Different for PV nodes?
@@ -339,7 +341,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
         else {
             D( m_debug.Increment("NegaMax Stalemate") );
-            return 0; //stalemate
+            return DRAW_SCORE(m_ply); //stalemate
         }
     }
 
@@ -519,7 +521,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         }
         else {
             D( m_debug.Increment("Quiescence Stalemate") );
-            return 0; //stalemate
+            return DRAW_SCORE(m_ply); //stalemate
         }
     }
 
