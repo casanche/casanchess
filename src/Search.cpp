@@ -353,9 +353,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // ------- Futility pruning --------
     //Prune quiet moves in the loop?
     bool doFutility = false;
-    const int futilityMargin[3] = {0, 300, 500};
-    if (depth <= 2 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
-        if(eval + futilityMargin[depth] < alpha) {
+    int futilityMargin;
+    if (depth <= 4 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
+        futilityMargin = 150 + depth * 150;
+        if(eval + futilityMargin < alpha) {
             D( m_debug.Increment("Futility - Depth " + std::to_string(depth)) );
             doFutility = true;
         }
@@ -376,9 +377,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // ------- Futility pruning --------
         //Don't prune: hash move, promotions, SEE > 0 captures
         if(doFutility && move.Score() < 241) {
-            if(eval + futilityMargin[depth] > bestScore) {
-                D( m_debug.Increment("Futility - FutileMove - " + std::to_string(depth)) );
-                bestScore = eval + futilityMargin[depth];
+            D( m_debug.Increment("Futility - FutileMove - " + std::to_string(depth)) );
+            if(eval + futilityMargin > bestScore) {
+                bestScore = eval + futilityMargin;
             }
             break;
         }
