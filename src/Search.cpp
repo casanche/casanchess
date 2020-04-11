@@ -545,21 +545,21 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             if(move.IsQuiet())
                 continue;
 
-            //Delta pruning
-            const int SEE_EQUAL = 127;
-            const int deltaMargin = 100;
-            bool isCapture = move.MoveType() == CAPTURE;
+            //Futility pruning depending on SEE
+            if(move.MoveType() == CAPTURE) {
+                const int SEE_ZERO = 127;  //score equivalent to SEE = 0
+                const int deltaMargin = 100;
 
-            int standPatMargin = standPat + deltaMargin;
-            if(isCapture && move.Score() == SEE_EQUAL && standPatMargin < alpha) {
-                if(standPatMargin > bestScore)
-                    bestScore = standPatMargin;
-                continue;
+                if(move.Score() < SEE_ZERO) continue;
+
+                int evalMargin = move.Score() > SEE_ZERO ? standPat + deltaMargin + SEE_MATERIAL_VALUES[move.CapturedType()]
+                                                         : standPat + deltaMargin;
+                if(evalMargin < alpha) {
+                    if(evalMargin > bestScore)
+                        bestScore = evalMargin;
+                    continue;
+                }
             }
-
-            //Skip negative SEE captures
-            if(isCapture && move.Score() < SEE_EQUAL)
-                continue;
         }
         
         D( Board bef = board );
