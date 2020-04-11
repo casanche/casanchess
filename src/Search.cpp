@@ -314,6 +314,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         if(nullScore >= beta) {
             D( m_debug.Increment("NullMove Cut-offs - Depth " + std::to_string(depth)) );
+            if(IsMateValue(nullScore))
+                nullScore = beta;  //to avoid false mates in zugzwang
             Hash::tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_counter);
             return nullScore;
         }
