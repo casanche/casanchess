@@ -2,6 +2,9 @@
 
 #include "BitboardUtils.h"
 
+const u64 MAX_BIT = 0x8000000000000000;
+const u64 MIN_BIT = ONE;
+
 Bitboard Attacks::m_Rays[8][64] = {{0}};
 Bitboard Attacks::m_NonSlidingAttacks[2][8][64] = {{{0}}};
 Bitboard Attacks::m_Between[64][64] = {{0}};
@@ -184,29 +187,29 @@ Bitboard Attacks::AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard bloc
             Bitboard swBlockers = blockers & sw;
             Bitboard seBlockers = blockers & se;
 
-            attacks |= (nwBlockers) ? nw & ~m_Rays[NORTH_WEST][BitscanForward(nwBlockers)] : nw;
-            attacks |= (neBlockers) ? ne & ~m_Rays[NORTH_EAST][BitscanForward(neBlockers)] : ne;
-            attacks |= (swBlockers) ? sw & ~m_Rays[SOUTH_WEST][BitscanReverse(swBlockers)] : sw;
-            attacks |= (seBlockers) ? se & ~m_Rays[SOUTH_EAST][BitscanReverse(seBlockers)] : se;
+            attacks |= nw ^ m_Rays[NORTH_WEST][ BitscanForward(nwBlockers | MAX_BIT) ];
+            attacks |= ne ^ m_Rays[NORTH_EAST][ BitscanForward(neBlockers | MAX_BIT) ];
+            attacks |= sw ^ m_Rays[SOUTH_WEST][ BitscanReverse(swBlockers | MIN_BIT) ];
+            attacks |= se ^ m_Rays[SOUTH_EAST][ BitscanReverse(seBlockers | MIN_BIT) ];
 
         }
             break;
 
         case ROOK: {
             Bitboard north = m_Rays[NORTH][square];
+            Bitboard east = m_Rays[EAST][square];
             Bitboard south = m_Rays[SOUTH][square];
             Bitboard west = m_Rays[WEST][square];
-            Bitboard east = m_Rays[EAST][square];
 
             Bitboard northBlockers = blockers & north;
+            Bitboard eastBlockers = blockers & east;
             Bitboard southBlockers = blockers & south;
             Bitboard westBlockers = blockers & west;
-            Bitboard eastBlockers = blockers & east;
 
-            attacks |= (northBlockers) ? north & ~m_Rays[NORTH][BitscanForward(northBlockers)] : north;
-            attacks |= (southBlockers) ? south & ~m_Rays[SOUTH][BitscanReverse(southBlockers)] : south;
-            attacks |= (westBlockers) ? west & ~m_Rays[WEST][BitscanReverse(westBlockers)] : west;
-            attacks |= (eastBlockers) ? east & ~m_Rays[EAST][BitscanForward(eastBlockers)] : east;
+            attacks |= north ^ m_Rays[NORTH][ BitscanForward(northBlockers | MAX_BIT) ];
+            attacks |= east ^ m_Rays[EAST][ BitscanForward(eastBlockers | MAX_BIT) ];
+            attacks |= south ^ m_Rays[SOUTH][ BitscanReverse(southBlockers | MIN_BIT) ];
+            attacks |= west ^ m_Rays[WEST][ BitscanReverse(westBlockers | MIN_BIT) ];
         }
             break;
             
