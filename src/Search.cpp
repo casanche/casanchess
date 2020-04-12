@@ -548,7 +548,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             //Futility pruning depending on SEE
             if(move.MoveType() == CAPTURE) {
                 const int SEE_ZERO = 127;  //score equivalent to SEE = 0
-                const int deltaMargin = 100;
+                const int deltaMargin = 90;
 
                 if(move.Score() < SEE_ZERO) continue;
 
