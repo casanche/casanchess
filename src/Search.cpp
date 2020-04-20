@@ -411,7 +411,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
                 D(m_debug.Increment("Late Move Reductions - WeakHistory"));
                 D( m_debug.Increment("Late Move Reductions - Depth " + std::to_string(depth)) );
                 reduction++;
-                if(depth > 8)
+                if(depth > 8 || (depth > 4 && move.Score() == 0))
                     reduction++;
             }
             //SEE negative (larger than pawn)
@@ -419,7 +419,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
                 D(m_debug.Increment("Late Move Reductions - SEENegative"));
                 D( m_debug.Increment("Late Move Reductions - Depth " + std::to_string(depth)) );
                 reduction++;
-                if(depth > 8)
+                if(depth > 6)
                     reduction++;
             }
         }
