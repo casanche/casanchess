@@ -404,6 +404,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
               && depth >= 2         //avoid negative depths
               && !extension     //no extensions (including not in check)
               && moves.size() >= 6
+              && moveNumber != 1
         ) {
             //Weak history
             if(move.Score() < 30) {
@@ -427,16 +428,23 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_ply++; m_nodes++;
 
         // -------- Principal Variation Search -----------
-        int extendedDepth = depth - 1 + extension + localExtension;
-        int reducedDepth = extendedDepth - reduction;
-        if(moveNumber == 1) {
-            score = -NegaMax(board, extendedDepth, -beta, -alpha); //full window, no reduction
-        }
+        int fullDepth = depth - 1 + extension + localExtension;
+        int reducedDepth = fullDepth - reduction;
+
+        //PV move: full window, full depth
+        //Other moves: zero window, reduced depth
+        if(isPV && moveNumber == 1)
+            score = -NegaMax(board, fullDepth, -beta, -alpha);
         else {
-            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha); //zero window, reduction
+            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha);
+
+            //Reduced search failed high: re-search with full depth
+            if(reduction && score > alpha) {
+                score = -NegaMax(board, fullDepth, -alpha-1, -alpha);
+            }
+            //Score within window: New PV!
             if(score > alpha && score < beta) { //'score < beta' is needed in fail-soft schemes
-                D( m_debug.Increment("NegaMax PVS Out of Window") );
-                score = -NegaMax(board, extendedDepth, -beta, -alpha);
+                score = -NegaMax(board, fullDepth, -beta, -alpha);
             }
         }
 
