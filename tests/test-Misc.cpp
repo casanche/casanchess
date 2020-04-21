@@ -26,6 +26,8 @@ TEST_F(PositionMisc, Fine70) {
 }
 
 //Mate tests
+
+//Difficult mate in #5. Too much pruning will see mate in #6
 // TEST_F(PositionMisc, Mate1) {
 //     board.SetFen("8/3N4/6p1/1p5p/5b1p/P2k2n1/1B6/3KQ3 w - -");
 //     search.FixDepth(10);

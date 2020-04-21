@@ -9,7 +9,7 @@ class ShortSearch : public ::testing::Test {
 protected:
     Search search;
     Board board;
-    int depth = 8; //short: 5, long: 7
+    int depth = 9; //short: 5, long: 7
     int time = 1000 + (depth > 5)*10000;
     void SetUp() override {
         std::cout.rdbuf(nullptr);
@@ -25,7 +25,7 @@ TEST_F(ShortSearch, Start) {
 // RG = Position from Real Game
 TEST_F(ShortSearch, RG1) {
     board.SetFen("r2qkb2/1b1p1pp1/p1n1p3/1pp4r/4PB2/1BNP2QP/PPP2P1P/R3R1K1 w q - 3 16");
-    search.FixDepth(depth-2);
+    search.FixDepth(depth-1);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
@@ -51,21 +51,21 @@ TEST_F(ShortSearch, RG4) {
 //Test passed pawn, Rd4+, most engines realize at depth 6/7
 TEST_F(ShortSearch, RG5_Rd4) {
     board.SetFen("3r2k1/7p/p7/3r1R2/PQ2K1P1/3p2PP/1P2b3/8 b - - 1 35");
-    search.FixDepth(depth+2);
+    search.FixDepth(depth+3);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
 //Crowdy early-final position
 TEST_F(ShortSearch, RG6_crowdy) {
     board.SetFen("8/8/1p1rknp1/pBb5/2P1nP1p/P1N4P/1BP3K1/4R3 b - - 14 41");
-    search.FixDepth(depth+2);
+    search.FixDepth(depth+3);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
 // Failed with Rc8, depth 8, 8s
 TEST_F(ShortSearch, RG7) {
     board.SetFen("4r1k1/1p3ppp/b7/3R4/1pn5/4P3/3N1PPP/R5K1 b - - 0 30");
-    search.FixDepth(depth+1);
+    search.FixDepth(depth+3);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
@@ -79,7 +79,7 @@ TEST_F(ShortSearch, RG8_Qf3) {
 // bm b5, not seen until depth 9 (might be related to mate detection)
 TEST_F(ShortSearch, RG9_b5) {
     board.SetFen("8/p1r2kp1/1p2bq2/2r2p2/QP2p3/P5PP/2PR1PB1/1K1R4 b - - 0 35");
-    search.FixDepth(depth);
+    search.FixDepth(depth+2);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
@@ -114,14 +114,14 @@ TEST_F(ShortSearch, RG13_kingSafetyI) {
 // Be careful with king safety! Failed with Nxc5 +0.49 d12/5s
 TEST_F(ShortSearch, RG14_kingSafetyII) {
     board.SetFen("r2qk2r/pp3ppp/n1p5/2b2b2/Q1P1N1n1/5N2/PP1PBPPP/R1B1K2R w KQkq - 8 10");
-    search.FixDepth(depth);
+    search.FixDepth(depth+1);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
 // Weird king move. Kf1 +0.19 d14/5s
 TEST_F(ShortSearch, RG15_weirdMove) {
     board.SetFen("rnb1kbnr/ppp1pppp/6q1/8/8/5N2/PPPPBPPP/RNBQK2R w KQkq - 4 5");
-    search.FixDepth(depth);
+    search.FixDepth(depth+1);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
@@ -135,7 +135,7 @@ TEST_F(ShortSearch, RG16) {
 // Failed with e5 +1.99 d10/2s
 TEST_F(ShortSearch, RG17) {
     board.SetFen("2b3r1/6rk/2NR3p/1pN2p2/4Pp1P/1PP2Pn1/P5PK/4R3 w - - 0 41");
-    search.FixDepth(depth);
+    search.FixDepth(depth+1);
     search.IterativeDeepening(board);
     EXPECT_LE(search.ElapsedTime(), time);
 }
