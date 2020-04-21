@@ -130,3 +130,9 @@ MoveData Move::Data() const {
     data.capturedType = CapturedType();
     return data;
 }
+
+bool Move::IsUnderpromotion() const {
+    bool underpromotion = PromotionType() != PROMOTION_QUEEN;
+    assert( !(underpromotion && !IsPromotion()) );
+    return underpromotion;
+}

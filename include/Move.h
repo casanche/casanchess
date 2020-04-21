@@ -42,6 +42,7 @@ public:
         MOVE_TYPE moveType = MoveType();
         return moveType == PROMOTION || moveType == PROMOTION_CAPTURE;
     }
+    bool IsUnderpromotion() const;
 
     inline void SetCapturedType(PIECE_TYPE capturedType) {
         m_move &= ~0x1c0000; //Clears the bits 18-20

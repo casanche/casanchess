@@ -401,7 +401,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         //-------- Late Move Reductions ----------
         if( !TURNOFF_LMR
-              //&& m_ply >= 2
               && depth >= 2         //avoid negative depths
               && !extension     //no extensions (including not in check)
               && moves.size() >= 6
@@ -533,10 +532,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
 
     //Order captures
-    if(!inCheck)
-        SortCaptures(board, moves);
-    else
-        SortEvasions(board, moves);
+    inCheck ? SortEvasions(board, moves) : SortCaptures(board, moves);
 
     for(auto move : moves) {
 
@@ -567,7 +563,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         board.MakeMove(move);
         m_ply++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
         D( m_debug.Increment("Quiescence Nodes") );
+
         int score = -QuiescenceSearch(board, -beta, -alpha);
+        
         board.TakeMove(move);
         m_ply--;
 
