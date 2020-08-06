@@ -11,7 +11,20 @@
 
 const int MAX_ROOTMOVES = 250;
 
-struct Limits;
+struct Limits {
+    bool infinite = false;
+    int depth = 0;
+    int nodes = 0;
+    int moveTime = 0;
+
+    int wtime;
+    int btime;
+
+    int winc;
+    int binc;
+
+    int movesToGo = 0;
+};
 
 struct RootMove {
     Move move;
@@ -47,6 +60,7 @@ public:
     };
 
     //Set limits
+    Limits GetLimits() { return m_limits; }
     void AllocateLimits(Board &board, Limits limits);
     inline void FixDepth(int depth) {
         m_maxDepth = depth;
@@ -83,6 +97,7 @@ private:
     void ShowDebugInfo();
 
     //Limits
+    Limits m_limits;
     int m_maxDepth;
     int m_allocatedTime;
     int m_forcedTime;
@@ -95,6 +110,7 @@ private:
     int m_nps;
     int m_bestScore;
     Move m_bestMove;
+    Move m_ponderMove;
 
     //Time management
     Clock::time_point m_startTime;
@@ -116,21 +132,6 @@ private:
     //Debug
     bool m_debugMode;
     Debug m_debug;
-};
-
-struct Limits {
-    bool infinite = false;
-    int depth = 0;
-    int nodes = 0;
-    int moveTime = 0;
-
-    int wtime;
-    int btime;
-
-    int winc;
-    int binc;
-
-    int movesToGo = 0;
 };
 
 #endif //SEARCH_H

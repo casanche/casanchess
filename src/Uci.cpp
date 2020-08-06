@@ -8,14 +8,16 @@
 #include <string>
 #include <thread>
 
+bool UCI_PONDER = false;
+
 ////https://ucichessengine.wordpress.com/2011/03/16/description-of-uci-protocol/
 
 namespace {
     const std::string ENGINE_NAME = "Casanchess";
     const std::string AUTHOR = "Carlos Sanchez Mayordomo";
     const std::string VERSION_MAJOR = "0";
-    const std::string VERSION_MINOR = "5";
-    const std::string VERSION_PATCH = "0";
+    const std::string VERSION_MINOR = "6";
+    const std::string VERSION_PATCH = "1";
 }
 
 Uci::Uci() :
@@ -42,6 +44,7 @@ void Uci::Launch() {
 
             //Options
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
+            std::cout << "option name Ponder type check default false" << std::endl;
 
             std::cout << "uciok" << std::endl;
         }
@@ -67,7 +70,9 @@ void Uci::Launch() {
             m_search.Stop();
         }
         else if(token == "ponderhit") {
-
+            Limits limits = m_search.GetLimits();
+            limits.infinite = false;
+            m_search.AllocateLimits(m_board, limits);
         }
         else if(token == "quit" || token == "q") {
             std::cout << "info string quitting" << std::endl;
@@ -125,11 +130,11 @@ void Uci::Launch() {
 
 void Uci::Go(std::istringstream &stream) {
     std::string token;
-
     Limits limits;
 
     while(stream >> token) {
 
+        if(token == "ponder") { limits.infinite = true; stream >> token; }
         if(token == "infinite") limits.infinite = true;
         else if(token == "depth") stream >> limits.depth;
         else if(token == "movetime") stream >> limits.moveTime;
@@ -143,7 +148,7 @@ void Uci::Go(std::istringstream &stream) {
         else {
             std::string temp;
             stream >> temp;
-            P("UNDEFINED GO STATMENT!!! (LOADING DEFAULT VALUES) " << temp);
+            P("UNDEFINED GO STATMENT: " << temp << " -- (LOADING DEFAULT VALUES) -- ");
             m_search.FixTime(2000);
             break;
         }
@@ -196,10 +201,22 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token; //should be 'value'
             if(token != "value")
                 return;
-
             stream >> token;
             P(token);
+
             Hash::tt.SetSize( stoi(token) );
+        }
+        else if(token == "Ponder") {
+            stream >> token; //should be 'value'
+            if(token != "value")
+                return;
+            stream >> token;
+            P(token);
+
+            if(token == "true")
+                UCI_PONDER = true;
+            else if(token == "false")
+                UCI_PONDER = false;
         }
         else {
             std::cout << "Unknown option: " << token << std::endl;

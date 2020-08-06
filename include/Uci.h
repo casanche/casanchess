@@ -6,6 +6,8 @@
 
 #include <sstream>
 
+extern bool UCI_PONDER;
+
 class Uci {
 public:
     Uci();

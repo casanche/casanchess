@@ -4,6 +4,7 @@
 #include "MoveGenerator.h"
 #include "Sorting.h"
 using namespace Sorting;
+#include "Uci.h"
 
 #include <algorithm> //max()
 #include <cmath> //INFINITY
@@ -94,6 +95,7 @@ void Search::IterativeDeepening(Board &board) {
 
         //PV
         std::string PV;
+        m_ponderMove = Move();
         Board newBoard = board;
         assert(newBoard == board);
         for(int depth = 1; depth <= m_depth; depth++) {
@@ -104,6 +106,9 @@ void Search::IterativeDeepening(Board &board) {
             Move bestMove = ttEntry->bestMove;
             PV += bestMove.Notation();
             PV += " ";
+
+            if(depth == 2)
+                m_ponderMove = bestMove;
 
             newBoard.MakeMove(bestMove);
         }
@@ -117,7 +122,10 @@ void Search::IterativeDeepening(Board &board) {
         D( m_debug.Print() );
     }
 
-    std::cout << "bestmove " << m_bestMove.Notation() << std::endl;
+    std::cout << "bestmove " << m_bestMove.Notation();
+    if(UCI_PONDER)
+        std::cout << " ponder " << m_ponderMove.Notation();
+    std::cout << std::endl;
 }
 void Search::UciOutput(std::string PV) {
     std::cout << "info depth " << m_depth;
@@ -605,6 +613,10 @@ bool Search::TimeOver() {
 }
 
 void Search::AllocateLimits(Board &board, Limits limits) {
+    m_limits = limits;
+    m_startTime = Clock::now();
+    m_nodes = 0;
+
     m_maxDepth = MAX_DEPTH;
     m_allocatedTime = INFINITE;
     m_forcedTime = INFINITE;
@@ -614,7 +626,7 @@ void Search::AllocateLimits(Board &board, Limits limits) {
     if(limits.depth)      { FixDepth(limits.depth); return; }
     if(limits.moveTime)   { FixTime(limits.moveTime); return; }
     if(limits.nodes)      { m_forcedNodes = limits.nodes; return; }
-    if(!limits.movesToGo) { limits.movesToGo = 20; } //estimation of the remaining moves
+    if(!limits.movesToGo) { limits.movesToGo = 20 - 5 * UCI_PONDER; } //estimation of the remaining moves
 
     COLOR color = board.ActivePlayer();
 
