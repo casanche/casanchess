@@ -221,7 +221,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Should I stop? -----------
     m_nodesTimeCheck++;
-    if( m_stop || TimeOver() ) {
+    if( m_stop || NodeLimit() || TimeOver() ) {
         m_stop = true;
         return 0;
     }
@@ -625,7 +625,7 @@ void Search::AllocateLimits(Board &board, Limits limits) {
     if(limits.infinite)   { Infinite(); return; }
     if(limits.depth)      { FixDepth(limits.depth); return; }
     if(limits.moveTime)   { FixTime(limits.moveTime); return; }
-    if(limits.nodes)      { m_forcedNodes = limits.nodes; return; }
+    if(limits.nodes)      { FixNodes(limits.nodes); return; }
     if(!limits.movesToGo) { limits.movesToGo = 20 - 5 * UCI_PONDER; } //estimation of the remaining moves
 
     COLOR color = board.ActivePlayer();

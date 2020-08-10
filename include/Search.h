@@ -63,17 +63,19 @@ public:
     Limits GetLimits() { return m_limits; }
     void AllocateLimits(Board &board, Limits limits);
     inline void FixDepth(int depth) {
-        m_maxDepth = depth;
         m_allocatedTime = INFINITE;
+        m_maxDepth = depth;
     }
     inline void FixTime(int time) {
         m_allocatedTime = INFINITE;
         m_forcedTime = time;
     }
-    inline void Infinite() {
-        m_maxDepth = MAX_DEPTH;
+    inline void FixNodes(int nodes) {
         m_allocatedTime = INFINITE;
-        m_forcedTime = INFINITE;
+        m_forcedNodes = nodes;
+    }
+    inline void Infinite() {
+        m_allocatedTime = INFINITE;
     }
 
     //Getters
@@ -88,6 +90,7 @@ private:
     int RootMax(Board &board, int depth, int alpha, int beta);
 
     bool TimeOver();
+    bool NodeLimit() { return m_nodes >= m_forcedNodes; };
 
     //IterativeDeepening methods
     void ClearSearch();
