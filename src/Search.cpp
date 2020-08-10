@@ -20,8 +20,6 @@ const int NULLMOVE_REDUCTION_FACTOR = 3;
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
 
-const int STATIC_MARGIN[5] = {0, 150, 300, 500, 700};
-
 #define DRAW_SCORE(ply) (ply & 1 ? 10 : -10)
 
 Search::Search() {
