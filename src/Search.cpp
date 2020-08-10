@@ -408,9 +408,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         //-------- Late Move Reductions ----------
         if( !TURNOFF_LMR
               && depth >= 2         //avoid negative depths
-              && !extension     //no extensions (including not in check)
-              && moves.size() >= 6
-              && moveNumber != 1
+              && !inCheck     //no extensions (including not in check)
+              //&& moves.size() >= 6
+              //&& moveNumber != 1
         ) {
             //Weak history
             if(move.Score() < 30) {
@@ -428,6 +428,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
                 if(depth > 6)
                     reduction++;
             }
+            //Principal Variation reduction
+            if(reduction && isPV && moveNumber == 1)
+                reduction--;
         }
 
         board.MakeMove(move);
