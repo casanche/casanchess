@@ -13,6 +13,7 @@ const int MAX_ROOTMOVES = 250;
 
 struct Limits {
     bool infinite = false;
+    bool ponderhit = false;
     int depth = 0;
     int nodes = 0;
     int moveTime = 0;

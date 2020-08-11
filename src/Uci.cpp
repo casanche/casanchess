@@ -72,6 +72,7 @@ void Uci::Launch() {
         else if(token == "ponderhit") {
             Limits limits = m_search.GetLimits();
             limits.infinite = false;
+            limits.ponderhit = true;
             m_search.AllocateLimits(m_board, limits);
         }
         else if(token == "quit" || token == "q") {

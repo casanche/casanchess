@@ -627,7 +627,7 @@ void Search::AllocateLimits(Board &board, Limits limits) {
     if(limits.depth)      { FixDepth(limits.depth); return; }
     if(limits.moveTime)   { FixTime(limits.moveTime); return; }
     if(limits.nodes)      { FixNodes(limits.nodes); return; }
-    if(!limits.movesToGo) { limits.movesToGo = 20 - 5 * UCI_PONDER; } //estimation of the remaining moves
+    limits.movesToGo = 20 + 20 * limits.ponderhit; //estimation of the remaining moves
 
     COLOR color = board.ActivePlayer();
 
