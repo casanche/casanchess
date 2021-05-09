@@ -39,6 +39,7 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     board.m_activePlayer = (token == "w") ? WHITE : BLACK;
 
     //Castling
+    token = "-";
     fenStream >> token;
     if(token != "-") {
         for(auto theChar : token) {
@@ -53,6 +54,7 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     }
 
     //En passant
+    token = "-";
     fenStream >> token;
     if(token != "-") {
         int square = board.SquareToIndex(token);
@@ -60,11 +62,13 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     }
 
     //50-move rule
+    token = "-";
     fenStream >> token;
     if(token != "-")
         board.m_fiftyrule = std::stoi(token);
 
     //Move number
+    token = "-";
     fenStream >> token;
     board.m_moveNumber = 1, board.m_ply = 0, board.m_initialPly = 0;
     if(token != "-" && token != "0") {

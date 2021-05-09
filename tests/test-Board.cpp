@@ -7,6 +7,12 @@
 using namespace Test;
 #include <gtest/gtest.h>
 
+TEST(FenTest, EnPassant) {
+    Board board;
+    board.SetFen("rnbqkbnr/p1pppppp/8/8/1Pp5/2N5/P2PPPPP/R1BQKBNR b KQkq b3");
+    EXPECT_EQ(board.EnPassantSquare(), SquareBB(SQUARES::B3));
+}
+
 TEST(BoardTest, IsRepetitionDraw) {
     Board board;
     board.SetFen("8/p5pp/1r2bpk1/8/2P1P3/q1P2PQ1/PR4PP/2KR4 b - - 5 32");
