@@ -554,7 +554,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
         if(!inCheck) {
             //Skip quiet moves (keep captures, promotions and enpassants)
-            if(move.IsQuiet())
+            //Skip underpromotions
+            if(move.IsQuiet() || move.PromotionType() > PROMOTION_QUEEN)
                 continue;
 
             //Futility pruning depending on SEE
