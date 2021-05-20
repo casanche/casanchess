@@ -28,9 +28,6 @@ namespace BitboardUtils {
 
     void PrintBits(Bitboard bitboard);
 
-    //Other implementations
-    int BitscanForwardSimple(Bitboard b);
-
 } //namespace BitboardUtils
 
 using namespace BitboardUtils;

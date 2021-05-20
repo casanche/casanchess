@@ -92,14 +92,3 @@ void BitboardUtils::PrintBits(Bitboard bitboard) {
         i++;
     }
 }
-
-//Other implementations
-int BitboardUtils::BitscanForwardSimple(Bitboard bitboard) {
-    int count;
-    // bitboard ^= bitboard & (bitboard - 1);
-    bitboard = (bitboard ^ (bitboard - 1) ) >> 1;
-    for(count = 0; bitboard; ++count) {
-        bitboard >>= 1;
-    }
-    return count;
-}

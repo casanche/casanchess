@@ -98,6 +98,7 @@ namespace {
             int historyScore = heuristics.history.Get(move, board.ActivePlayer());
             int maxValue = heuristics.history.MaxValue();
             historyScore = historyScore * 180 / (maxValue+1); //add one to avoid division by zero
+            assert(historyScore >= 0 && historyScore <= 180);
             move.SetScore(historyScore);
 
         }
