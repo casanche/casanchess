@@ -34,6 +34,15 @@ TEST_F(ZobristKeyTest, Capture) {
     EXPECT_EQ(initialKey, board.ZKey());
 }
 
+TEST_F(ZobristKeyTest, PromotionCapture) {
+    board.SetFen("r4N2/1P2nP2/7q/8/1kP2Bp1/4p3/1P4pb/n2K4 w - - 0 1");
+    initialKey = board.ZKey();
+    board.MakeMove("b7a8q");
+    EXPECT_NE(initialKey, board.ZKey());
+    board.TakeMove();
+    EXPECT_EQ(initialKey, board.ZKey());
+}
+
 TEST_F(ZobristKeyTest, Color) {
     board.SetFen("5N2/r3nP2/1P5q/8/k1P2Bp1/4p3/1P4pb/n2K4 b - - 0 1");
     u64 blackKey = board.ZKey();
