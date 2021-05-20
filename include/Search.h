@@ -124,6 +124,7 @@ private:
 
     //Helpers
     int m_ply;
+    int m_plyqs;
     int m_selPly;
     u8 m_counter;
     bool m_nullmoveAllowed;

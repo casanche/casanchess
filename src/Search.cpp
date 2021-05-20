@@ -47,6 +47,7 @@ void Search::ClearSearch() {
     m_nodesTimeCheck = 0;
 
     m_ply = 0;
+    m_plyqs  = 0;
     m_selPly = 0;
     m_nullmoveAllowed = true;
 
@@ -577,13 +578,13 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         D( Board bef = board );
 
         board.MakeMove(move);
-        m_ply++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
+        m_ply++; m_plyqs++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
         D( m_debug.Increment("Quiescence Nodes") );
 
         int score = -QuiescenceSearch(board, -beta, -alpha);
         
         board.TakeMove(move);
-        m_ply--;
+        m_ply--; m_plyqs--;
 
         D( Board aft = board );
         D( assert(bef == aft) );
