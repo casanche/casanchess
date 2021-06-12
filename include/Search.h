@@ -88,6 +88,8 @@ private:
     int NegaMax(Board  &board, int depth, int alpha, int beta);
     int RootMax(Board &board, int depth, int alpha, int beta);
 
+    int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
+
     bool TimeOver();
     bool NodeLimit() { return m_nodes >= m_forcedNodes; };
 

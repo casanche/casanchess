@@ -406,30 +406,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         //-------- Late Move Reductions ----------
         if( !TURNOFF_LMR
+              && moveNumber > 1     //never reduce the first move
               && depth >= 2         //avoid negative depths
-              && !inCheck     //no extensions (including not in check)
-              //&& moves.size() >= 6
-              //&& moveNumber != 1
+              && !inCheck           //not in check
         ) {
-            //Weak history
-            if(move.Score() < 30) {
-                D(m_debug.Increment("Late Move Reductions - WeakHistory"));
-                D( m_debug.Increment("Late Move Reductions - Depth " + std::to_string(depth)) );
-                reduction++;
-                if(depth > 8 || (depth > 4 && move.Score() <= 1))
-                    reduction++;
-            }
-            //SEE negative (larger than pawn)
-            if(move.Score() >= 181 && move.Score() <= 187) {
-                D(m_debug.Increment("Late Move Reductions - SEENegative"));
-                D( m_debug.Increment("Late Move Reductions - Depth " + std::to_string(depth)) );
-                reduction++;
-                if(depth > 6)
-                    reduction++;
-            }
-            //Principal Variation reduction
-            if(reduction && isPV && moveNumber == 1)
-                reduction--;
+            reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, isPV);
         }
 
         board.MakeMove(move);
@@ -654,6 +635,36 @@ void Search::ProbeBoard(Board& board) {
         }
         board.TakeMove(move);
     }
+}
+
+int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV) {
+    int reduction = 0;
+
+    //History moves
+    if(moveScore < 180) {
+        float logscore = logf(moveScore+1);
+        reduction = (int)floorf(
+            -0.5 -0.2*logscore
+            - 2*(isPV)
+            + (2.0 - 0.3*logscore) * logf(depth)
+            + (0.3 + 0.15*logscore) * logf(moveNumber)
+            );
+    }
+    //SEE << 0
+    else if(moveScore >= 181 && moveScore <= 184) {
+        reduction = (int)floorf(0.5 - 0.4*(isPV) + 1.35*logf(depth) + 0.4*logf(moveNumber));
+    }
+    //SEE < 0
+    else if(moveScore >= 185 && moveScore <= 189) {
+        reduction = (int)floorf(-0.85 + 1.35*logf(depth) + 0.4*logf(moveNumber));
+    }
+    //Killers 2,3,4
+    else if(moveScore >= 191 && moveScore <= 193 && !isPV) {
+        reduction = (int)floorf(-1.85 + 0.5*logf(depth) + 1.65*logf(moveNumber));
+    }
+
+    reduction = std::min(4, std::max(0, reduction));
+    return reduction;
 }
 
 void Search::Debug::Transform() {
