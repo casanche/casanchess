@@ -1,4 +1,5 @@
 #include "BitboardUtils.h"
+#include "Utils.h"
 
 #include <gtest/gtest.h>
 
@@ -7,6 +8,31 @@
 //EXPECT_TRUE, EXPECT_FALSE
 //EXPECT_EQ, EXPECT_NE, EXPECT_LT, EXPECT_LE, EXPECT_GT, EXPECT_GE
 //EXPECT_STREQ, EXPECT_STRNE, EXPECT_STRCASEEQ, EXPECT_STRCASENE
+
+//Utils
+TEST(Utils, RandomNumberGenerator_64bits) {
+    uint64_t r1, r2;
+
+    //Fixed seed
+    Utils::PRNG_64 prng_fixedSeed_1(100);
+    Utils::PRNG_64 prng_fixedSeed_2(100);
+    r1 = prng_fixedSeed_1.Random();
+    r2 = prng_fixedSeed_2.Random();
+    EXPECT_EQ(r1, r2);
+
+    //Random seed
+    Utils::PRNG_64 prng_noSeed_1;
+    Utils::PRNG_64 prng_noSeed_2;
+    r1 = prng_noSeed_1.Random();
+    r2 = prng_noSeed_2.Random();
+    EXPECT_NE(r1, r2);
+
+    Utils::PRNG_64 prng_noSeed_explicit_1(0);
+    Utils::PRNG_64 prng_noSeed_explicit_2(0);
+    r1 = prng_noSeed_explicit_1.Random();
+    r2 = prng_noSeed_explicit_2.Random();
+    EXPECT_NE(r1, r2);
+}
 
 //BitboardUtils
 TEST(BitboardUtils, GetBit) {

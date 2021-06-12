@@ -37,10 +37,10 @@ if(BUILD_TESTS)
 	include_directories(${GTEST_INCLUDE_DIRS})
 	set(TEST_LIBRARIES ${GTEST_LIBRARIES} ${GTEST_MAIN_LIBRARIES} tests-common engine ${LINK_LIBRARIES})
 	set(TEST_SOURCES
-		tests/test-BitboardUtils.cpp
 		tests/test-Board.cpp
-		tests/test-ZobristKey.cpp
 		tests/test-Misc.cpp
+		tests/test-Utils.cpp
+		tests/test-ZobristKey.cpp
 	)
 	add_executable(tests ${TEST_SOURCES})
 	target_link_libraries(tests ${TEST_LIBRARIES})

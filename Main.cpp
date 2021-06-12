@@ -2,13 +2,13 @@
 #include "Board.h"
 #include "Interface.h"
 #include "Uci.h"
+#include "Utils.h"
 
 #include <iostream>
-#include <chrono>
 
 int main(int argc, char** argv) {
-    typedef std::chrono::high_resolution_clock Clock;
-    auto t0 = Clock::now();
+    Utils::Clock clock;
+    clock.Start();
 
     //Testing position
     if(argc > 1 && argv[1] == std::string("-j")) {
@@ -27,9 +27,8 @@ int main(int argc, char** argv) {
     Uci uci;
     uci.Launch();
 
-    auto t1 = Clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1-t0);
-    std::cout << "[DEBUG] " << duration.count() << " ms" << std::endl;
+    int elapsed = clock.Elapsed();
+    std::cout << "[TIME] " << elapsed << " ms" << std::endl;
 
     return 0;
 }

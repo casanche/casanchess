@@ -3,7 +3,6 @@
 
 #include "Constants.h"
 #include "Move.h"
-#include <random>
 
 class Board;
 
@@ -29,16 +28,6 @@ public:
     void UpdateCastling(CASTLING_TYPE castlingType);
 private:
     u64 m_key;
-};
-
-class PRNG {
-public:
-    PRNG(); //seed
-    u64 Random();
-private:
-    std::random_device m_device;
-    std::mt19937_64 m_mersenne;
-    std::uniform_int_distribution<u64> m_distribution;
 };
 
 #endif //ZOBRIST_KEYS_H

@@ -2,6 +2,7 @@
 
 #include "BitboardUtils.h"
 #include "Board.h"
+#include "Utils.h"
 
 u64 ZobristKeys::m_zkeyPieces[2][8][64];
 u64 ZobristKeys::m_zkeyCastling[2][2];
@@ -10,7 +11,7 @@ u64 ZobristKeys::m_zkeyColor;
 
 //Generate the zKey bitwords. Call once before running the program
 void ZobristKeys::Init() {
-    PRNG random;
+    Utils::PRNG_64 random(70);
     //color
     m_zkeyColor = random.Random();
     for(COLOR color : {WHITE, BLACK}) {
@@ -94,13 +95,4 @@ void ZobristKey::UpdateCastling(CASTLING_TYPE castlingType) {
         case CASTLING_q: m_key ^= ZobristKeys::m_zkeyCastling[BLACK][1]; break;
         default: assert(false);
     };
-}
-
-//Pseudo RNG for 64-bitwords
-//Random seed: m_mersenne(m_device())
-PRNG::PRNG() : m_mersenne(70) {}
-
-//Generate a random 64-bitword
-u64 PRNG::Random() {
-    return m_distribution(m_mersenne);
 }

@@ -5,8 +5,8 @@
 #include "Hash.h"
 #include "Move.h"
 #include "Sorting.h"
+#include "Utils.h"
 
-#include <chrono>
 #include <vector>
 
 const int MAX_ROOTMOVES = 250;
@@ -33,7 +33,6 @@ struct RootMove {
 };
 
 class Search {
-    typedef std::chrono::steady_clock Clock;
 
     class Debug {
     public:
@@ -49,16 +48,14 @@ public:
     Search(Board board);
 
     void IterativeDeepening(Board &board);
-    inline void MakeMove(Board &board) { board.MakeMove(m_bestMove); }; //Interface
+
+    //Interface
+    inline void MakeMove(Board &board) { board.MakeMove(m_bestMove); };
 
     //Flow
+    int64_t ElapsedTime() { return m_clock.Elapsed(); }
     void Stop() { m_stop = true; }
     void DebugMode() { m_debugMode = true; }
-
-    //Helpers
-    inline int64_t ElapsedTime() {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - m_startTime).count();
-    };
 
     //Set limits
     Limits GetLimits() { return m_limits; }
@@ -118,7 +115,7 @@ private:
     Move m_ponderMove;
 
     //Time management
-    Clock::time_point m_startTime;
+    Utils::Clock m_clock;
     bool m_stop;
     int m_nodesTimeCheck;
 

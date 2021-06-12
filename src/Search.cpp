@@ -57,7 +57,7 @@ void Search::ClearSearch() {
 
 void Search::IterativeDeepening(Board &board) {
     m_counter++;
-    m_startTime = Clock::now();
+    m_clock.Start();
     ClearSearch();
 
     for(m_depth = 1; m_depth <= m_maxDepth; m_depth++) {
@@ -615,8 +615,8 @@ bool Search::TimeOver() {
 
 void Search::AllocateLimits(Board &board, Limits limits) {
     m_limits = limits;
-    m_startTime = Clock::now();
     m_nodes = 0;
+    m_clock.Start();
 
     m_maxDepth = MAX_DEPTH;
     m_allocatedTime = INFINITE;
