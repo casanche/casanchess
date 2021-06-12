@@ -1,5 +1,6 @@
 #include "Fen.h"
 #include "Board.h"
+#include "Utils.h"
 
 #include <cassert>
 #include <sstream>
@@ -88,6 +89,113 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     board.m_pawnKey.SetPawnKey(board);
     board.m_history[board.m_ply].zkey = board.ZKey();
     board.m_checkCalculated = false;
+}
+
+//Sets the board with a random fen string
+//Returns the sfen
+std::string Fen::SetRandomPosition(Board& board) {
+    board.ClearBits();
+
+    //--
+    //--Generate random position
+    //--
+    Utils::PRNG rng;
+
+    auto CheckIsValid = [&] (int p, Bitboard bb) {
+        if(bb & board.m_allpieces)
+            return false;
+        int square = BitscanForward(bb);
+        if(p == PAWN && (Rank(square) == RANK1 || Rank(square) == RANK8))
+            return false;
+        if(board.IsCheck()) {
+            board.m_checkCalculated = false;
+            return false;
+        }
+        return true;
+    };
+
+    const int pieceMax[8] = {0, 8, 2, 2, 2, 1, 1, 0};
+
+    for(int c = WHITE; c <= BLACK; c++) {
+        for(int p = PAWN; p <= KING; p++) {
+
+            const int max = (p == KING) ? 1 : rng.Random(0, pieceMax[p]);
+
+            for(int m = 1; m <= max; m++) {
+                Bitboard randomSquareBB;
+                bool isValid;
+                do {
+                    int randomSquare = rng.Random(0, 64);
+                    randomSquareBB = SquareBB(randomSquare);
+                    isValid = CheckIsValid(p, randomSquareBB);
+                } while(!isValid);
+                board.m_pieces[c][p] |= randomSquareBB;
+                board.m_allpieces |= randomSquareBB;
+            }
+
+        } //p
+    } //c
+
+    //Update state and history
+    board.UpdateBitboards();
+    assert(board.m_ply >= 0);
+    board.m_history[board.m_ply].fiftyrule = board.m_fiftyrule;
+    board.m_history[board.m_ply].castling = board.m_castlingRights;
+    board.m_history[board.m_ply].enpassant = board.m_enPassantSquare;
+    board.m_zobristKey.SetKey(board);
+    board.m_pawnKey.SetPawnKey(board);
+    board.m_history[board.m_ply].zkey = board.ZKey();
+    board.m_checkCalculated = false;
+
+    int random = rng.Random(0, 1);
+    board.m_activePlayer = random ? WHITE : BLACK;
+
+    return GetSimplifiedFen(board);
+}
+
+//Fen with only the piece positions (without side-to-move, castling rights...)
+std::string Fen::GetSimplifiedFen(Board& board) {
+    std::string buffer = ""; //buffer to fill the fen
+    int empties = 0; //number of successive empty squares
+
+    const char PIECES_NOTATION[2][8] = {{'\0', 'P', 'N', 'B', 'R', 'Q', 'K', '\0'},  //white
+                                        {'\0', 'p', 'n', 'b', 'r', 'q', 'k', '\0'}}; //black
+
+    for(int rank = RANK8; rank >= RANK1; rank--) {
+        for(int file = FILEA; file <= FILEH; file++) {
+            int square = rank*8 + file;
+
+            char whitePiece = PIECES_NOTATION[WHITE][board.GetPieceAtSquare(WHITE, square)];
+            char blackPiece = PIECES_NOTATION[BLACK][board.GetPieceAtSquare(BLACK, square)];
+
+            //Lambda function. Writes the number of empties to the buffer and resets the counter
+            auto bufferEmpties = [&] () {
+                if(empties > 0)
+                    buffer += std::to_string(empties);
+                empties = 0;
+            };
+
+            if(whitePiece) {
+                bufferEmpties();
+                buffer += whitePiece;
+            }
+            else if(blackPiece) {
+                bufferEmpties();
+                buffer += blackPiece;
+            }
+            else {
+                empties++;
+            }
+
+            if(file == FILEH) {
+                bufferEmpties();
+                if(rank != RANK1)
+                    buffer += "/";
+            }
+        } //file
+    } //rank
+
+    return buffer;
 }
 
 EPDLine Fen::ReadEPDLine(const std::string& line) {
