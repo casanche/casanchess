@@ -33,11 +33,16 @@ namespace {
 
             //Queen promotion captures: 254
             //Queen promotions: 253
-            if(move.IsPromotion() && move.PromotionType() == PROMOTION_QUEEN) {
-                if(move.MoveType() == PROMOTION_CAPTURE) {
+            //Underpromotions: 0
+            if(move.IsPromotion()) {
+                if(move.MoveType() == PROMOTION_CAPTURE && move.PromotionType() == PROMOTION_QUEEN) {
                     move.SetScore(254); continue;
-                } else {
+                }
+                else if(move.MoveType() == PROMOTION && move.PromotionType() == PROMOTION_QUEEN) {
                     move.SetScore(253); continue;
+                }
+                else { //underpromotion
+                    move.SetScore(0); continue;
                 }
             }
 
@@ -94,11 +99,13 @@ namespace {
                 continue;
             }
 
-            //History heuristics (0-180)
+            //History heuristics (1-180)
             int historyScore = heuristics.history.Get(move, board.ActivePlayer());
             int maxValue = heuristics.history.MaxValue();
-            historyScore = historyScore * 180 / (maxValue+1); //add one to avoid division by zero
-            assert(historyScore >= 0 && historyScore <= 180);
+            const int maxScore = 180;
+            const int minScore = 1;
+            historyScore = minScore + historyScore * (maxScore-minScore) / (maxValue+1);
+            assert(historyScore >= minScore && historyScore <= maxScore);
             move.SetScore(historyScore);
 
         }
