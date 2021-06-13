@@ -44,6 +44,7 @@ void Uci::Launch() {
             //Options
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
             std::cout << "option name Ponder type check default false" << std::endl;
+            std::cout << "option name ClearHash type button" << std::endl;
 
             std::cout << "uciok" << std::endl;
         }
@@ -217,6 +218,9 @@ void Uci::SetOption(std::istringstream &stream) {
                 UCI_PONDER = true;
             else if(token == "false")
                 UCI_PONDER = false;
+        }
+        else if(token == "ClearHash") {
+            Hash::tt.Clear();
         }
         else {
             std::cout << "Unknown option: " << token << std::endl;
