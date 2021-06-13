@@ -3,8 +3,8 @@
 
 #include "Board.h"
 #include "Hash.h"
+#include "Heuristics.h"
 #include "Move.h"
-#include "Sorting.h"
 #include "Utils.h"
 
 #include <vector>

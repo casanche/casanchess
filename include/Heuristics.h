@@ -1,5 +1,5 @@
-#ifndef SORTING_H
-#define SORTING_H
+#ifndef HEURISTICS_H
+#define HEURISTICS_H
 
 #include "Move.h"
 struct RootMove;
@@ -8,8 +8,8 @@ class Board;
 class TT;
 struct Heuristics;
 
-const int MAX_PLY = 128;
-const int RESET_HISTORY = INFINITE / 30;
+const int HEURISTICS_MAX_PLY = 128;
+const int VALUE_TO_RESET_HISTORY = INFINITE / 30;
 
 namespace Sorting {
     void SortCaptures(Board &board, MoveList &moveList);
@@ -21,7 +21,7 @@ namespace Sorting {
 class KillerHeuristics {
 public:
     void Clear() {
-        for(int i = 0; i < MAX_PLY; i++) {
+        for(int i = 0; i < HEURISTICS_MAX_PLY; i++) {
             m_killers[i][0] = Move();
             m_killers[i][1] = Move();
         }
@@ -41,7 +41,7 @@ public:
         return m_killers[ply][1];
     }
 private:
-    Move m_killers[MAX_PLY][2]; //[PLY][SLOT]
+    Move m_killers[HEURISTICS_MAX_PLY][2]; //[PLY][SLOT]
 };
 
 //Loop over all elements of the history table, to perform operations
@@ -85,7 +85,7 @@ private:
         if(value > m_maxValue) {
             m_maxValue = value;
         }
-        if(m_maxValue > RESET_HISTORY) {
+        if(m_maxValue > VALUE_TO_RESET_HISTORY) {
             LoopHistoryTable(m_history[color][from][to] /= 3);
         }
     }
@@ -96,4 +96,4 @@ struct Heuristics {
     HistoryHeuristics history;
 };
 
-#endif //SORTING_H
+#endif //HEURISTICS_H

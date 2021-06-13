@@ -2,9 +2,8 @@
 
 #include "Evaluation.h"
 #include "MoveGenerator.h"
-#include "Sorting.h"
-using namespace Sorting;
 #include "Uci.h"
+using namespace Sorting;
 
 #include <algorithm> //max()
 #include <cmath> //INFINITY

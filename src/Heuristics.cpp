@@ -1,4 +1,4 @@
-#include "Sorting.h"
+#include "Heuristics.h"
 #include "Board.h"
 #include "Evaluation.h"
 #include "Hash.h"
@@ -131,32 +131,29 @@ namespace {
         }
     }
 
-}
-
-//Unnamed namespace (private functions)
-namespace {
     bool MVV(const Move &lmove, const Move &rmove) {
         return lmove.CapturedType() > rmove.CapturedType();
     }
-    // bool MVVtoLVA(const Move &lmove, const Move &rmove) {
-    //     if(lmove.CapturedType() > rmove.CapturedType()) //MVV
-    //         return true;
+    [[maybe_unused]] bool MVVtoLVA(const Move &lmove, const Move &rmove) {
+        if(lmove.CapturedType() > rmove.CapturedType()) //MVV
+            return true;
 
-    //     else if(lmove.CapturedType() == rmove.CapturedType()) {
-    //         return lmove.PieceType() < rmove.PieceType(); //LVA
-    //     }
+        else if(lmove.CapturedType() == rmove.CapturedType()) {
+            return lmove.PieceType() < rmove.PieceType(); //LVA
+        }
 
-    //     return false;
-    // }
+        return false;
+    }
     bool ByScore(const Move &lmove, const Move &rmove) {
         return lmove.Score() > rmove.Score();
     }
     bool ByNodes(const RootMove &lhs, const RootMove &rhs) {
         return lhs.nodeCount > rhs.nodeCount;
     }
+
 }
 
-//Sorting namespace (public interface)
+//Named namespace (public interface)
 void Sorting::SortCaptures(Board &board, MoveList &moveList) {
     const bool useSEE = 1;
     if(useSEE) {
