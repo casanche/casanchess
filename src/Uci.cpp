@@ -16,8 +16,8 @@ namespace {
     const std::string ENGINE_NAME = "Casanchess";
     const std::string AUTHOR = "Carlos Sanchez Mayordomo";
     const std::string VERSION_MAJOR = "0";
-    const std::string VERSION_MINOR = "6";
-    const std::string VERSION_PATCH = "1";
+    const std::string VERSION_MINOR = "7";
+    const std::string VERSION_PATCH = "0";
 }
 
 Uci::Uci() :
@@ -40,7 +40,6 @@ void Uci::Launch() {
                 std::cout << "." << VERSION_PATCH;
             std::cout << std::endl;
             std::cout << "id author " << AUTHOR << std::endl;
-            std::cout << std::endl;
 
             //Options
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
