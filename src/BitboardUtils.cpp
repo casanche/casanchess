@@ -1,10 +1,10 @@
 #include "BitboardUtils.h"
 
+#include <bit>
 #include <iostream>
 
 #ifdef _MSC_VER
     #include <intrin.h>
-    #define __builtin_popcountll (int)__popcnt64
     #define __builtin_bswap64 _byteswap_uint64
 #endif
 
@@ -18,37 +18,21 @@ x & (x-1): removes the LSB (LSB reset)
 
 //Gives the index of the first '1' bit (LSB)
 int BitboardUtils::BitscanForward(Bitboard b) {
-    #ifdef __GNUC__
-        if (b)
-            return __builtin_ffsll(b) - 1;
-        return -1;
-    #elif _MSC_VER
-        unsigned long index;
-        if (_BitScanForward64(&index, b))
-            return index;
-        else
-            return -1;
-    #endif
+    if(b)
+        return std::countr_zero(b);
+    return -1;
 }
 
 //Gives the index of the last '1' bit (MSB)
 int BitboardUtils::BitscanReverse(Bitboard b) {
-    #ifdef __GNUC__
-        if(b)
-            return 63 ^ __builtin_clzll(b);
-        return -1;
-    #elif _MSC_VER
-        unsigned long index;
-        if (_BitScanReverse64(&index, b))
-            return index;
-        else
-            return -1;
-    #endif
+    if(b)
+        return 63 ^ std::countl_zero(b);
+    return -1;
 }
 
 //Counts the number of set bits
 int BitboardUtils::PopCount(Bitboard b) {
-    return __builtin_popcountll(b);
+    return std::popcount(b);
 }
 
 //Resets the LSB of the given bitboard and returns its index
