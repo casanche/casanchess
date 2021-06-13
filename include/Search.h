@@ -67,6 +67,7 @@ public:
         m_allocatedTime = INFINITE;
         m_maxDepth = depth;
     }
+    //In milliseconds
     inline void FixTime(int time) {
         m_allocatedTime = INFINITE;
         m_forcedTime = time;

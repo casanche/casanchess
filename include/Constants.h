@@ -1,10 +1,9 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-#include <cstdint>
-#include <string>
-#include <iostream>
 #include <cassert>
+#include <cstdint>
+#include <iostream>
 
 typedef unsigned int uint;
 typedef int8_t i8;
@@ -24,16 +23,15 @@ typedef uint64_t Bitboard;
     #define __INT16_MAX__ SHRT_MAX
 #endif
 
-const int INFINITE_SCORE = INFINITE_I16 - 1000;
-const int MATESCORE = INFINITE_SCORE - 1000;
+const int INFINITE_SCORE = INFINITE_I16 - 1024;
+const int MATESCORE = INFINITE_SCORE - 1024;
 
 enum COLOR { WHITE, BLACK, NO_COLOR };
 enum FILES { FILEA, FILEB, FILEC, FILED, FILEE, FILEF, FILEG, FILEH };
 enum RANKS { RANK1, RANK2, RANK3, RANK4, RANK5, RANK6, RANK7, RANK8 };
 enum PIECE_TYPE { NO_PIECE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, ALL_PIECES };
-enum PIECES { A_NOPIECE, W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING, W_ALLPIECES,
-                        B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING, B_ALLPIECES, A_ALLPIECES };
-enum DIRECTIONS { NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST };
+enum DIRECTIONS { NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST, NO_DIRECTION };
+
 const Bitboard ZERO = 0; //all zeros
 const Bitboard ONE = 1;
 const Bitboard ALL = (Bitboard)~0; //universal bitboard (all ones)
@@ -42,24 +40,15 @@ const Bitboard ALL = (Bitboard)~0; //universal bitboard (all ones)
 
 #define SquareBB(square) (ONE << (square))
 
-#define PieceTypeToPieces(piecetype, color) (PIECES)(piecetype + 7 * color)
-#define PiecesToPieceType(piece, color) (PIECE_TYPE)(piece - 7 * color)
-
-#define IsValidPieceType(piece) (piece != NO_PIECE && piece != ALL_PIECES)
-#define IsValidPiece(piece) (piece != A_NOPIECE && piece != W_ALLPIECES && piece != B_ALLPIECES && piece != A_ALLPIECES)
-
-#define IsMateValue(score) (abs(score) <= MATESCORE && abs(score) > (MATESCORE - 1000))
-
-//Output
-#define P(x) std::cout << x << std::endl;
-#define PL(x) std::cout << x << " " << std::flush;
-
 //Debug
 #ifdef DEBUG
     #define D(x) x
 #else
-    #define D(x) do {} while(0)
+    #define D(x) ((void)0)
 #endif
+
+#define P(x) std::cout << x << std::endl;
+#define PL(x) std::cout << x << " " << std::flush;
 
 enum SQUARES {
     A1=0,  B1, C1, D1, E1, F1, G1, H1,
@@ -132,7 +121,13 @@ inline PIECE_TYPE& operator++(PIECE_TYPE& pieceType) {
 }
 
 //Global inlined functions
-inline int ColorlessRank(COLOR color, int square) {
+inline bool IsValidPieceType(PIECE_TYPE piece) {
+    return (piece != NO_PIECE) && (piece != ALL_PIECES);
+}
+inline bool IsMateValue(int score) {
+    return (abs(score) <= MATESCORE) && (abs(score) > (MATESCORE - 1024));
+}
+inline int RelativeRank(COLOR color, int square) {
     return color == WHITE ? Rank(square) : 7 ^ Rank(square);
 }
 

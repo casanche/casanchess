@@ -20,20 +20,19 @@ protected:
 
 TEST_F(PositionMisc, Fine70) {
     board.SetFen("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -");
-    search.FixDepth(26);
+    search.FixTime(2000);
     search.IterativeDeepening(board);
     EXPECT_EQ(search.BestMove().Notation(), "a1b1");
 }
 
 //Mate tests
 
-//Difficult mate in #5. Too much pruning will see mate in #6
+// Difficult mate in #5. Too much pruning will see mate in #6
 // TEST_F(PositionMisc, Mate1) {
 //     board.SetFen("8/3N4/6p1/1p5p/5b1p/P2k2n1/1B6/3KQ3 w - -");
-//     search.FixDepth(10);
+//     search.FixTime(2000);
 //     search.IterativeDeepening(board);
 //     EXPECT_EQ(search.BestMove().Notation(), "b2a1");
-//     EXPECT_LE(search.ElapsedTime(), 1000);
 // }
 
 // 8/3N4/6p1/1p5p/5b1p/P2k2n1/1B6/3KQ3 w - - acn 138553; acs 0; bm Ba1; ce 32758; dm 5; pv Ba1 h3 Nf6 b4 Qe6 Bd2 Qd6+ Ke3 Qxg3#;

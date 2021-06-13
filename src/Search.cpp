@@ -129,9 +129,8 @@ void Search::UciOutput(std::string PV) {
     std::cout << "info depth " << m_depth;
     std::cout << " seldepth " << m_selPly;
     if(IsMateValue(m_bestScore)) {
-        int mateScore;
-        if     (m_bestScore > 0) mateScore =  MATESCORE - m_bestScore + 1; //ply+1
-        else if(m_bestScore < 0) mateScore = -MATESCORE - m_bestScore - 1; //-ply-1
+        int mateScore = (m_bestScore > 0) ?  MATESCORE - m_bestScore + 1
+                                          : -MATESCORE - m_bestScore - 1;
         std::cout << " score mate " << mateScore / 2; //return mate in moves, not in plies
     } else {
         std::cout << " score cp " << m_bestScore;
@@ -272,7 +271,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     //Calculate evaluation once at start, for pruning purposes
-    int eval;
+    int eval = 0;
     if(!inCheck) {
         D( m_debug.Increment("NegaMax Calls to Evaluation") );
         eval = Evaluation::Evaluate(board);
@@ -359,7 +358,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // ------- Futility pruning --------
     //Prune quiet moves in the loop?
     bool doFutility = false;
-    int futilityMargin;
+    int futilityMargin = 0;
     if (depth <= 4 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
         futilityMargin = 150 + depth * 150;
         if(eval + futilityMargin < alpha) {
@@ -392,7 +391,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // ---- Pawn to 7th/8th extension -----
         // if(move.PieceType() == PAWN
-        //     && ColorlessRank(board.ActivePlayer(), move.ToSq()) >= RANK7
+        //     && RelativeRank(board.ActivePlayer(), move.ToSq()) >= RANK7
         // )
         //     extension++;
 
@@ -505,7 +504,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     bool inCheck = board.IsCheck();
 
     //--------- Standpat -----------
-    int standPat;
+    int standPat = 0;
     if(!inCheck) {
         standPat = Evaluation::Evaluate(board);
 

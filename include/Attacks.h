@@ -4,7 +4,6 @@
 #include "Constants.h"
 
 namespace Attacks {
-
     void Init();
 
     Bitboard GetRay(DIRECTIONS direction, int square);
@@ -14,15 +13,11 @@ namespace Attacks {
     Bitboard AttacksKing(int square);
     Bitboard AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard blockers);
 
-    //Return the squares between two given squares
+    //Return the squares between two given squares. Strict straight/diagonal match is required (otherwise returns zero)
     Bitboard Between(int sq1, int sq2);
 
     //Helpers
-    DIRECTIONS GetDirection(int sq1, int sq2);
     bool IsInDirection(PIECE_TYPE pieceType, int sq1, int sq2, DIRECTIONS &direction);
-    bool IsInStraightDirection(int sq1, int sq2, DIRECTIONS &direction);
-    bool IsInDiagonalDirection(int sq1, int sq2, DIRECTIONS &direction);
-    DIRECTIONS OppositeDirection(DIRECTIONS direction);
 
     //Lookup tables
     extern Bitboard m_Rays[8][64]; //[DIRECTION][SQUARE]

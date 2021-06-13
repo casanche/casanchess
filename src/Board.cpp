@@ -109,7 +109,7 @@ void Board::Print(bool bits) const {
 
     std::string squareMap[64];
     for (int i = 0; i < 64; ++i) {
-        squareMap[i] = PIECE_LETTERS[NO_PIECE];
+        squareMap[i] = PIECE_LETTERS[0][NO_PIECE];
     }
 
     for(COLOR color : {WHITE, BLACK}) {
@@ -118,8 +118,8 @@ void Board::Print(bool bits) const {
             while(thePieces) {
                 int index = ResetLsb(thePieces);
                 squareMap[index] = '\0';
-                squareMap[index] += (color == WHITE) ? "\033[1;97m" : "\033[1;31m";
-                squareMap[index] += PIECE_LETTERS[ PieceTypeToPieces(piece, color) ];
+                squareMap[index] += (color == WHITE) ? "\033[1;97m" : "\033[1;31m"; //white or red
+                squareMap[index] += PIECE_LETTERS[color][piece];
                 squareMap[index] += "\033[0m";
             }
         }

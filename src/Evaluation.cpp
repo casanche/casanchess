@@ -380,12 +380,12 @@ TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLOR color) {
         bool isIsolated = !(thePawns & ADJACENT_FILES[file]);
 
         if(isPassed) {
-            int rank = ColorlessRank(color, square);
+            int rank = RelativeRank(color, square);
             score.mg += parameters.PASSED_PAWN[MG][rank];
             score.eg += parameters.PASSED_PAWN[EG][rank];
         }
         if(isIsolated) {
-            int rank = ColorlessRank(color, square);
+            int rank = RelativeRank(color, square);
             score.mg += parameters.ISOLATED_PAWN[MG][rank];
             score.eg += parameters.ISOLATED_PAWN[EG][rank];
         }

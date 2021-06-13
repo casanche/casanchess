@@ -10,10 +10,10 @@
 #include <map>
 
 const int MAX_PLIES = 3000;
-const int SEE_MATERIAL_VALUES[8] = {0, 100, 350, 350, 500, 1050, 0};
+const int SEE_MATERIAL_VALUES[8] = {0, 100, 350, 350, 500, 1050, 0}; //[PIECE]
 
-const char PIECE_LETTERS[16] = { ' ', 'P', 'N', 'B', 'R', 'Q', 'K', '-',
-                                 'p', 'n', 'b', 'r', 'q', 'k', '-', '-' };
+const char PIECE_LETTERS[2][8] = { {' ', 'P', 'N', 'B', 'R', 'Q', 'K', '-',},
+                                   {' ', 'p', 'n', 'b', 'r', 'q', 'k', '-'} }; //[COLOR][PIECE]
 
 class Board {
     friend class Fen;

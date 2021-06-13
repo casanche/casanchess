@@ -1,13 +1,69 @@
 #include "Attacks.h"
-
 #include "BitboardUtils.h"
 
-const u64 MAX_BIT = 0x8000000000000000;
-const u64 MIN_BIT = ONE;
+Bitboard Attacks::m_Rays[8][64] = {{0}}; //[DIRECTION][SQUARE]
+Bitboard Attacks::m_NonSlidingAttacks[2][8][64] = {{{0}}}; //[COLOR][PIECE][SQUARE]
+Bitboard Attacks::m_Between[64][64] = {{0}}; //[SQUARE][SQUARE]
 
-Bitboard Attacks::m_Rays[8][64] = {{0}};
-Bitboard Attacks::m_NonSlidingAttacks[2][8][64] = {{{0}}};
-Bitboard Attacks::m_Between[64][64] = {{0}};
+//Private functions
+namespace Attacks {
+    const u64 MIN_BIT = ONE;
+    const u64 MAX_BIT = (ONE << 63);
+
+    DIRECTIONS GetDirection(int sq1, int sq2) {
+        assert(sq1 != sq2);
+        int deltaFile = File(sq2) - File(sq1);
+        int deltaRank = Rank(sq2) - Rank(sq1);
+
+        //East-West
+        if(deltaRank == 0) {
+            return deltaFile > 0 ? EAST : WEST;
+        }
+        //North-like
+        else if(deltaRank > 0) {
+            return deltaFile == 0 ? NORTH : 
+                   deltaFile  > 0 ? NORTH_EAST : NORTH_WEST;
+        }
+        //South-like
+        else if(deltaRank < 0) {
+            return deltaFile == 0 ? SOUTH : 
+                   deltaFile  > 0 ? SOUTH_EAST : SOUTH_WEST;
+        }
+
+        return NORTH;
+    }
+
+    int Shift(DIRECTIONS direction) {
+        int shift = 0;
+        switch(direction) {
+            case DIRECTIONS::NORTH: shift = +8; break;
+            case DIRECTIONS::SOUTH: shift = -8; break;
+            case DIRECTIONS::EAST: shift = +1; break;
+            case DIRECTIONS::WEST: shift = -1; break;
+            case DIRECTIONS::NORTH_EAST: shift = +9; break;
+            case DIRECTIONS::NORTH_WEST: shift = +7; break;
+            case DIRECTIONS::SOUTH_EAST: shift = -7; break;
+            case DIRECTIONS::SOUTH_WEST: shift = -9; break;
+            default: assert(false);
+        }
+        return shift;
+    }
+
+    bool ContinueRayGeneration(DIRECTIONS direction, int square) {
+        switch(direction) {
+            case DIRECTIONS::NORTH: return Rank(square) < RANK8;
+            case DIRECTIONS::SOUTH: return Rank(square) > RANK1;
+            case DIRECTIONS::EAST: return File(square) < FILEH;
+            case DIRECTIONS::WEST: return File(square) > FILEA;
+            case DIRECTIONS::NORTH_EAST: return ContinueRayGeneration(NORTH, square) && ContinueRayGeneration(EAST, square);
+            case DIRECTIONS::NORTH_WEST: return ContinueRayGeneration(NORTH, square) && ContinueRayGeneration(WEST, square);
+            case DIRECTIONS::SOUTH_EAST: return ContinueRayGeneration(SOUTH, square) && ContinueRayGeneration(EAST, square);
+            case DIRECTIONS::SOUTH_WEST: return ContinueRayGeneration(SOUTH, square) && ContinueRayGeneration(WEST, square);
+            default: assert(false);
+        }
+        return 0;
+    }
+}
 
 void Attacks::Init() {
     //Rays
@@ -27,21 +83,21 @@ void Attacks::Init() {
         Bitboard thePawn = ONE << square;
 
         //White pawns
-        Bitboard attackLeft = (thePawn & ClearFile[FILEA]) << 7;
-        Bitboard attackRight = (thePawn & ClearFile[FILEH]) << 9;
+        Bitboard attackLeft = (thePawn & ClearFile[FILEA]) << Shift(NORTH_WEST);
+        Bitboard attackRight = (thePawn & ClearFile[FILEH]) << Shift(NORTH_EAST);
 
         m_NonSlidingAttacks[WHITE][PAWN][square] = attackLeft | attackRight;
 
         //Black pawns
-        attackLeft = (thePawn & ClearFile[FILEH]) >> 7;
-        attackRight = (thePawn & ClearFile[FILEA]) >> 9;
+        attackLeft = (thePawn & ClearFile[FILEH]) >> abs(Shift(SOUTH_EAST));
+        attackRight = (thePawn & ClearFile[FILEA]) >> abs(Shift(SOUTH_WEST));
 
         m_NonSlidingAttacks[BLACK][PAWN][square] = attackLeft | attackRight;
     }
 
     //Knight attacks
     for(int square = 0; square < 64; square++) {
-        Bitboard theKnight = ONE << square;
+        Bitboard theKnight = (ONE << square);
 
         Bitboard pos1Clip = theKnight & ClearFile[FILEA] & ClearFile[FILEB];
         Bitboard pos2Clip = theKnight & ClearFile[FILEA];
@@ -52,14 +108,14 @@ void Attacks::Init() {
         Bitboard pos7Clip = pos2Clip;
         Bitboard pos8Clip = pos1Clip;
 
-        Bitboard pos1 = pos1Clip << 8 >> 2; //1 up, 2 left
-        Bitboard pos2 = pos2Clip << 8*2 >> 1; //2 up, 1 left
-        Bitboard pos3 = pos3Clip << 8*2 << 1; //2 up, 1 right
-        Bitboard pos4 = pos4Clip << 8 << 2; //1 up, 2 right
-        Bitboard pos5 = pos5Clip >> 8 << 2; //1 down, 2 right
-        Bitboard pos6 = pos6Clip >> 8*2 << 1; //2 down, 1 right
-        Bitboard pos7 = pos7Clip >> 8*2 >> 1; //2 down, 1 left
-        Bitboard pos8 = pos8Clip >> 8 >> 2; //1 down, 2 left
+        Bitboard pos1 = West(North(pos1Clip, 1), 2); //1 up, 2 left
+        Bitboard pos2 = West(North(pos2Clip, 2), 1); //2 up, 1 left
+        Bitboard pos3 = East(North(pos3Clip, 2), 1); //2 up, 1 right
+        Bitboard pos4 = East(North(pos4Clip, 1), 2); //1 up, 2 right
+        Bitboard pos5 = East(South(pos5Clip, 1), 2); //1 down, 2 right
+        Bitboard pos6 = East(South(pos6Clip, 2), 1); //2 down, 1 right
+        Bitboard pos7 = West(South(pos7Clip, 2), 1); //2 down, 1 left
+        Bitboard pos8 = West(South(pos8Clip, 1), 2); //1 down, 2 left
         Bitboard attacks = (pos1 | pos2 | pos3 | pos4 | pos5 | pos6 | pos7 | pos8);
 
         m_NonSlidingAttacks[WHITE][KNIGHT][square] = attacks;
@@ -77,10 +133,10 @@ void Attacks::Init() {
         Bitboard left = West(leftClip);
         Bitboard up = North(theKing);
         Bitboard down = South(theKing);
-        Bitboard upleft = leftClip << 8 >> 1;
-        Bitboard upright = rightClip << 8 << 1;
-        Bitboard downleft = leftClip >> 8 >> 1;
-        Bitboard downright = rightClip >> 8 << 1;
+        Bitboard upleft = leftClip << Shift(NORTH_WEST);
+        Bitboard upright = rightClip << Shift(NORTH_EAST);
+        Bitboard downleft = leftClip >> abs(Shift(SOUTH_WEST));
+        Bitboard downright = rightClip >> abs(Shift(SOUTH_EAST));
         Bitboard attacks = up | down | left | right | upleft | upright | downleft | downright;
 
         m_NonSlidingAttacks[WHITE][KING][square] = attacks;
@@ -90,79 +146,34 @@ void Attacks::Init() {
     //Between squares
     for(int sq1 = 0; sq1 < 64; sq1++) {
         for(int sq2 = 0; sq2 < 64; sq2++) {
-
             if(sq1 == sq2) continue;
 
             DIRECTIONS direction = GetDirection(sq1, sq2);
-            switch(direction) {
-                case NORTH: {
-                    const int nextSq = 8;
-                    for(int i = sq1 + nextSq; i != sq2; i += nextSq) { m_Between[sq1][sq2] |= (ONE << i); }
-                } break;
-                case SOUTH: {
-                    const int nextSq = -8;
-                    for(int i = sq1 + nextSq; i != sq2; i += nextSq) { m_Between[sq1][sq2] |= (ONE << i); }
-                } break;
-                case EAST: {
-                    const int nextSq = 1;
-                    for(int i = sq1 + nextSq; i != sq2; i += nextSq) { m_Between[sq1][sq2] |= (ONE << i); }
-                } break;
-                case WEST: {
-                    const int nextSq = -1;                    
-                    for(int i = sq1 + nextSq; i != sq2; i += nextSq) { m_Between[sq1][sq2] |= (ONE << i); }
-                } break;
-                case NORTH_EAST: {
-                    const int nextSq = 9;
-                    if( (sq2-sq1) % nextSq ) m_Between[sq1][sq2] = ZERO;
-                    else for(int i = sq1 + nextSq; i < sq2; i += nextSq) { m_Between[sq1][sq2] |= (ONE << i); }
-                } break;
-                case NORTH_WEST: {
-                    const int nextSq = 7;
-                    if( (sq2-sq1) % nextSq ) m_Between[sq1][sq2] = ZERO;
-                    else for(int i = sq1 + nextSq; i < sq2; i += nextSq) { m_Between[sq1][sq2] |= (ONE << i); }
-                } break;
-                case SOUTH_EAST: {
-                    const int nextSq = -7;
-                    if( (sq2-sq1) % nextSq ) m_Between[sq1][sq2] = ZERO;
-                    else for(int i = sq1 + nextSq; i > sq2; i += nextSq) { m_Between[sq1][sq2] |= (ONE << i); }
-                } break;
-                case SOUTH_WEST: {
-                    const int nextSq = -9;
-                    if( (sq2-sq1) % nextSq ) m_Between[sq1][sq2] = ZERO;
-                    else for(int i = sq1 + nextSq; i > sq2; i += nextSq) { m_Between[sq1][sq2] |= (ONE << i); }
-                } break;
-                default: assert(false);
-            };
+            int shift = Shift(direction);
+
+            if( (sq2-sq1) % shift ) { //not a straight or diagonal line
+                m_Between[sq1][sq2] = ZERO;
+            }
+            else for(int i = sq1 + shift; i != sq2; i += shift) {
+                m_Between[sq1][sq2] |= (ONE << i);
+            }
         }
     }
 
 }
 
 Bitboard Attacks::GetRay(DIRECTIONS direction, int square) {
-    switch(direction) {
-    case DIRECTIONS::NORTH:
-        return 0x0101010101010100ULL << square;
-    case DIRECTIONS::SOUTH:
-        return 0x0080808080808080ULL >> (63 - square);
-    case DIRECTIONS::WEST:
-        return (ONE << square) - (ONE << (square & 56));
-    case DIRECTIONS::EAST:
-        return 2 * ((ONE << (square | 7)) - (ONE << square));
-    case DIRECTIONS::NORTH_WEST:
-        return West(0x102040810204000ULL, 7 - File[square] ) << (Rank(square) * 8);
-    case DIRECTIONS::NORTH_EAST:
-        return East(0x8040201008040200ULL, File[square] ) << (Rank(square) * 8);
-    case DIRECTIONS::SOUTH_WEST:
-        return West(0x40201008040201ULL, 7 - File[square] ) >> ( (7 - Rank(square)) * 8);
-    case DIRECTIONS::SOUTH_EAST:
-        return East(0x2040810204080ULL, File[square] ) >> ( (7 - Rank(square)) * 8);
-    default:
-        break;
+    Bitboard ray = ZERO;
+    int cursor = square;
+    int shift = Shift(direction);
+
+    while(ContinueRayGeneration(direction, cursor)) {
+        cursor += shift;
+        ray |= (ONE << cursor);
     }
-    return 0;
+    return ray;
 }
 
-//Classical approach
 Bitboard Attacks::AttacksPawns(COLOR color, int square) {
     return m_NonSlidingAttacks[color][PAWN][square];
 }
@@ -172,6 +183,7 @@ Bitboard Attacks::AttacksKnights(int square) {
 Bitboard Attacks::AttacksKing(int square) {
     return m_NonSlidingAttacks[WHITE][KING][square];
 }
+//Classical approach
 Bitboard Attacks::AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard blockers) {
     Bitboard attacks = ZERO;
 
@@ -229,89 +241,18 @@ Bitboard Attacks::Between(int sq1, int sq2) {
     return m_Between[sq1][sq2];
 }
 
-//The direction between square1 and square2. No strict straight/diagonal match is required
-DIRECTIONS Attacks::GetDirection(int sq1, int sq2) {
-    int deltaSquare = sq2 - sq1;
-    int deltaFile = File(sq2) - File(sq1);
-    int deltaRank = Rank(sq2) - Rank(sq1);
-
-    assert(sq1 != sq2);
-
-    if(deltaFile == 0) {
-        if(deltaSquare > 0) return NORTH;
-        if(deltaSquare < 0) return SOUTH;
-    }
-    if(deltaRank == 0) {
-        if(deltaSquare > 0) return EAST;
-        if(deltaSquare < 0) return WEST;
-    }
-    if(deltaRank > 0) { //North-like
-        if(deltaFile > 0) return NORTH_EAST;
-        if(deltaFile < 0) return NORTH_WEST;
-    } else if(deltaRank < 0) { //South-like
-        if(deltaFile > 0) return SOUTH_EAST;
-        if(deltaFile < 0) return SOUTH_WEST;
-    }
-
-    assert(false);
-    return NORTH;
-}
-
 bool Attacks::IsInDirection(PIECE_TYPE pieceType, int sq1, int sq2, DIRECTIONS &direction) {
-    if(pieceType == ROOK) {
-        return IsInStraightDirection(sq1, sq2, direction);
-    } else if(pieceType == BISHOP) {
-        return IsInDiagonalDirection(sq1, sq2, direction);
-    }
-    assert(false);
-    return false;
-}
-bool Attacks::IsInStraightDirection(int sq1, int sq2, DIRECTIONS &direction) {
-    int deltaSquare = sq2 - sq1;
-    int deltaFile = File(sq2) - File(sq1);
-    int deltaRank = Rank(sq2) - Rank(sq1);
+    bool inDirection = Between(sq1, sq2);
 
-    assert(sq1 != sq2);
+    if(inDirection) {
+        direction = GetDirection(sq1, sq2);
+        bool inStraightDirection = (direction == NORTH || direction == SOUTH || direction == EAST || direction == WEST);
+        bool inDiagonalDirection = (direction == NORTH_EAST || direction == NORTH_WEST || direction == SOUTH_EAST || direction == SOUTH_WEST);
 
-    if(deltaFile == 0) {
-        if(deltaSquare > 0) { direction = NORTH; return true; }
-        if(deltaSquare < 0) { direction = SOUTH; return true; }
-    }
-    if(deltaRank == 0) {
-        if(deltaSquare > 0) { direction = EAST; return true; }
-        if(deltaSquare < 0) { direction = WEST; return true; }
+        if(pieceType == ROOK && inStraightDirection)
+            return true;
+        if(pieceType == BISHOP && inDiagonalDirection)
+            return true;
     }
     return false;
-}
-bool Attacks::IsInDiagonalDirection(int sq1, int sq2, DIRECTIONS &direction) {
-    int deltaFile = File(sq2) - File(sq1);
-    int deltaRank = Rank(sq2) - Rank(sq1);
-
-    assert(sq1 != sq2);
-
-    //North-like
-    if(deltaRank > 0 && abs(deltaFile) == abs(deltaRank) ) {
-        if(deltaFile > 0) { direction = NORTH_EAST; return true; }
-        if(deltaFile < 0) { direction = NORTH_WEST; return true; }
-    }
-    //South-like
-    else if(deltaRank < 0 && abs(deltaFile) == abs(deltaRank) ) {
-        if(deltaFile > 0) { direction = SOUTH_EAST; return true; }
-        if(deltaFile < 0) { direction = SOUTH_WEST; return true; }
-    }
-    return false;
-}
-DIRECTIONS Attacks::OppositeDirection(DIRECTIONS direction) {
-    switch(direction) {
-        case NORTH: return SOUTH; break;
-        case SOUTH: return NORTH; break;
-        case EAST: return WEST; break;
-        case WEST: return EAST; break;
-        case NORTH_EAST: return SOUTH_WEST; break;
-        case NORTH_WEST: return SOUTH_EAST; break;
-        case SOUTH_EAST: return NORTH_WEST; break;
-        case SOUTH_WEST: return NORTH_EAST; break;
-    };
-    assert(false);
-    return NORTH;
 }
