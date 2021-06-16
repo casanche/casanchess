@@ -62,18 +62,16 @@ Bitboard BitboardUtils::South(Bitboard bitboard, int times) {
     return bitboard >> 8*times;
 }
 Bitboard BitboardUtils::West(Bitboard bitboard, int times) {
-    Bitboard newBitboard = bitboard;
     for(int i = 0; i < times; ++i) {
-        newBitboard = (newBitboard >> 1) & ClearFile[FILEH];
+        bitboard = (bitboard >> 1) & ClearFile[FILEH];
     }
-    return newBitboard;
+    return bitboard;
 }
 Bitboard BitboardUtils::East(Bitboard bitboard, int times) {
-    Bitboard newBitboard = bitboard;
     for(int i = 0; i < times; ++i) {
-        newBitboard = (newBitboard << 1) & ClearFile[FILEA];
+        bitboard = (bitboard << 1) & ClearFile[FILEA];
     }
-    return newBitboard;
+    return bitboard;
 }
 
 //Mirrors the board in the north-south direction
