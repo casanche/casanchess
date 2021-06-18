@@ -1,8 +1,17 @@
+#include "test-Common.h"
+
 #include "Board.h"
 #include "Move.h"
 #include "MoveGenerator.h"
 
 #include <gtest/gtest.h>
+
+int main(int argc, char** argv) {
+    TestCommon::InitEngine();
+
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
 
 //MoveGenerator
 TEST(MoveGenerator, StartingPosition) {

@@ -3,9 +3,16 @@
 #include <fstream>
 
 #include "test-Common.h"
-using namespace Test;
+using namespace TestCommon;
 
 #include <gtest/gtest.h>
+
+int main(int argc, char** argv) {
+    TestCommon::InitEngine();
+
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
 
 TEST(WAC, WAC) {
     CoutHelper coutHelper;

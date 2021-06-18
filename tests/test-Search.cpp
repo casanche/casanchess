@@ -1,9 +1,18 @@
+#include "test-Common.h"
+
 #include "Board.h"
 #include "Search.h"
 
 #include <gtest/gtest.h>
 
 #include <iostream>
+
+int main(int argc, char** argv) {
+    TestCommon::InitEngine();
+
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
 
 class ShortSearch : public ::testing::Test {
 protected:

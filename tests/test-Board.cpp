@@ -4,7 +4,7 @@
 #include <fstream>
 
 #include "test-Common.h"
-using namespace Test;
+using namespace TestCommon;
 #include <gtest/gtest.h>
 
 TEST(FenTest, EnPassant) {

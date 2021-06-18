@@ -15,7 +15,6 @@ elseif(MSVC)
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE}")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -DDEBUG")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-	#SET(GTEST_ROOT "C:/Program Files/gtest")
 endif()
 
 #Library
@@ -23,8 +22,6 @@ include_directories(./include)
 file(GLOB SOURCES src/*.cpp)
 list(REMOVE_ITEM SOURCES src/Main.cpp)
 add_library(engine STATIC ${SOURCES})
-
-add_library(tests-common STATIC tests/test-Common.cpp)
 
 #Main
 add_executable(casanchess Main.cpp)
@@ -35,8 +32,9 @@ if(BUILD_TESTS)
 	#Google Test
 	find_package(GTest REQUIRED)
 	include_directories(${GTEST_INCLUDE_DIRS})
-	set(TEST_LIBRARIES ${GTEST_LIBRARIES} ${GTEST_MAIN_LIBRARIES} tests-common engine ${LINK_LIBRARIES})
+	set(TEST_LIBRARIES ${GTEST_LIBRARIES} engine ${LINK_LIBRARIES}) #${GTEST_MAIN_LIBRARIES}
 	set(TEST_SOURCES
+		tests/test-Main.cpp
 		tests/test-Board.cpp
 		tests/test-Misc.cpp
 		tests/test-Utils.cpp
@@ -54,6 +52,6 @@ if(BUILD_TESTS)
 	target_link_libraries(searcht ${TEST_LIBRARIES})
 
 	#Suites
-	add_executable(wac tests/suite-WAC.cpp)
-	target_link_libraries(wac ${TEST_LIBRARIES})
+	#add_executable(wac tests/suite-WAC.cpp)
+	#target_link_libraries(wac ${TEST_LIBRARIES})
 endif()

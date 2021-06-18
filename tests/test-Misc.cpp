@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "test-Common.h"
-using namespace Test;
+using namespace TestCommon;
 #include <gtest/gtest.h>
 
 class PositionMisc : public ::testing::Test {

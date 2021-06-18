@@ -1,3 +1,5 @@
+#include "test-Common.h"
+
 #include "Board.h"
 #include "MoveGenerator.h"
 #include "ZobristKeys.h"

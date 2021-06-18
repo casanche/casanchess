@@ -26,9 +26,6 @@ Move generation:
 */
 
 Board::Board() {
-    Attacks::Init();
-    Evaluation::Init(); //after Attacks
-    ZobristKeys::Init();
     Init();
 }
 
