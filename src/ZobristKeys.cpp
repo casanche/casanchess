@@ -4,26 +4,28 @@
 #include "Board.h"
 #include "Utils.h"
 
-u64 ZobristKeys::m_zkeyPieces[2][8][64];
-u64 ZobristKeys::m_zkeyCastling[2][2];
-u64 ZobristKeys::m_zkeyEnpassant[8];
 u64 ZobristKeys::m_zkeyColor;
+u64 ZobristKeys::m_zkeyPieces[2][8][64]; //[COLOR][PIECE_TYPE][SQUARE]
+u64 ZobristKeys::m_zkeyCastling[2][2]; //[COLOR][CASTLING_TYPE_SIMPLE]
+u64 ZobristKeys::m_zkeyEnpassant[8]; //[FILE]
+
+enum CASTLING_TYPE_SIMPLE { CASTLING_KING=0, CASTLING_QUEEN=1 };
 
 //Generate the zKey bitwords. Call once before running the program
 void ZobristKeys::Init() {
     Utils::PRNG_64 random(70);
-    //color
+    //Color
     m_zkeyColor = random.Random();
     for(COLOR color : {WHITE, BLACK}) {
-        //Castling rights
-        for(int castlingType = 0; castlingType <= 1; castlingType++) {
-            m_zkeyCastling[color][castlingType] = random.Random();
-        }
         //Pieces
         for(int pieceType = PAWN; pieceType <= KING; pieceType++) {
             for(int square = A1; square <= H8; square++) {
                 m_zkeyPieces[color][pieceType][square] = random.Random();
             }
+        }
+        //Castling rights
+        for(CASTLING_TYPE_SIMPLE castlingType : {CASTLING_KING, CASTLING_QUEEN}) {
+            m_zkeyCastling[color][castlingType] = random.Random();
         }
     }
     //En passant
@@ -42,12 +44,6 @@ void ZobristKey::SetKey(Board& board) {
         m_key ^= ZobristKeys::m_zkeyColor;
     }
 
-    //Castling rights
-    if(board.CastlingRights() & CASTLING_K) m_key ^= ZobristKeys::m_zkeyCastling[WHITE][0];
-    if(board.CastlingRights() & CASTLING_Q) m_key ^= ZobristKeys::m_zkeyCastling[WHITE][1];
-    if(board.CastlingRights() & CASTLING_k) m_key ^= ZobristKeys::m_zkeyCastling[BLACK][0];
-    if(board.CastlingRights() & CASTLING_q) m_key ^= ZobristKeys::m_zkeyCastling[BLACK][1];
-
     for(COLOR color : {WHITE, BLACK}) {
         //Pieces
         for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
@@ -58,6 +54,12 @@ void ZobristKey::SetKey(Board& board) {
             }
         }
     }
+
+    //Castling rights
+    if(board.CastlingRights() & CASTLING_K) m_key ^= ZobristKeys::m_zkeyCastling[WHITE][CASTLING_KING];
+    if(board.CastlingRights() & CASTLING_Q) m_key ^= ZobristKeys::m_zkeyCastling[WHITE][CASTLING_QUEEN];
+    if(board.CastlingRights() & CASTLING_k) m_key ^= ZobristKeys::m_zkeyCastling[BLACK][CASTLING_KING];
+    if(board.CastlingRights() & CASTLING_q) m_key ^= ZobristKeys::m_zkeyCastling[BLACK][CASTLING_QUEEN];
 
     //Enpassant
     Bitboard epSquare = board.EnPassantSquare();
@@ -80,19 +82,19 @@ void ZobristKey::SetPawnKey(Board& board) {
 void ZobristKey::UpdateColor() {
     m_key ^= ZobristKeys::m_zkeyColor;
 }
-void ZobristKey::UpdateEnpassant(Bitboard enpassant) {
-    int file = File( BitscanForward(enpassant) );
-    m_key ^= ZobristKeys::m_zkeyEnpassant[file];
-}
 void ZobristKey::UpdatePiece(COLOR color, PIECE_TYPE pieceType, int square) {
     m_key ^= ZobristKeys::m_zkeyPieces[color][pieceType][square];
 }
 void ZobristKey::UpdateCastling(CASTLING_TYPE castlingType) {
     switch(castlingType) {
-        case CASTLING_K: m_key ^= ZobristKeys::m_zkeyCastling[WHITE][0]; break;
-        case CASTLING_Q: m_key ^= ZobristKeys::m_zkeyCastling[WHITE][1]; break;
-        case CASTLING_k: m_key ^= ZobristKeys::m_zkeyCastling[BLACK][0]; break;
-        case CASTLING_q: m_key ^= ZobristKeys::m_zkeyCastling[BLACK][1]; break;
+        case CASTLING_K: m_key ^= ZobristKeys::m_zkeyCastling[WHITE][CASTLING_KING]; break;
+        case CASTLING_Q: m_key ^= ZobristKeys::m_zkeyCastling[WHITE][CASTLING_QUEEN]; break;
+        case CASTLING_k: m_key ^= ZobristKeys::m_zkeyCastling[BLACK][CASTLING_KING]; break;
+        case CASTLING_q: m_key ^= ZobristKeys::m_zkeyCastling[BLACK][CASTLING_QUEEN]; break;
         default: assert(false);
     };
+}
+void ZobristKey::UpdateEnpassant(Bitboard enpassant) {
+    int file = File( BitscanForward(enpassant) );
+    m_key ^= ZobristKeys::m_zkeyEnpassant[file];
 }
