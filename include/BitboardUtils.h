@@ -4,10 +4,9 @@
 #include "Constants.h"
 
 namespace BitboardUtils {
-
     //Gives the value of the bit in 'position'
     template <typename T>
-    T GetBit(const T& object, int position) {
+    bool GetBit(const T& object, int position) {
         return (object >> position) & 1;
     }
 
@@ -17,7 +16,7 @@ namespace BitboardUtils {
     int ResetLsb(Bitboard &b);
 
     Bitboard IsolateLsb(Bitboard b);
-    Bitboard RemoveLsb(Bitboard b);
+    void RemoveLsb(Bitboard &b);
 
     Bitboard North(Bitboard bitboard, int times = 1);
     Bitboard South(Bitboard bitboard, int times = 1);
@@ -27,8 +26,7 @@ namespace BitboardUtils {
     Bitboard Mirror(Bitboard bitboard);
 
     void PrintBits(Bitboard bitboard);
-
-} //namespace BitboardUtils
+}
 
 using namespace BitboardUtils;
 

@@ -38,19 +38,17 @@ int BitboardUtils::PopCount(Bitboard b) {
 //Resets the LSB of the given bitboard and returns its index
 int BitboardUtils::ResetLsb(Bitboard &b) {
     int index = BitscanForward(b);
-    b &= b - 1;
+    RemoveLsb(b);
     return index;
 }
 
 //Returns a bitboard with the LSB only
 Bitboard BitboardUtils::IsolateLsb(Bitboard b) {
-    //return b & -b;
 	return b & (~b + 1);
 }
 
-//Returns a bitboard removing the the LSB
-Bitboard BitboardUtils::RemoveLsb(Bitboard b) {
-    return b & (b - 1);
+void BitboardUtils::RemoveLsb(Bitboard &b) {
+    b &= (b - 1);
 }
 
 //Moves all bits to a given direction a certain number of times.
@@ -82,13 +80,14 @@ Bitboard BitboardUtils::Mirror(Bitboard bitboard) {
 void BitboardUtils::PrintBits(Bitboard bitboard) {
     std::cout << "The bitboard: " << bitboard << ", ";
     std::cout << "Bit values: " << std::endl;
-    int i = A8;
-    while(i != -8) {
-        std::cout << GetBit(bitboard, i) << " ";
-        if(i % 8 == 7) {
-            i -= 16;
+    int square = A8;
+    const int nextRank = 8;
+    while(square >= 0) {
+        std::cout << GetBit(bitboard, square) << " ";
+        if(File(square) == FILEH) {
+            square -= nextRank * 2; //go down two ranks
             std::cout << std::endl;
         }
-        i++;
+        square++;
     }
 }

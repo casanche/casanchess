@@ -73,7 +73,10 @@ TEST(BitboardUtils, IsolateLsb) {
 }
 TEST(BitboardUtils, RemoveLsb) {
     Bitboard b = 127;
-    EXPECT_EQ(RemoveLsb(b), (u64)126);
+    RemoveLsb(b);
+    EXPECT_EQ(b, (u64)126);
+    
     b = 3377802801971200;
-    EXPECT_EQ(RemoveLsb(b), (u64)3377802801840128);
+    RemoveLsb(b);
+    EXPECT_EQ(b, (u64)3377802801840128);
 }

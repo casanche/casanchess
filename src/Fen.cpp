@@ -12,7 +12,7 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     std::string token;
 
     int boardPos = A8; //starts at square '56'
-    const int nextRank = -8; //go down one rank
+    const int nextRank = 8;
 
     //Set the board pieces
     fenStream >> token;
@@ -30,7 +30,7 @@ void Fen::SetPosition(Board& board, std::string fenString) {
             case 'r': board.m_pieces[BLACK][ROOK]   |= SquareBB(boardPos++); break;
             case 'q': board.m_pieces[BLACK][QUEEN]  |= SquareBB(boardPos++); break;
             case 'k': board.m_pieces[BLACK][KING]   |= SquareBB(boardPos++); break;
-            case '/': boardPos += nextRank * 2; break;
+            case '/': boardPos -= nextRank * 2; break; //go down two ranks
             default: boardPos += (int)(theChar - '0'); //numbers '1' to '9'
         };
     }
