@@ -58,6 +58,7 @@ class HistoryHeuristics {
 public:
     void Age() {
         LoopHistoryTable(m_history[color][from][to] /= 8);
+        m_maxValue /= 8;
     }
     void Clear() {
         LoopHistoryTable(m_history[color][from][to] = 0);
@@ -86,7 +87,7 @@ private:
             m_maxValue = value;
         }
         if(m_maxValue > VALUE_TO_RESET_HISTORY) {
-            LoopHistoryTable(m_history[color][from][to] /= 3);
+            LoopHistoryTable(m_history[color][from][to] /= 4);
         }
     }
 };

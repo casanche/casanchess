@@ -33,6 +33,8 @@ Search::Search() {
     m_debugMode = false;
 
     ClearSearch();
+    m_heuristics.history.Clear();
+
     Hash::tt.Clear();
     Hash::pawnHash.Clear();
 }
@@ -51,13 +53,14 @@ void Search::ClearSearch() {
     m_nullmoveAllowed = true;
 
     m_heuristics.killer.Clear();
-    m_heuristics.history.Clear(); //or Age()
 }
 
 void Search::IterativeDeepening(Board &board) {
     m_counter++;
     m_clock.Start();
+
     ClearSearch();
+    m_heuristics.history.Age();
 
     for(m_depth = 1; m_depth <= m_maxDepth; m_depth++) {
         m_ply = 0;
