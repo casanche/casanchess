@@ -81,18 +81,18 @@ public:
     int SEE(Move move);
 
     //Getters
-    inline COLOR ActivePlayer() const      { return m_activePlayer; }
+    inline COLOR ActivePlayer() const       { return m_activePlayer; }
     inline Bitboard AllPieces() const       { return m_allpieces; }
-    inline Bitboard AttackedSquares(COLOR color) const                 { return m_kingDangerSquares[color]; };
     inline u8 CastlingRights() const        { return m_castlingRights; }
-    inline Bitboard EnPassantSquare() const { return m_enPassantSquare; };
-    inline unsigned int FiftyRule() const   { return m_fiftyrule; };
-    inline Bitboard GetPieces(COLOR color, PIECE_TYPE pieceType) const { return m_pieces[color][pieceType]; };
+    inline Bitboard Checkers() const        { return m_kingAttackers[m_activePlayer]; }
+    inline Bitboard EnPassantSquare() const { return m_enPassantSquare; }
+    inline unsigned int FiftyRule() const   { return m_fiftyrule; }
+    inline Bitboard GetPieces(COLOR color, PIECE_TYPE pieceType) const { return m_pieces[color][pieceType]; }
     inline COLOR InactivePlayer() const    { return (COLOR)!m_activePlayer; }
     inline unsigned int MoveNumber() const  { return m_moveNumber; }
     inline Move LastMove() const            { return m_history[m_ply].move; }
     inline u64 PawnKey() const              { return m_pawnKey.Key(); }
-    inline Bitboard Piece(COLOR color, PIECE_TYPE pieceType) const     { return m_pieces[color][pieceType]; };
+    inline Bitboard Piece(COLOR color, PIECE_TYPE pieceType) const     { return m_pieces[color][pieceType]; }
     inline unsigned int Ply() const         { return m_ply; }
     inline u64 ZKey() const                 { return m_zobristKey.Key(); }
 
@@ -126,18 +126,8 @@ private:
 
     //Helpers
     unsigned int m_initialPly;
-    Bitboard m_attackedSquares[2]; //[COLOR]
-    Bitboard m_pinnedPieces[2];
     Bitboard m_kingAttackers[2]; //pieces that attack the king
-    Bitboard m_kingDangerSquares[2];
     bool m_checkCalculated;
-
-    //Helpers: check evasion
-    Bitboard m_captureMask; //the piece giving check
-    Bitboard m_pushMask; //squares that block a check
-
-    Bitboard m_pinnedPushMask[64];
-    Bitboard m_pinnedCaptureMask[64];
 
     //Static classes
     inline static Fen m_fen;

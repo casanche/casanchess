@@ -146,7 +146,7 @@ void Board::ShowMoves() {
     for(auto move : moves ) {
         move.Print();
     }
-    P("size: " << moveGenerator.Moves().size());
+    P("size: " << moves.size());
 }
 
 //Attackers
@@ -217,8 +217,8 @@ bool Board::IsAttacked(COLOR color, int square) const {
     if( AttacksKing(square) & Piece(enemyColor, KING) ) return true;
 
     Bitboard blockers = m_allpieces;
-    Bitboard slidingPieces = Piece(enemyColor, BISHOP) | Piece(enemyColor, QUEEN);
-    if( AttacksSliding(BISHOP, square, blockers) & slidingPieces ) return true;
+    Bitboard diagonalPieces = Piece(enemyColor, BISHOP) | Piece(enemyColor, QUEEN);
+    if( AttacksSliding(BISHOP, square, blockers) & diagonalPieces ) return true;
     Bitboard straightPieces = Piece(enemyColor, ROOK) | Piece(enemyColor, QUEEN);
     if( AttacksSliding(ROOK, square, blockers) & straightPieces ) return true;
 
@@ -389,10 +389,7 @@ bool Board::operator==(const Board& rhs) const {
 //Private
 void Board::ClearBits() {
     for(COLOR color : {WHITE, BLACK}) {
-        m_attackedSquares[color] = 0;
-        m_pinnedPieces[color] = 0;
         m_kingAttackers[color] = 0;
-        m_kingDangerSquares[color] = 0;
 
         for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
             m_pieces[color][pieceType] = 0;
@@ -401,11 +398,6 @@ void Board::ClearBits() {
 
     for(int i = 0; i < MAX_PLIES; ++i) {
         m_history[i].Clear();
-    }
-
-    for(int i = 0; i < 63; ++i) {
-        m_pinnedPushMask[i] = 0;
-        m_pinnedCaptureMask[i] = 0;
     }
 
     m_enPassantSquare = ZERO;

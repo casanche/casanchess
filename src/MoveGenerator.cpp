@@ -1,37 +1,37 @@
 #include "MoveGenerator.h"
 #include "Attacks.h"
-#include "BitboardUtils.h"
-#include "Board.h"
 using namespace Attacks;
+#include "BitboardUtils.h"
 using namespace BitboardUtils;
+#include "Board.h"
+#include "Utils.h" //random
 
 #include <algorithm>
-#include <cstdlib> //random
 #include <iostream>
 
-#ifdef _MSC_VER
-	#include <time.h>
-#endif
-
-MoveGenerator::MoveGenerator() { }
+const int MAX_MOVES_RESERVE = 256;
 
 //Legal moves
 MoveList MoveGenerator::GenerateMoves(Board &board) {
-    //Attacked squares
-    COLOR color = board.ActivePlayer();
-    COLOR enemyColor = board.InactivePlayer();
-    board.m_kingDangerSquares[enemyColor] = GenerateKingDangerAttacks(board, enemyColor);
-    board.m_attackedSquares[enemyColor] = board.m_kingDangerSquares[enemyColor] & ~board.Piece(enemyColor,ALL_PIECES);
+    //Init
+    m_color = board.ActivePlayer();
+    m_enemyColor = board.InactivePlayer();
+    m_ownPieces = board.GetPieces(m_color, ALL_PIECES);
+    m_enemyPieces = board.GetPieces(m_enemyColor, ALL_PIECES);
+    m_allPieces = board.AllPieces();
+    m_moves.reserve(MAX_MOVES_RESERVE);
 
-    // Initialize the capture and push masks
-    board.m_captureMask = ALL;
-    board.m_pushMask = ALL;
-    //Pinned pieces
+    // Initialize the push and capture masks
+    m_captureMask = ALL;
+    m_pushMask = ALL;
     for(int i = 0; i < 64; ++i) {
-        board.m_pinnedPushMask[i] = ALL;
-        board.m_pinnedCaptureMask[i] = ALL;
+        m_pinnedPushMask[i] = ALL;
+        m_pinnedCaptureMask[i] = ALL;
     }
-    board.m_pinnedPieces[color] = PinnedPieces(board, color);
+
+    //Calculations
+    m_kingDangerSquares = GenerateKingDangerAttacks(board);
+    m_pinned = PinnedPieces(board, m_color);
 
     if(board.IsCheck()) {
         GenerateEvasionMoves(board);
@@ -42,481 +42,319 @@ MoveList MoveGenerator::GenerateMoves(Board &board) {
     return m_moves;
 }
 
-MoveList MoveGenerator::GeneratePseudoMoves(Board &board) {
-    m_moves.reserve(MAX_MOVES_RESERVE);
-
+void MoveGenerator::GeneratePseudoMoves(Board &board) {
     GenerateKingMoves(board);
     GenerateKnightMoves(board);
     GeneratePawnMoves(board);
 
-    COLOR color = board.ActivePlayer();
-    board.m_kingDangerSquares[color] = board.m_attackedSquares[color];
-
     GenerateSlidingMoves(BISHOP, board);
     GenerateSlidingMoves(ROOK, board);
     GenerateSlidingMoves(QUEEN, board);
-
-    return m_moves;
 }
 
-MoveList MoveGenerator::GenerateEvasionMoves(Board &board) {
-    m_moves.reserve(MAX_MOVES_RESERVE);
-
-    COLOR color = board.ActivePlayer();
-    Bitboard checkers = board.m_kingAttackers[color];
-
+void MoveGenerator::GenerateEvasionMoves(Board &board) {
+    Bitboard checkers = board.Checkers();
     int numCheckers = PopCount(checkers);
-    if(numCheckers == 1) {
-        //Create the capture mask
-        board.m_captureMask = checkers;
 
-        int attackerSq = BitscanForward(checkers);
-        PIECE_TYPE checkerType = board.GetPieceAtSquare(board.InactivePlayer(), attackerSq);
+    if(numCheckers > 1) {
+        GenerateKingMoves(board);
+    }
+    else if(numCheckers == 1) {
+        //Create the capture mask
+        m_captureMask = checkers;
+
+        //Create the push mask (block moves)
+        int checkerSquare = BitscanForward(checkers);
+        PIECE_TYPE checkerType = board.GetPieceAtSquare(m_enemyColor, checkerSquare);
         switch(checkerType) {
             case PAWN: case KNIGHT: {
-                board.m_pushMask = ZERO; //only capture solves the check
-                GeneratePseudoMoves(board);
+                m_pushMask = ZERO; //only capture solves the check
             } break;
             case BISHOP: case ROOK: case QUEEN: {
-                //Create the block mask
-                Bitboard theKing = board.Piece(color, KING);
-                int kingSq = BitscanForward(theKing);
-                board.m_pushMask = Attacks::Between(attackerSq, kingSq);
-
-                // board.m_pushMask = ALL; //oponent slider rays to square... (board)
-
-                GeneratePseudoMoves(board);
+                int kingSquare = BitscanForward( board.Piece(m_color, KING) );
+                m_pushMask = Attacks::Between(checkerSquare, kingSquare);
             } break;
             default: assert(false);
         };
-    } else if(numCheckers > 1) {
-        GenerateKingMoves(board);
-    }
 
-    return m_moves;
+        GeneratePseudoMoves(board);
+    }
 }
 
 Move MoveGenerator::RandomMove() {
-    int min = 0;
-    size_t max = m_moves.size();
-    
-    srand( (uint)time(nullptr) );
-
-    int randomIndex = (rand() % max) + min;
+    Utils::PRNG rng;
+    int randomIndex = rng.Random(0, m_moves.size());
 
     return m_moves[randomIndex];
 }
 
 void MoveGenerator::GeneratePawnMoves(Board &board) {
-    if(board.ActivePlayer() == WHITE) {
-        GenerateWhitePawnMoves(board);
-    } else {
-        GenerateBlackPawnMoves(board);
-    }
-}
-void MoveGenerator::GenerateWhitePawnMoves(Board &board) {
+    enum ATTACK_SIDE {LEFT, RIGHT};
+
+    //Relative functions (white/black)
+    auto RNorth = [&](const Bitboard& b) -> Bitboard {
+        return m_color == WHITE ? North(b) : South(b);
+    };
+    auto RSouth = [&](const Bitboard& b, int times=1) -> Bitboard {
+        return m_color == WHITE ? South(b, times) : North(b, times);
+    };
+    auto RWest = [&](const Bitboard& b) -> Bitboard {
+        return m_color == WHITE ? West(b) : East(b);
+    };
+    auto REast = [&](const Bitboard& b) -> Bitboard {
+        return m_color == WHITE ? East(b) : West(b);
+    };
+    int relativeRank3 = m_color == WHITE ? RANK3 : RANK6;
+    int relativeRank8 = m_color == WHITE ? RANK8 : RANK1;
+
     PIECE_TYPE piece = PAWN;
 
-    Bitboard thePawns = board.GetPieces( board.ActivePlayer(), piece );
-    Bitboard enemyPieces = board.GetPieces( board.InactivePlayer(), ALL_PIECES );
-    Bitboard allPieces = board.m_allpieces;
+    Bitboard thePawns = board.GetPieces(m_color, piece);
 
-    Bitboard oneStep =  North(thePawns) & ~allPieces;
-    Bitboard twoSteps = North(oneStep & MaskRank[RANK3]) & ~allPieces & board.m_pushMask;
-    Bitboard attackLeft = ( (thePawns & ClearFile[FILEA]) << 7) & enemyPieces & board.m_captureMask;
-    Bitboard attackRight = ( (thePawns & ClearFile[FILEH]) << 9) & enemyPieces & board.m_captureMask;
-    Bitboard promotions = (oneStep & MaskRank[RANK8]) & board.m_pushMask;
-    Bitboard promotionsLeft = attackLeft & MaskRank[RANK8];
-    Bitboard promotionsRight = attackRight & MaskRank[RANK8];
-    Bitboard enpassantLeft = ( (thePawns & ClearFile[FILEA]) << 7) & board.m_enPassantSquare;
-    Bitboard enpassantRight = ( (thePawns & ClearFile[FILEH]) << 9) & board.m_enPassantSquare;
+    Bitboard singlePush = RNorth(thePawns) & ~m_allPieces;
+    Bitboard doublePush = RNorth(singlePush & MaskRank[relativeRank3]) & ~m_allPieces & m_pushMask;
+    Bitboard attack[2] = { RWest(RNorth(thePawns)) & m_enemyPieces,
+                           REast(RNorth(thePawns)) & m_enemyPieces };
+    Bitboard promotionPush = (singlePush & MaskRank[relativeRank8]);
+    Bitboard promotionAttack[2] = { attack[LEFT]  & m_enemyPieces & MaskRank[relativeRank8],
+                                    attack[RIGHT] & m_enemyPieces & MaskRank[relativeRank8] };
+    Bitboard enpassant[2] = {{0}};
+    if(board.EnPassantSquare()) {
+        enpassant[LEFT]  = RWest(RNorth(thePawns)) & board.EnPassantSquare();
+        enpassant[RIGHT] = REast(RNorth(thePawns)) & board.EnPassantSquare();
+    }
 
-    oneStep &= ClearRank[RANK8] & board.m_pushMask;
-    attackLeft &= ClearRank[RANK8];
-    attackRight &= ClearRank[RANK8];
+    singlePush &= ClearRank[relativeRank8] & m_pushMask;
+    attack[LEFT] &= ClearRank[relativeRank8];
+    attack[RIGHT] &= ClearRank[relativeRank8];
 
-    bool enpassantEvasion = (board.m_captureMask & South(board.m_enPassantSquare)) || (board.m_pushMask & board.m_enPassantSquare);
-    enpassantLeft *= enpassantEvasion;
-    enpassantRight *= enpassantEvasion;
-
-    while(oneStep) {
-        int toSq = ResetLsb(oneStep);
-        int fromSq = toSq - 8;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedPushMask[fromSq];
-        AddPawnPushMoves(board, fromSq, toBitboard, MOVE_TYPE::NORMAL);
+    while(singlePush) {
+        int toSq = ResetLsb(singlePush);
+        Bitboard toBitboard = SquareBB(toSq);
+        int fromSq = BitscanForward( RSouth(toBitboard) );
+        toBitboard &= m_pinnedPushMask[fromSq];
+        if(toBitboard) {
+            Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::NORMAL);
+            m_moves.push_back(move);
+        }
     }
-    while(twoSteps) {
-        int toSq = ResetLsb(twoSteps);
-        int fromSq = toSq - 16;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedPushMask[fromSq];
-        AddPawnPushMoves(board, fromSq, toBitboard, MOVE_TYPE::DOUBLE_PUSH);
+    while(doublePush) {
+        int toSq = ResetLsb(doublePush);
+        Bitboard toBitboard = SquareBB(toSq);
+        int fromSq = BitscanForward( RSouth(toBitboard,2) );
+        toBitboard &= m_pinnedPushMask[fromSq];
+        if(toBitboard) {
+            Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::DOUBLE_PUSH);
+            m_moves.push_back(move);
+        }
     }
-    while(attackLeft) {
-        int toSq = ResetLsb(attackLeft);
-        int fromSq = toSq - 7;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedCaptureMask[fromSq];
-        AddMoves(board, piece, fromSq, toBitboard, enemyPieces);
-    }
-    while(attackRight) {
-        int toSq = ResetLsb(attackRight);
-        int fromSq = toSq - 9;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedCaptureMask[fromSq];
-        AddMoves(board, piece, fromSq, toBitboard, enemyPieces);
-    }
-    while(promotions) {
-        int toSq = ResetLsb(promotions);
-        int fromSq = toSq - 8;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedPushMask[fromSq];
+    while(promotionPush) {
+        int toSq = ResetLsb(promotionPush);
+        Bitboard toBitboard = SquareBB(toSq);
+        int fromSq = BitscanForward( RSouth(toBitboard) );
+        toBitboard &= m_pinnedPushMask[fromSq];
         AddPromotionMoves(board, fromSq, toBitboard);
     }
-    while(promotionsLeft) {
-        int toSq = ResetLsb(promotionsLeft);
-        int fromSq = toSq - 7;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedCaptureMask[fromSq];
-        AddPromotionMoves(board, fromSq, toBitboard);
-    }
-    while(promotionsRight) {
-        int toSq = ResetLsb(promotionsRight);
-        int fromSq = toSq - 9;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedCaptureMask[fromSq];
-        AddPromotionMoves(board, fromSq, toBitboard);
-    }
-    while(enpassantLeft) {
-        int toSq = ResetLsb(enpassantLeft);
-        int fromSq = toSq - 7;
-        Bitboard toBitboard = ONE << toSq;
-        Bitboard theChecker = South(board.m_enPassantSquare);
-        bool pinnedMask = (board.m_pinnedCaptureMask[fromSq] & theChecker) || (board.m_pinnedPushMask[fromSq] & board.m_enPassantSquare);
-        toBitboard *= pinnedMask;
 
-        COLOR color = board.ActivePlayer();
-        Bitboard blockers = board.m_allpieces ^ SquareBB(fromSq) ^ theChecker;
-        if( board.AttackersTo( color, BitscanForward(board.Piece(color,KING)), blockers ) & ~theChecker )
-            continue;
+    for(ATTACK_SIDE side : {LEFT, RIGHT}) {
+        auto FromBitboard = [&](const Bitboard& b) -> Bitboard {
+            return (side == LEFT) ? REast(RSouth(b))
+                                  : RWest(RSouth(b));
+        };
 
-        AddPawnPushMoves(board, fromSq, toBitboard, MOVE_TYPE::ENPASSANT);
-    }
-    while(enpassantRight) {
-        int toSq = ResetLsb(enpassantRight);
-        int fromSq = toSq - 9;
-        Bitboard toBitboard = ONE << toSq;
-        Bitboard theChecker = South(board.m_enPassantSquare);
-        bool pinnedMask = (board.m_pinnedCaptureMask[fromSq] & theChecker) || (board.m_pinnedPushMask[fromSq] & board.m_enPassantSquare);
-        toBitboard *= pinnedMask;
+        while(attack[side]) {
+            int toSq = ResetLsb(attack[side]);
+            Bitboard toBitboard = SquareBB(toSq);
+            int fromSq = BitscanForward( FromBitboard(toBitboard) );
+            toBitboard &= m_pinnedCaptureMask[fromSq];
+            AddMoves(board, piece, fromSq, toBitboard);
+        }
+        while(promotionAttack[side]) {
+            int toSq = ResetLsb(promotionAttack[side]);
+            Bitboard toBitboard = SquareBB(toSq);
+            int fromSq = BitscanForward( FromBitboard(toBitboard) );
+            toBitboard &= m_pinnedCaptureMask[fromSq];
+            AddPromotionMoves(board, fromSq, toBitboard);
+        }
+        while(enpassant[side]) {
+            int toSq = ResetLsb(enpassant[side]);
+            Bitboard toBitboard = SquareBB(toSq);
+            int fromSq = BitscanForward( FromBitboard(toBitboard) );
+            Bitboard enemyPawn = RSouth(board.EnPassantSquare());
 
-        COLOR color = board.ActivePlayer();
-        Bitboard blockers = board.m_allpieces ^ SquareBB(fromSq) ^ theChecker;
-        if( board.AttackersTo( color, BitscanForward(board.Piece(color,KING)), blockers ) & ~theChecker )
-            continue;
+            //Check legality
+            Bitboard blockers = m_allPieces ^ SquareBB(fromSq) ^ enemyPawn; //remove the own and enemy pawns
+            int kingSquare = BitscanForward( board.Piece(m_color,KING) );
+            if(board.AttackersTo(m_color, kingSquare, blockers) & ~enemyPawn) //any attackers that are not the enemy pawn?
+                continue;
 
-        AddPawnPushMoves(board, fromSq, toBitboard, MOVE_TYPE::ENPASSANT);
+            if(toBitboard) {
+                Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::ENPASSANT);
+                m_moves.push_back(move);
+            }
+        }
     }
 }
-
-void MoveGenerator::GenerateBlackPawnMoves(Board &board) {
-    PIECE_TYPE piece = PAWN;
-    
-    Bitboard thePawns = board.GetPieces( board.ActivePlayer(), piece );
-    Bitboard enemyPieces = board.GetPieces( board.InactivePlayer(), ALL_PIECES );
-    Bitboard allPieces = board.m_allpieces;
-
-    Bitboard oneStep = South(thePawns) & ~allPieces;
-    Bitboard twoSteps = South(oneStep & MaskRank[RANK6]) & ~allPieces & board.m_pushMask;
-    Bitboard attackLeft = ( (thePawns & ClearFile[FILEH]) >> 7) & enemyPieces & board.m_captureMask;
-    Bitboard attackRight = ( (thePawns & ClearFile[FILEA]) >> 9) & enemyPieces & board.m_captureMask;
-    Bitboard promotions = (oneStep & MaskRank[RANK1]) & board.m_pushMask;
-    Bitboard promotionsLeft = attackLeft & MaskRank[RANK1];
-    Bitboard promotionsRight = attackRight & MaskRank[RANK1];
-    Bitboard enpassantLeft = ( (thePawns & ClearFile[FILEH]) >> 7) & board.m_enPassantSquare;
-    Bitboard enpassantRight = ( (thePawns & ClearFile[FILEA]) >> 9) & board.m_enPassantSquare;
-
-    oneStep &= ClearRank[RANK1] & board.m_pushMask;
-    attackLeft &= ClearRank[RANK1];
-    attackRight &= ClearRank[RANK1];
-
-    bool enpassantEvasion = (board.m_captureMask & North(board.m_enPassantSquare)) || (board.m_pushMask & board.m_enPassantSquare);
-    enpassantLeft *= enpassantEvasion;
-    enpassantRight *= enpassantEvasion;
-
-    while(oneStep) {
-        int toSq = ResetLsb(oneStep);
-        int fromSq = toSq + 8;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedPushMask[fromSq];
-        AddPawnPushMoves(board, fromSq, toBitboard, MOVE_TYPE::NORMAL);
-    }
-    while(twoSteps) {
-        int toSq = ResetLsb(twoSteps);
-        int fromSq = toSq + 16;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedPushMask[fromSq];
-        AddPawnPushMoves(board, fromSq, toBitboard, MOVE_TYPE::DOUBLE_PUSH);
-    }
-    while(attackLeft) {
-        int toSq = ResetLsb(attackLeft);
-        int fromSq = toSq + 7;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedCaptureMask[fromSq];
-        AddMoves(board, piece, fromSq, toBitboard, enemyPieces);
-    }
-    while(attackRight) {
-        int toSq = ResetLsb(attackRight);
-        int fromSq = toSq + 9;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedCaptureMask[fromSq];
-        AddMoves(board, piece, fromSq, toBitboard, enemyPieces);
-    }
-    while(promotions) {
-        int toSq = ResetLsb(promotions);
-        int fromSq = toSq + 8;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedPushMask[fromSq];
-        AddPromotionMoves(board, fromSq, toBitboard);
-    }
-    while(promotionsLeft) {
-        int toSq = ResetLsb(promotionsLeft);
-        int fromSq = toSq + 7;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedCaptureMask[fromSq];
-        AddPromotionMoves(board, fromSq, toBitboard);
-    }
-    while(promotionsRight) {
-        int toSq = ResetLsb(promotionsRight);
-        int fromSq = toSq + 9;
-        Bitboard toBitboard = ONE << toSq;
-        toBitboard &= board.m_pinnedCaptureMask[fromSq];
-        AddPromotionMoves(board, fromSq, toBitboard);
-    }
-    while(enpassantLeft) {
-        int toSq = ResetLsb(enpassantLeft);
-        int fromSq = toSq + 7;
-        Bitboard toBitboard = ONE << toSq;
-        Bitboard theChecker = North(board.m_enPassantSquare);
-        bool pinnedMask = (board.m_pinnedCaptureMask[fromSq] & theChecker) || (board.m_pinnedPushMask[fromSq] & board.m_enPassantSquare);
-        toBitboard *= pinnedMask;
-
-        COLOR color = board.ActivePlayer();
-        Bitboard blockers = board.m_allpieces ^ SquareBB(fromSq) ^ theChecker;
-        if( board.AttackersTo( color, BitscanForward(board.Piece(color,KING)), blockers ) & ~theChecker )
-            continue;
-
-        AddPawnPushMoves(board, fromSq, toBitboard, MOVE_TYPE::ENPASSANT);
-    }
-    while(enpassantRight) {
-        int toSq = ResetLsb(enpassantRight);
-        int fromSq = toSq + 9;
-        Bitboard toBitboard = ONE << toSq;
-        Bitboard theChecker = North(board.m_enPassantSquare);
-        bool pinnedMask = (board.m_pinnedCaptureMask[fromSq] & theChecker) || (board.m_pinnedPushMask[fromSq] & board.m_enPassantSquare);
-        toBitboard *= pinnedMask;
-
-        COLOR color = board.ActivePlayer();
-        Bitboard blockers = board.m_allpieces ^ SquareBB(fromSq) ^ theChecker;
-        if( board.AttackersTo( color, BitscanForward(board.Piece(color,KING)), blockers ) & ~theChecker )
-            continue;
-        
-        AddPawnPushMoves(board, fromSq, toBitboard, MOVE_TYPE::ENPASSANT);
-    }
-}
-
 void MoveGenerator::GenerateKnightMoves(Board &board) {
     PIECE_TYPE piece = KNIGHT;
-    Bitboard thePieces = board.GetPieces( board.ActivePlayer(), piece );
-    Bitboard ownPieces = board.GetPieces( board.ActivePlayer(), ALL_PIECES );
-    Bitboard enemyPieces = board.GetPieces( board.InactivePlayer(), ALL_PIECES );
+    Bitboard theKnights = board.GetPieces(m_color, piece);
+    theKnights &= ~m_pinned;
 
-    while(thePieces) {
-        int fromSq = ResetLsb(thePieces);
-        Bitboard attacks = AttacksKnights(fromSq);
-        attacks &= ~ownPieces;
+    while(theKnights) {
+        int square = ResetLsb(theKnights);
+        Bitboard attacks = AttacksKnights(square) & ~m_ownPieces;
 
-        if( board.m_pinnedPieces[board.ActivePlayer()] & SquareBB(fromSq) )
-            continue;
-
-        AddMoves(board, piece, fromSq, attacks, enemyPieces);
+        AddMoves(board, piece, square, attacks);
     }
 }
 void MoveGenerator::GenerateKingMoves(Board &board) {
     PIECE_TYPE piece = KING;
-    Bitboard theKing = board.GetPieces( board.ActivePlayer(), piece );
-    Bitboard ownPieces = board.GetPieces( board.ActivePlayer(), ALL_PIECES );
-    Bitboard enemyPieces = board.GetPieces( board.InactivePlayer(), ALL_PIECES );
+    Bitboard theKing = board.GetPieces(m_color, piece);
 
     //Exit if no king on the board
     assert(theKing);
 
     //Attacks
-    int fromSq = BitscanForward(theKing);
-    Bitboard attacks = AttacksKing(fromSq);
-    attacks &= ~ownPieces;
+    int square = BitscanForward(theKing);
+    Bitboard attacks = AttacksKing(square) & ~m_ownPieces;
 
     //Evade attacked squares
-    attacks &= ~board.m_kingDangerSquares[ board.InactivePlayer() ];
+    attacks &= ~m_kingDangerSquares;
 
     //Moves
-    AddMoves(board, piece, fromSq, attacks, enemyPieces);
+    AddMoves(board, piece, square, attacks);
 
     //Castling. Don't generate in evasion
-    if(board.m_pushMask == ALL)
+    if(!board.IsCheck())
         AddCastlingMoves(board);
 }
 void MoveGenerator::GenerateSlidingMoves(PIECE_TYPE pieceType, Board &board) {
-    COLOR color = board.ActivePlayer();
-    Bitboard thePieces = board.GetPieces( color, pieceType );
-    Bitboard ownPieces = board.GetPieces( color, ALL_PIECES );
-    Bitboard enemyPieces = board.GetPieces( board.InactivePlayer(), ALL_PIECES );
+    Bitboard thePieces = board.GetPieces(m_color, pieceType);
 
     while(thePieces) {
         //Attacks
         int fromSq = ResetLsb(thePieces);
-        Bitboard attacks = AttacksSliding(pieceType, fromSq, board.m_allpieces);
-        attacks &= ~ownPieces;
-        attacks &= board.m_pinnedPushMask[fromSq] | board.m_pinnedCaptureMask[fromSq];
+        Bitboard attacks = AttacksSliding(pieceType, fromSq, m_allPieces) & ~m_ownPieces;
+        attacks &= m_pinnedPushMask[fromSq] | m_pinnedCaptureMask[fromSq];
 
-        AddMoves(board, pieceType, fromSq, attacks, enemyPieces);
+        AddMoves(board, pieceType, fromSq, attacks);
     }
 }
 
-void MoveGenerator::AddMoves(Board &board, PIECE_TYPE piece, int fromSq, Bitboard possibleMoves, Bitboard enemyPieces) {
-
+void MoveGenerator::AddMoves(Board &board, PIECE_TYPE piece, int fromSq, Bitboard possibleMoves) {
     // ===================
     // == Capture moves ==
     // ===================
-    Bitboard captureMoves = possibleMoves & enemyPieces;
+    Bitboard captureMoves = possibleMoves & m_enemyPieces;
     if(piece != KING) {
-        captureMoves &= board.m_captureMask;
+        captureMoves &= m_captureMask;
     }
+
     while(captureMoves) {
         int toSq = ResetLsb(captureMoves);
-        PIECE_TYPE capturedPiece = board.GetPieceAtSquare( board.InactivePlayer(), toSq);
+        PIECE_TYPE capturedPiece = board.GetPieceAtSquare(m_enemyColor, toSq);
         Move move = Move(fromSq, toSq, piece, MOVE_TYPE::CAPTURE);
         move.SetCapturedType(capturedPiece);
-        m_moves.push_back( move );
+        m_moves.push_back(move);
     }
 
     // =================================
     // == Normal moves (non-captures) ==
     // =================================
-    Bitboard normalMoves = possibleMoves & ~enemyPieces;
+    Bitboard normalMoves = possibleMoves & ~m_enemyPieces;
     if(piece != KING) {
-        normalMoves &= board.m_pushMask;
+        normalMoves &= m_pushMask;
     }
     while(normalMoves) {
         int toSq = ResetLsb(normalMoves);
         Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
-        m_moves.push_back( move );
-    }
-    
-}
-void MoveGenerator::AddPawnPushMoves(Board &board, int fromSq, Bitboard possibleMoves, MOVE_TYPE moveType) {
-    while(possibleMoves) {
-        int toSq = ResetLsb(possibleMoves);
-        Move move = Move(fromSq, toSq, PIECE_TYPE::PAWN, moveType);
         m_moves.push_back(move);
     }
 }
+
 void MoveGenerator::AddPromotionMoves(Board &board, int fromSq, Bitboard promotionMoves) {
+    assert(PopCount(promotionMoves) <= 1);
+
+    bool isCapture = promotionMoves & m_enemyPieces;
+    promotionMoves &= isCapture ? m_captureMask
+                                : m_pushMask;
 
     while(promotionMoves) {
         int toSq = ResetLsb(promotionMoves);
-        PIECE_TYPE capturedPiece = board.GetPieceAtSquare( board.InactivePlayer(), toSq);
 
         Move move;
-        if(capturedPiece) { //PROMOTION_CAPTURE
+        if(isCapture) { //PROMOTION_CAPTURE
             move = Move(fromSq, toSq, PIECE_TYPE::PAWN, MOVE_TYPE::PROMOTION_CAPTURE);
+            
+            PIECE_TYPE capturedPiece = board.GetPieceAtSquare(m_enemyColor, toSq);
             move.SetCapturedType(capturedPiece);
         } else { //PROMOTION
             move = Move(fromSq, toSq, PIECE_TYPE::PAWN, MOVE_TYPE::PROMOTION);
         }
 
-        move.SetPromotionFlag(PROMOTION_QUEEN);
-        m_moves.push_back(move);
-
-        move.SetPromotionFlag(PROMOTION_KNIGHT);
-        m_moves.push_back(move);
-
-        move.SetPromotionFlag(PROMOTION_ROOK);
-        m_moves.push_back(move);
-
-        move.SetPromotionFlag(PROMOTION_BISHOP);
-        m_moves.push_back(move);
+        for(int p = PROMOTION_QUEEN; p <= PROMOTION_BISHOP; p++) {
+            move.SetPromotionFlag((PROMOTION_TYPE)p);
+            m_moves.push_back(move);
+        }
     }
 }
 void MoveGenerator::AddCastlingMoves(Board &board) {
-    COLOR color = board.ActivePlayer();
     u8 castlingRights = board.CastlingRights();
-    int fromSq = 0, toSq = 0;
 
-    if(color == WHITE) {
+    if(m_color == WHITE) {
         //WHITE CASTLING KING
         if(castlingRights & CASTLING_K 
-            && !(board.m_allpieces & ( (ONE << F1) | (ONE << G1) ) )
-            && !board.IsAttacked(color, E1)
-            && !board.IsAttacked(color, F1)
-            && !board.IsAttacked(color, G1)
+            && !(m_allPieces & ( (ONE << F1) | (ONE << G1) ) )
+            && !board.IsAttacked(m_color, E1)
+            && !board.IsAttacked(m_color, F1)
+            && !board.IsAttacked(m_color, G1)
         ) {
-            fromSq = E1; toSq = G1;
-            Move move = Move(fromSq, toSq, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
+            Move move = Move(E1, G1, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
             m_moves.push_back(move);
         }
         //WHITE CASTLING QUEEN
         if(castlingRights & CASTLING_Q 
-            && !(board.m_allpieces & ( (ONE << B1) | (ONE << C1) | (ONE << D1) ) )
-            && !board.IsAttacked(color, E1)
-            && !board.IsAttacked(color, D1)
-            && !board.IsAttacked(color, C1)
+            && !(m_allPieces & ( (ONE << B1) | (ONE << C1) | (ONE << D1) ) )
+            && !board.IsAttacked(m_color, E1)
+            && !board.IsAttacked(m_color, D1)
+            && !board.IsAttacked(m_color, C1)
         ) {
-            fromSq = E1; toSq = C1;
-            Move move = Move(fromSq, toSq, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
+            Move move = Move(E1, C1, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
             m_moves.push_back(move);
         }
     } else {
         //BLACK CASTLING KING
         if(castlingRights & CASTLING_k 
-            && !(board.m_allpieces & ( (ONE << F8) | (ONE << G8) ) )
-            && !board.IsAttacked(color, E8)
-            && !board.IsAttacked(color, F8)
-            && !board.IsAttacked(color, G8)
+            && !(m_allPieces & ( (ONE << F8) | (ONE << G8) ) )
+            && !board.IsAttacked(m_color, E8)
+            && !board.IsAttacked(m_color, F8)
+            && !board.IsAttacked(m_color, G8)
         ) {
-            fromSq = E8; toSq = G8;
-            Move move = Move(fromSq, toSq, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
+            Move move = Move(E8, G8, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
             m_moves.push_back(move);
         }
         //BLACK CASTLING QUEEN
         if(castlingRights & CASTLING_q 
-            && !(board.m_allpieces & ( (ONE << B8) | (ONE << C8) | (ONE << D8) ) )
-            && !board.IsAttacked(color, E8)
-            && !board.IsAttacked(color, D8)
-            && !board.IsAttacked(color, C8)
+            && !(m_allPieces & ( (ONE << B8) | (ONE << C8) | (ONE << D8) ) )
+            && !board.IsAttacked(m_color, E8)
+            && !board.IsAttacked(m_color, D8)
+            && !board.IsAttacked(m_color, C8)
         ) {
-            fromSq = E8; toSq = C8;
-            Move move = Move(fromSq, toSq, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
+            Move move = Move(E8, C8, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
             m_moves.push_back(move);
         }
     }
 }
 
-Bitboard MoveGenerator::GenerateAttacks(Board &board, COLOR color) {
-    Bitboard ownPieces = board.Piece(color,ALL_PIECES);
-    return GenerateKingDangerAttacks(board, color) & ~ownPieces;
-}
-
-Bitboard MoveGenerator::GenerateKingDangerAttacks(Board &board, COLOR color) {
+Bitboard MoveGenerator::GenerateKingDangerAttacks(Board &board) {
     Bitboard attacks = ZERO;
-    Bitboard blockers = board.m_allpieces ^ board.Piece((COLOR)!color, KING);
+    Bitboard blockers = m_allPieces ^ board.Piece(m_color, KING);
     for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
-        Bitboard bb = board.Piece(color, pieceType);
-        while(bb) {
-            int square = ResetLsb(bb);
+        Bitboard enemyPieces = board.Piece(m_enemyColor, pieceType);
+        while(enemyPieces) {
+            int square = ResetLsb(enemyPieces);
             switch(pieceType) {
-                case PAWN: attacks |= AttacksPawns(color, square); break;
+                case PAWN: attacks |= AttacksPawns(m_enemyColor, square); break;
                 case KNIGHT: attacks |= AttacksKnights(square); break;
                 case KING: attacks |= AttacksKing(square); break;
                 case BISHOP: attacks |= AttacksSliding(BISHOP, square, blockers); break;
@@ -530,26 +368,26 @@ Bitboard MoveGenerator::GenerateKingDangerAttacks(Board &board, COLOR color) {
 }
 
 //Step 1: Generate enemy sliding attacks, in the same direction as our king
-//Step 2: Generate attacks from our king (as the same sliding pieceType)
+//Step 2: Generate attacks from our king (as the same sliding piece)
 //Step 3: A pinned piece would appear in both bitboards
 Bitboard MoveGenerator::PinnedPieces(Board &board, COLOR color) {
     Bitboard pinned = ZERO;
-    int kingSquare = BitscanForward( board.Piece(color, KING) );
+    int kingSquare = BitscanForward( board.GetPieces(color, KING) );
 
-    for(PIECE_TYPE pieceType = BISHOP; pieceType <= QUEEN; ++pieceType) {
-        Bitboard bb = board.Piece((COLOR)!color, pieceType);
-        while(bb) {
-            int square = ResetLsb(bb);
+    for(PIECE_TYPE pieceType : {BISHOP, ROOK, QUEEN}) {
+        Bitboard enemySlidings = board.GetPieces(m_enemyColor, pieceType);
+        while(enemySlidings) {
+            int slidingSquare = ResetLsb(enemySlidings);
             switch(pieceType) {
                 case BISHOP: {
-                    pinned |= FillPinned(board, color, BISHOP, square, kingSquare);
+                    pinned |= FillPinned(color, BISHOP, slidingSquare, kingSquare);
                 } break;
                 case ROOK: {
-                    pinned |= FillPinned(board, color, ROOK, square, kingSquare);
+                    pinned |= FillPinned(color, ROOK, slidingSquare, kingSquare);
                 } break;
                 case QUEEN: {
-                    pinned |= FillPinned(board, color, BISHOP, square, kingSquare);
-                    pinned |= FillPinned(board, color, ROOK, square, kingSquare);
+                    pinned |= FillPinned(color, BISHOP, slidingSquare, kingSquare);
+                    pinned |= FillPinned(color, ROOK, slidingSquare, kingSquare);
                 } break;
                 default: break;
             };
@@ -558,20 +396,19 @@ Bitboard MoveGenerator::PinnedPieces(Board &board, COLOR color) {
     return pinned;
 }
 
-Bitboard MoveGenerator::FillPinned(Board& board, COLOR color, PIECE_TYPE slidingType, int square, int kingSquare) {
+Bitboard MoveGenerator::FillPinned(COLOR color, PIECE_TYPE slidingType, int slidingSquare, int kingSquare) {
     assert(slidingType == BISHOP || slidingType == ROOK);
 
     Bitboard pinned = ZERO;
-    DIRECTIONS direction;
-    if(Attacks::IsInDirection(slidingType, square, kingSquare, direction)) {
-        Bitboard inBetween = Attacks::Between(square, kingSquare);
-        Bitboard attacksFromEnemy = Attacks::AttacksSliding(slidingType, square, board.m_allpieces);
-        Bitboard attacksFromKing = Attacks::AttacksSliding(slidingType, kingSquare, board.m_allpieces);
-        pinned = attacksFromEnemy & attacksFromKing & board.Piece(color, ALL_PIECES);
+    if(Attacks::IsInDirection(slidingType, slidingSquare, kingSquare)) {
+        Bitboard inBetween = Between(slidingSquare, kingSquare);
+        Bitboard attacksFromEnemy = AttacksSliding(slidingType, slidingSquare, m_allPieces);
+        Bitboard attacksFromKing = AttacksSliding(slidingType, kingSquare, m_allPieces);
+        pinned = attacksFromEnemy & attacksFromKing & m_ownPieces;
         if(pinned) {
             assert(PopCount(pinned) == 1);
-            board.m_pinnedPushMask[BitscanForward(pinned)] = inBetween;
-            board.m_pinnedCaptureMask[BitscanForward(pinned)] = SquareBB(square);
+            m_pinnedPushMask[BitscanForward(pinned)] = inBetween;
+            m_pinnedCaptureMask[BitscanForward(pinned)] = SquareBB(slidingSquare);
         }
     }
     return pinned;

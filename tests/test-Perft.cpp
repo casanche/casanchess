@@ -18,10 +18,9 @@ TEST(MoveGenerator, StartingPosition) {
     Board board;
 
     MoveGenerator generator;
-    generator.GenerateMoves(board);
-    MoveList moves = generator.Moves();
+    MoveList moves = generator.GenerateMoves(board);
 
-    EXPECT_EQ(moves.size(), 20U);
+    EXPECT_EQ(moves.size(), (size_t)20);
 }
 
 //https://www.chessprogramming.org/Perft_Results
@@ -41,7 +40,7 @@ TEST(Perft, Kiwipete) {
     EXPECT_EQ(board.Perft(2), (u64)2039);
     EXPECT_EQ(board.Perft(3), (u64)97862);
     EXPECT_EQ(board.Perft(4), (u64)4085603);
-    // EXPECT_EQ(board.Perft(5), (u64)193690690);
+    //EXPECT_EQ(board.Perft(5), (u64)193690690);
 }
 TEST(Perft, Position3) {
     Board board;
@@ -59,7 +58,7 @@ TEST(Perft, Position4) {
     EXPECT_EQ(board.Perft(2), (u64)264);
     EXPECT_EQ(board.Perft(3), (u64)9467);
     EXPECT_EQ(board.Perft(4), (u64)422333);
-    // EXPECT_EQ(board.Perft(5), (u64)15833292);
+    //EXPECT_EQ(board.Perft(5), (u64)15833292);
 }
 TEST(Perft, Position5) {
     Board board;
@@ -68,7 +67,7 @@ TEST(Perft, Position5) {
     EXPECT_EQ(board.Perft(2), (u64)1486);
     EXPECT_EQ(board.Perft(3), (u64)62379);
     EXPECT_EQ(board.Perft(4), (u64)2103487);
-    // EXPECT_EQ(board.Perft(5), (u64)89941194);
+    //EXPECT_EQ(board.Perft(5), (u64)89941194);
 }
 TEST(Perft, Position6) {
     Board board;
@@ -77,7 +76,7 @@ TEST(Perft, Position6) {
     EXPECT_EQ(board.Perft(2), (u64)2079);
     EXPECT_EQ(board.Perft(3), (u64)89890);
     EXPECT_EQ(board.Perft(4), (u64)3894594);
-    // EXPECT_EQ(board.Perft(5), (u64)164075551);
+    //EXPECT_EQ(board.Perft(5), (u64)164075551);
 }
 
 // http://www.rocechess.ch/perft.html
@@ -108,7 +107,7 @@ TEST(Perft, Numpty4) { //enpassant check
     EXPECT_EQ(board.Perft(2), (u64)85);
     EXPECT_EQ(board.Perft(3), (u64)795);
     EXPECT_EQ(board.Perft(4), (u64)7658);
-    // EXPECT_EQ(board.Perft(5), (u64)72170); //CHECK IF WRONG! 72120
+    EXPECT_EQ(board.Perft(5), (u64)72120);
     EXPECT_EQ(board.Perft(6), (u64)703851);
 }
 TEST(Perft, Numpty5) {

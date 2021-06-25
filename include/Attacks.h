@@ -17,7 +17,7 @@ namespace Attacks {
     Bitboard Between(int sq1, int sq2);
 
     //Helpers
-    bool IsInDirection(PIECE_TYPE pieceType, int sq1, int sq2, DIRECTIONS &direction);
+    bool IsInDirection(PIECE_TYPE pieceType, int sq1, int sq2);
 
     //Lookup tables
     extern Bitboard m_Rays[8][64]; //[DIRECTION][SQUARE]
