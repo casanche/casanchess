@@ -12,7 +12,7 @@ const int HEURISTICS_MAX_PLY = 128;
 const int VALUE_TO_RESET_HISTORY = INFINITE / 30;
 
 namespace Sorting {
-    void SortCaptures(Board &board, MoveList &moveList);
+    void SortQuiescence(Board &board, MoveList &moveList);
     void SortEvasions(Board &board, MoveList &moveList);
     void SortMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply);
     void SortRootMoves(std::vector<RootMove>& rootMoves);

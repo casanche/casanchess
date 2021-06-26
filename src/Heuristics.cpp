@@ -111,19 +111,27 @@ namespace {
         }
     }
 
-    void RateCaptures(Board &board, MoveList& moveList) {
+    void RateQuiescence(Board &board, MoveList& moveList) {
         for(auto &move : moveList) {
-            if(move.CapturedType()) {
+            if(move.IsPromotion()) {
+                move.SetScore(255);
+                continue;
+            }
+            if(move.IsCapture()) {
                 int see = board.SEE(move);
 
                 if     (see > 1000) see = 1000;
                 else if(see < -1000) see = -1000;
                 see += 1000; //0-2000
-                const float factor = 255.f / 2000;
-                float score = see * factor;
 
-                assert(score >= 0 && score <= 255);
-                move.SetScore( (u8)score );
+                const int maxValue = 2000;
+                const int maxScore = 254;
+                const int minScore = 1;
+                int score = minScore + see * (maxScore-minScore) / (maxValue+1);
+
+                assert(score >= 1 && score <= 254);
+                move.SetScore((u8)score);
+                continue;
             }
         }
     }
@@ -138,7 +146,7 @@ namespace {
         }
     }
 
-    bool MVV(const Move &lmove, const Move &rmove) {
+    [[maybe_unused]] bool MVV(const Move &lmove, const Move &rmove) {
         return lmove.CapturedType() > rmove.CapturedType();
     }
     [[maybe_unused]] bool MVVtoLVA(const Move &lmove, const Move &rmove) {
@@ -161,15 +169,9 @@ namespace {
 }
 
 //Named namespace (public interface)
-void Sorting::SortCaptures(Board &board, MoveList &moveList) {
-    const bool useSEE = 1;
-    if(useSEE) {
-        RateCaptures(board, moveList);
-        std::sort(moveList.begin(), moveList.end(), ByScore);
-    }
-    else {
-        std::sort(moveList.begin(), moveList.end(), MVV);
-    }
+void Sorting::SortQuiescence(Board &board, MoveList &moveList) {
+    RateQuiescence(board, moveList);
+    std::sort(moveList.begin(), moveList.end(), ByScore);
 }
 
 void Sorting::SortEvasions(Board &board, MoveList &moveList) {

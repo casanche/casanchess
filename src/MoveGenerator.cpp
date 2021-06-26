@@ -10,24 +10,13 @@ using namespace BitboardUtils;
 #include <iostream>
 
 const int MAX_MOVES_RESERVE = 256;
+const int MAX_CAPTURES_RESERVE = 64;
 
 //Legal moves
 MoveList MoveGenerator::GenerateMoves(Board &board) {
-    //Init
-    m_color = board.ActivePlayer();
-    m_enemyColor = board.InactivePlayer();
-    m_ownPieces = board.GetPieces(m_color, ALL_PIECES);
-    m_enemyPieces = board.GetPieces(m_enemyColor, ALL_PIECES);
-    m_allPieces = board.AllPieces();
+    Init(board);
     m_moves.reserve(MAX_MOVES_RESERVE);
-
-    // Initialize the push and capture masks
-    m_captureMask = ALL;
-    m_pushMask = ALL;
-    for(int i = 0; i < 64; ++i) {
-        m_pinnedPushMask[i] = ALL;
-        m_pinnedCaptureMask[i] = ALL;
-    }
+    m_generateQuiet = true;
 
     //Calculations
     m_kingDangerSquares = GenerateKingDangerAttacks(board);
@@ -40,6 +29,40 @@ MoveList MoveGenerator::GenerateMoves(Board &board) {
     }
 
     return m_moves;
+}
+
+MoveList MoveGenerator::GenerateCaptures(Board &board) {
+    Init(board);
+    m_moves.reserve(MAX_CAPTURES_RESERVE);
+    m_generateQuiet = false;
+
+    //Calculations
+    m_kingDangerSquares = GenerateKingDangerAttacks(board);
+    m_pinned = PinnedPieces(board, m_color);
+
+    //Don't allow king moves to empty squares
+    m_kingDangerSquares |= ~m_allPieces;
+
+    GeneratePseudoMoves(board);
+
+    return m_moves;
+}
+
+void MoveGenerator::Init(const Board& board) {
+    //Init
+    m_color = board.ActivePlayer();
+    m_enemyColor = board.InactivePlayer();
+    m_ownPieces = board.GetPieces(m_color, ALL_PIECES);
+    m_enemyPieces = board.GetPieces(m_enemyColor, ALL_PIECES);
+    m_allPieces = board.AllPieces();
+
+    // Initialize the push and capture masks
+    m_captureMask = ALL;
+    m_pushMask = ALL;
+    for(int i = 0; i < 64; ++i) {
+        m_pinnedPushMask[i] = ALL;
+        m_pinnedCaptureMask[i] = ALL;
+    }
 }
 
 void MoveGenerator::GeneratePseudoMoves(Board &board) {
@@ -127,6 +150,9 @@ void MoveGenerator::GeneratePawnMoves(Board &board) {
     singlePush &= ClearRank[relativeRank8] & m_pushMask;
     attack[LEFT] &= ClearRank[relativeRank8];
     attack[RIGHT] &= ClearRank[relativeRank8];
+
+    singlePush *= m_generateQuiet;
+    doublePush *= m_generateQuiet;
 
     while(singlePush) {
         int toSq = ResetLsb(singlePush);
@@ -225,7 +251,7 @@ void MoveGenerator::GenerateKingMoves(Board &board) {
     AddMoves(board, piece, square, attacks);
 
     //Castling. Don't generate in evasion
-    if(!board.IsCheck())
+    if(m_generateQuiet && !board.IsCheck())
         AddCastlingMoves(board);
 }
 void MoveGenerator::GenerateSlidingMoves(PIECE_TYPE pieceType, Board &board) {
@@ -265,11 +291,12 @@ void MoveGenerator::AddMoves(Board &board, PIECE_TYPE piece, int fromSq, Bitboar
     if(piece != KING) {
         normalMoves &= m_pushMask;
     }
-    while(normalMoves) {
+    while(normalMoves && m_generateQuiet) {
         int toSq = ResetLsb(normalMoves);
         Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
         m_moves.push_back(move);
     }
+
 }
 
 void MoveGenerator::AddPromotionMoves(Board &board, int fromSq, Bitboard promotionMoves) {
@@ -292,10 +319,16 @@ void MoveGenerator::AddPromotionMoves(Board &board, int fromSq, Bitboard promoti
             move = Move(fromSq, toSq, PIECE_TYPE::PAWN, MOVE_TYPE::PROMOTION);
         }
 
-        for(int p = PROMOTION_QUEEN; p <= PROMOTION_BISHOP; p++) {
-            move.SetPromotionFlag((PROMOTION_TYPE)p);
-            m_moves.push_back(move);
+        move.SetPromotionFlag(PROMOTION_QUEEN);
+        m_moves.push_back(move);
+
+        if(m_generateQuiet) {
+            for(int p = PROMOTION_KNIGHT; p <= PROMOTION_BISHOP; p++) {
+                move.SetPromotionFlag((PROMOTION_TYPE)p);
+                m_moves.push_back(move);
+            }
         }
+
     }
 }
 void MoveGenerator::AddCastlingMoves(Board &board) {

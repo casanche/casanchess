@@ -515,7 +515,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     //-------- Generate moves ----------
     MoveGenerator gen;
-    MoveList moves = gen.GenerateMoves(board);
+    MoveList moves = inCheck ? gen.GenerateMoves(board)
+                             : gen.GenerateCaptures(board);
 
     D( m_debug.Increment("Quiescence GenerateMoves") );
 
@@ -525,23 +526,18 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             D( m_debug.Increment("Quiescence Checkmate") );
             return -MATESCORE + m_ply; //checkmate
         }
-        else {
+        else if( gen.GenerateMoves(board).empty() ) {
             D( m_debug.Increment("Quiescence Stalemate") );
             return DRAW_SCORE(m_ply); //stalemate
         }
     }
 
-    //Order captures
-    inCheck ? SortEvasions(board, moves) : SortCaptures(board, moves);
+    inCheck ? SortEvasions(board, moves)
+            : SortQuiescence(board, moves);
 
     for(auto move : moves) {
 
         if(!inCheck) {
-            //Skip quiet moves (keep captures, promotions and enpassants)
-            //Skip underpromotions
-            if(move.IsQuiet() || move.PromotionType() > PROMOTION_QUEEN)
-                continue;
-
             //Futility pruning depending on SEE
             if(move.MoveType() == CAPTURE) {
                 const int SEE_ZERO = 127;  //score equivalent to SEE = 0

@@ -9,9 +9,12 @@ class Board;
 class MoveGenerator {
 public:
     MoveList GenerateMoves(Board &board);
+    MoveList GenerateCaptures(Board &board);
     Move RandomMove();
 
 private:
+    void Init(const Board &board);
+
     void GeneratePseudoMoves(Board &board);
     void GenerateEvasionMoves(Board &board);
 
@@ -32,6 +35,7 @@ private:
 
     COLOR m_color;
     COLOR m_enemyColor;
+    bool m_generateQuiet;
 
     Bitboard m_ownPieces;
     Bitboard m_enemyPieces;
