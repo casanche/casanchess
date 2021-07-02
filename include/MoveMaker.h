@@ -8,32 +8,31 @@ class Board;
 class MoveMaker {
 public:
     //Standard
-    void MakeMove(Board& board, Move move);
-    void TakeMove(Board& board, Move move);
+    static void MakeMove(Board& board, Move move);
+    static void TakeMove(Board& board, Move move);
     //String
-    void MakeMove(Board& board, std::string input);
-    void TakeMove(Board& board);
+    static void MakeMove(Board& board, std::string input);
+    static void TakeMove(Board& board);
     //Null
-    void MakeNull(Board& board);
-    void TakeNull(Board& board);
+    static void MakeNull(Board& board);
+    static void TakeNull(Board& board);
 
 private:
-    void AddPiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType);
-    void RemovePiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType);
-    void MovePiece(Board& board, int fromSq, int toSq, COLOR color, PIECE_TYPE pieceType);
+    static void AddPiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType);
+    static void RemovePiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType);
+    static void MovePiece(Board& board, int fromSq, int toSq, COLOR color, PIECE_TYPE pieceType);
 
     //Castling
-    void UpdateCastlingRights(Board& board, const Move& move);
-    void RewindCastlingRights(Board& board, const Move& move);
+    static void UpdateCastlingRights(Board& board, const Move& move);
+    static void RewindCastlingRights(Board& board, const Move& move);
 
-    void AddCastlingRights(Board& board, CASTLING_TYPE castlingType);
-    void RemoveCastlingRights(Board& board, CASTLING_TYPE castlingType);
-    void ToggleCastlingRights(Board& board, CASTLING_TYPE castlingType);
+    static void AddCastlingRights(Board& board, CASTLING_TYPE castlingType);
+    static void RemoveCastlingRights(Board& board, CASTLING_TYPE castlingType);
+    static void ToggleCastlingRights(Board& board, CASTLING_TYPE castlingType);
 
     //Helpers
-    Move StringToMove(const Board& board, std::string input);
-    Move DescriptiveToMove(const Board& board, SQUARES fromSq, SQUARES toSq, char promLet);
-
+    static Move StringToMove(const Board& board, std::string input);
+    static Move DescriptiveToMove(const Board& board, SQUARES fromSq, SQUARES toSq, char promLet);
 };
 
 #endif //MOVEMAKER_H

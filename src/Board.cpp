@@ -4,7 +4,6 @@
 using namespace Attacks;
 #include "BitboardUtils.h"
 using namespace BitboardUtils;
-#include "Evaluation.h"
 #include "Move.h"
 #include "MoveGenerator.h"
 
@@ -13,6 +12,9 @@ using namespace BitboardUtils;
 #include <string>
 
 const std::string STARTFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+const char PIECE_NOTATION[2][8] = { {' ', 'P', 'N', 'B', 'R', 'Q', 'K', '-',},
+                                    {' ', 'p', 'n', 'b', 'r', 'q', 'k', '-'} }; //[COLOR][PIECE]
 
 /*
 ------------
@@ -31,45 +33,6 @@ Board::Board() {
 
 void Board::Init() {
     SetFen(STARTFEN);
-}
-
-void Board::Divide(int depth) {
-    u64 nodesTotal = 0;
-
-    MoveGenerator generator;
-    MoveList moves = generator.GenerateMoves(*this);
-
-    for(auto &move : moves) {
-        MakeMove(move);
-        u64 nodes = Perft(depth-1);
-        P( move.Notation() << " \t" << nodes );
-        nodesTotal += nodes;
-        TakeMove(move);
-    }
-
-    P("nodes: " << nodesTotal);
-}
-
-void Board::Mirror() {
-    m_activePlayer = (COLOR)!m_activePlayer;
-    for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
-        m_pieces[WHITE][pieceType] = BitboardUtils::Mirror(m_pieces[WHITE][pieceType]);
-        m_pieces[BLACK][pieceType] = BitboardUtils::Mirror(m_pieces[BLACK][pieceType]);
-        std::swap(m_pieces[WHITE][pieceType], m_pieces[BLACK][pieceType]);
-    }
-    if(m_enPassantSquare)
-        m_enPassantSquare = BitboardUtils::Mirror(m_enPassantSquare);
-    if(m_castlingRights) {
-        u8 mirroredCastlingRights = 0;
-        if(m_castlingRights & CASTLING_K) mirroredCastlingRights ^= CASTLING_k;
-        if(m_castlingRights & CASTLING_Q) mirroredCastlingRights ^= CASTLING_q;
-        if(m_castlingRights & CASTLING_k) mirroredCastlingRights ^= CASTLING_K;
-        if(m_castlingRights & CASTLING_q) mirroredCastlingRights ^= CASTLING_Q;
-        m_castlingRights = mirroredCastlingRights;
-    }
-    m_zobristKey.SetKey(*this);
-    m_pawnKey.SetPawnKey(*this);
-    UpdateBitboards();
 }
 
 u64 Board::Perft(int depth) {
@@ -98,6 +61,23 @@ u64 Board::Perft(int depth) {
     return nodes;
 }
 
+void Board::Divide(int depth) {
+    u64 nodesTotal = 0;
+
+    MoveGenerator generator;
+    MoveList moves = generator.GenerateMoves(*this);
+
+    for(auto &move : moves) {
+        MakeMove(move);
+        u64 nodes = Perft(depth-1);
+        P( move.Notation() << " \t" << nodes );
+        nodesTotal += nodes;
+        TakeMove(move);
+    }
+
+    P("nodes: " << nodesTotal);
+}
+
 void Board::Print(bool bits) const {
     if(bits) {
         PrintBits( m_pieces[WHITE][ALL_PIECES] | m_pieces[BLACK][ALL_PIECES] );
@@ -106,7 +86,7 @@ void Board::Print(bool bits) const {
 
     std::string squareMap[64];
     for (int i = 0; i < 64; ++i) {
-        squareMap[i] = PIECE_LETTERS[0][NO_PIECE];
+        squareMap[i] = PIECE_NOTATION[0][NO_PIECE];
     }
 
     for(COLOR color : {WHITE, BLACK}) {
@@ -116,21 +96,22 @@ void Board::Print(bool bits) const {
                 int index = ResetLsb(thePieces);
                 squareMap[index] = '\0';
                 squareMap[index] += (color == WHITE) ? "\033[1;97m" : "\033[1;31m"; //white or red
-                squareMap[index] += PIECE_LETTERS[color][piece];
+                squareMap[index] += PIECE_NOTATION[color][piece];
                 squareMap[index] += "\033[0m";
             }
         }
     }
 
     std::cout << "--------------------------------" << std::endl;
-    int i = A8;
-    while(i != -8) {
-        std::cout << " " << squareMap[i] << " |";
-        if(i % 8 == 7) {
-            i -= 16;
+    int square = A8;
+    const int nextRank = 8;
+    while(square >= 0) {
+        std::cout << " " << squareMap[square] << " |";
+        if(File(square) == FILEH) {
+            square -= nextRank * 2;
             std::cout << std::endl << "--------------------------------" << std::endl;
         }
-        i++;
+        square++;
     }
 }
 
@@ -147,6 +128,67 @@ void Board::ShowMoves() {
         move.Print();
     }
     P("size: " << moves.size());
+}
+
+//Static Exchange Evaluator
+int Board::SEE(Move move) {
+    //Retrieve info
+    COLOR color = ActivePlayer();
+    COLOR enemyColor = InactivePlayer();
+    MoveData moveData = move.Data();
+
+    //List of scores to be filled
+    const int MAX_CAPTURES = 24;
+    int scores[MAX_CAPTURES];
+    int numCapture = 0;
+
+    //Direct attackers to the square
+    Bitboard attackers = XRayAttackersTo(color, moveData.toSq) | XRayAttackersTo(enemyColor, moveData.toSq);
+
+    //Initial capture
+    attackers ^= SquareBB(moveData.fromSq);
+    scores[numCapture] = SEE_MATERIAL_VALUES[moveData.capturedType];
+    int pieceValue = SEE_MATERIAL_VALUES[moveData.pieceType]; //what is actually on the square
+
+    // switch the active player
+    color = (COLOR)!color;
+    enemyColor = (COLOR)!enemyColor;
+
+    //the main loop, where all the captures are simulated
+    while(attackers) {
+        Bitboard activeAttackers = attackers & Piece(color, ALL_PIECES);
+        if(!activeAttackers) break;
+
+        //get the Least Valuable Attacker
+        PIECE_TYPE pieceType;
+        Bitboard LVA = LeastValuableAttacker(activeAttackers, color, pieceType);
+        attackers ^= LVA;
+
+        //if king... do smth
+
+        //fill an array of scores / current-piece-on-square
+        numCapture++;
+        assert(numCapture <= MAX_CAPTURES);
+        scores[numCapture] = pieceValue - scores[numCapture-1];
+        pieceValue = SEE_MATERIAL_VALUES[pieceType];
+
+        // switch the active player
+        color = (COLOR)!color;
+        enemyColor = (COLOR)!enemyColor;
+    }
+
+    // add hidden pieces
+    //another options is to check for bishops, rooks and queen in the moving direction?? (don't do for kings and knights)
+
+    //retrieve best score
+    while(numCapture > 0) {
+        if(scores[numCapture] > -scores[numCapture-1]) { //scores[numCapture-1] > -scores[numCapture]
+            scores[numCapture-1] = -scores[numCapture];
+        }
+        numCapture--;
+    }
+
+    return scores[0];
 }
 
 //Attackers
@@ -250,6 +292,28 @@ bool Board::IsRepetitionDraw(int searchPly) {
     return false;
 }
 
+void Board::Mirror() {
+    m_activePlayer = (COLOR)!m_activePlayer;
+    for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
+        m_pieces[WHITE][pieceType] = BitboardUtils::Mirror(m_pieces[WHITE][pieceType]);
+        m_pieces[BLACK][pieceType] = BitboardUtils::Mirror(m_pieces[BLACK][pieceType]);
+        std::swap(m_pieces[WHITE][pieceType], m_pieces[BLACK][pieceType]);
+    }
+    if(m_enPassantSquare)
+        m_enPassantSquare = BitboardUtils::Mirror(m_enPassantSquare);
+    if(m_castlingRights) {
+        u8 mirroredCastlingRights = 0;
+        if(m_castlingRights & CASTLING_K) mirroredCastlingRights ^= CASTLING_k;
+        if(m_castlingRights & CASTLING_Q) mirroredCastlingRights ^= CASTLING_q;
+        if(m_castlingRights & CASTLING_k) mirroredCastlingRights ^= CASTLING_K;
+        if(m_castlingRights & CASTLING_q) mirroredCastlingRights ^= CASTLING_Q;
+        m_castlingRights = mirroredCastlingRights;
+    }
+    m_zobristKey.SetKey(*this);
+    m_pawnKey.SetPawnKey(*this);
+    UpdateBitboards();
+}
+
 int Board::SquareToIndex(std::string square) const {
     const int asciiToNumber = -96;  //lowercase to numbers
 
@@ -287,69 +351,6 @@ Bitboard Board::XRayAttackersTo(COLOR color, int square) {
     attackers |= AttacksSliding(ROOK, square, straightBlockers) & straightPieces;
 
     return attackers;
-}
-
-//Static Exchange Evaluator
-int Board::SEE(Move move) {
-    
-    // retrieve info
-    COLOR color = ActivePlayer();
-    COLOR enemyColor = InactivePlayer();
-    MoveData data = move.Data();
-
-    // list of scores to be filled
-    const int MAX_CAPTURES = 32;
-    int scores[MAX_CAPTURES];
-    int numCapture = 0;
-
-    // direct attackers
-    Bitboard attackers = XRayAttackersTo(color, data.toSq) | XRayAttackersTo(enemyColor, data.toSq);
-
-    // handle separately the initial capture
-    attackers ^= SquareBB(data.fromSq);
-
-    // simulate the initial capture
-    scores[numCapture] = SEE_MATERIAL_VALUES[data.capturedType];
-    int pieceValue = SEE_MATERIAL_VALUES[data.pieceType]; //what is actually on the square
-
-    // switch the active player
-    color = (COLOR)!color;
-    enemyColor = (COLOR)!enemyColor;
-
-    //the main loop, where all the captures are simulated
-    while(attackers) {
-        Bitboard activeAttackers = attackers & Piece(color, ALL_PIECES);
-        if(!activeAttackers) break;
-
-        //get the Least Valuable Attacker
-        PIECE_TYPE pieceType;
-        Bitboard LVA = LeastValuableAttacker(activeAttackers, color, pieceType);
-        attackers ^= LVA;
-
-        //if king... do smth
-
-        //fill an array of scores / current-piece-on-square
-        numCapture++;
-        scores[numCapture] = pieceValue - scores[numCapture-1];
-        pieceValue = SEE_MATERIAL_VALUES[pieceType];
-
-        // switch the active player
-        color = (COLOR)!color;
-        enemyColor = (COLOR)!enemyColor;
-    }
-
-    // add hidden pieces
-    //another options is to check for bishops, rooks and queen in the moving direction?? (don't do for kings and knights)
-
-    //retrieve best score
-    while(numCapture > 0) {
-        if(scores[numCapture] > -scores[numCapture-1]) { //scores[numCapture-1] > -scores[numCapture]
-            scores[numCapture-1] = -scores[numCapture];
-        }
-        numCapture--;
-    }
-
-    return scores[0];
 }
 
 Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) {
