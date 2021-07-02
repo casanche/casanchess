@@ -406,6 +406,7 @@ void Board::ClearBits() {
     m_activePlayer = WHITE;
     m_moveNumber = 1;
     m_ply = 0;
+    m_initialPly = 0;
     m_fiftyrule = 0;
 
     UpdateBitboards();
@@ -434,6 +435,21 @@ void Board::UpdateKingAttackers(COLOR color) {
     int kingSquare = BitscanForward(theKing);
 
     m_kingAttackers[color] = AttackersTo(color, kingSquare);
+}
+
+void Board::InitStateAndHistory() {
+    assert(m_ply >= 0);
+
+    UpdateBitboards();
+
+    m_history[m_ply].fiftyrule = m_fiftyrule;
+    m_history[m_ply].castling = m_castlingRights;
+    m_history[m_ply].enpassant = m_enPassantSquare;
+    m_zobristKey.SetKey(*this);
+    m_pawnKey.SetPawnKey(*this);
+    m_history[m_ply].zkey = ZKey();
+
+    m_checkCalculated = false;
 }
 
 bool Board::CheckIntegrity() const {

@@ -1,9 +1,10 @@
 #ifndef FEN_H
 #define FEN_H
 
-class Board;
-#include <string>
 #include <map>
+#include <string>
+
+class Board;
 
 typedef std::map<std::string, std::string> EPDLine;
 

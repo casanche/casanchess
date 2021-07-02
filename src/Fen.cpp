@@ -16,7 +16,7 @@ void Fen::SetPosition(Board& board, std::string fenString) {
 
     //Set the board pieces
     fenStream >> token;
-    for(auto theChar : token) {
+    for(char theChar : token) {
         switch(theChar) {
             case 'P': board.m_pieces[WHITE][PAWN]   |= SquareBB(boardPos++); break;
             case 'N': board.m_pieces[WHITE][KNIGHT] |= SquareBB(boardPos++); break;
@@ -43,7 +43,7 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     token = "-";
     fenStream >> token;
     if(token != "-") {
-        for(auto theChar : token) {
+        for(char theChar : token) {
             switch(theChar) {
                 case 'K': board.m_castlingRights += CASTLING_K; break;
                 case 'Q': board.m_castlingRights += CASTLING_Q; break;
@@ -71,7 +71,6 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     //Move number
     token = "-";
     fenStream >> token;
-    board.m_moveNumber = 1, board.m_ply = 0, board.m_initialPly = 0;
     if(token != "-" && token != "0") {
         board.m_moveNumber = std::stoi(token);
         board.m_ply = (board.m_moveNumber-1) * 2;
@@ -79,16 +78,7 @@ void Fen::SetPosition(Board& board, std::string fenString) {
         board.m_initialPly = board.m_ply;
     }
 
-    //Update state and history
-    board.UpdateBitboards();
-    assert(board.m_ply >= 0);
-    board.m_history[board.m_ply].fiftyrule = board.m_fiftyrule;
-    board.m_history[board.m_ply].castling = board.m_castlingRights;
-    board.m_history[board.m_ply].enpassant = board.m_enPassantSquare;
-    board.m_zobristKey.SetKey(board);
-    board.m_pawnKey.SetPawnKey(board);
-    board.m_history[board.m_ply].zkey = board.ZKey();
-    board.m_checkCalculated = false;
+    board.InitStateAndHistory();
 }
 
 //Sets the board with a random fen string
@@ -96,13 +86,10 @@ void Fen::SetPosition(Board& board, std::string fenString) {
 std::string Fen::SetRandomPosition(Board& board) {
     board.ClearBits();
 
-    //--
-    //--Generate random position
-    //--
     Utils::PRNG rng;
 
     auto CheckIsValid = [&] (int p, Bitboard bb) {
-        if(bb & board.m_allpieces)
+        if(bb & board.AllPieces())
             return false;
         int square = BitscanForward(bb);
         if(p == PAWN && (Rank(square) == RANK1 || Rank(square) == RANK8))
@@ -136,16 +123,7 @@ std::string Fen::SetRandomPosition(Board& board) {
         } //p
     } //c
 
-    //Update state and history
-    board.UpdateBitboards();
-    assert(board.m_ply >= 0);
-    board.m_history[board.m_ply].fiftyrule = board.m_fiftyrule;
-    board.m_history[board.m_ply].castling = board.m_castlingRights;
-    board.m_history[board.m_ply].enpassant = board.m_enPassantSquare;
-    board.m_zobristKey.SetKey(board);
-    board.m_pawnKey.SetPawnKey(board);
-    board.m_history[board.m_ply].zkey = board.ZKey();
-    board.m_checkCalculated = false;
+    board.InitStateAndHistory();
 
     int random = rng.Random(0, 1);
     board.m_activePlayer = random ? WHITE : BLACK;
