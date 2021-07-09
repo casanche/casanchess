@@ -9,7 +9,7 @@
 
 #include <vector>
 
-const int MAX_ROOTMOVES = 250;
+const int MAX_ROOTMOVES = 256;
 
 struct Limits {
     bool infinite = false;
@@ -27,66 +27,46 @@ struct Limits {
     int movesToGo = 0;
 };
 
-struct RootMove {
-    Move move;
-    unsigned int nodeCount = 0;
+class SearchDebug {
+public:
+    void Increment(std::string theVariable) { debugVariables[theVariable]++; };
+    void Print();
+private:
+    void Transform();
+    
+    std::map<std::string, int> debugVariables;
 };
 
 class Search {
-
-    class Debug {
-    public:
-        void Increment(std::string theVariable) { debugVariables[theVariable]++; };
-        void Print();
-    private:
-        void Transform();
-        std::map<std::string, int> debugVariables;
-    };
-    
 public:
     Search();
-    Search(Board board);
 
+    //Start search
     void IterativeDeepening(Board &board);
-
-    //Interface
-    inline void MakeMove(Board &board) { board.MakeMove(m_bestMove); };
 
     //Flow
     int64_t ElapsedTime() { return m_clock.Elapsed(); }
     void Stop() { m_stop = true; }
     void DebugMode() { m_debugMode = true; }
 
-    //Set limits
+    //Limits
     Limits GetLimits() { return m_limits; }
     void AllocateLimits(Board &board, Limits limits);
-    inline void FixDepth(int depth) {
-        m_allocatedTime = INFINITE;
-        m_maxDepth = depth;
-    }
-    //In milliseconds
-    inline void FixTime(int time) {
-        m_allocatedTime = INFINITE;
-        m_forcedTime = time;
-    }
-    inline void FixNodes(int nodes) {
-        m_allocatedTime = INFINITE;
-        m_forcedNodes = nodes;
-    }
-    inline void Infinite() {
-        m_allocatedTime = INFINITE;
-    }
+    void FixDepth(int depth);
+    void FixTime(int time); //In milliseconds
+    void FixNodes(int nodes);
+    void Infinite();
 
     //Getters
     Move BestMove() const { return m_bestMove; };
 
-    //Debug
-    void ProbeBoard(Board& board);
+    //Interface
+    void MakeMove(Board &board) { board.MakeMove(m_bestMove); };
 
 private:
-    int QuiescenceSearch(Board &board, int alpha, int beta);
-    int NegaMax(Board  &board, int depth, int alpha, int beta);
     int RootMax(Board &board, int depth, int alpha, int beta);
+    int NegaMax(Board  &board, int depth, int alpha, int beta);
+    int QuiescenceSearch(Board &board, int alpha, int beta);
 
     int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
 
@@ -125,18 +105,15 @@ private:
     int m_ply;
     int m_plyqs;
     int m_selPly;
-    u8 m_counter;
+    u8 m_searchCount;
     bool m_nullmoveAllowed;
 
     //Heuristics
     Heuristics m_heuristics;
 
-    //Root moves
-    std::vector<RootMove> m_rootMoves;
-
     //Debug
     bool m_debugMode;
-    Debug m_debug;
+    SearchDebug m_debug;
 };
 
 #endif //SEARCH_H

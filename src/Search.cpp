@@ -19,6 +19,8 @@ const int NULLMOVE_REDUCTION_FACTOR = 3;
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
 
+const int UCI_OUTPUT_CURRMOVE_MINTIME = 1000; //ms
+
 #define DRAW_SCORE(ply) (ply & 1 ? 10 : -10)
 
 Search::Search() {
@@ -29,7 +31,7 @@ Search::Search() {
 
     m_bestScore = -INFINITE_SCORE;
 
-    m_counter = 0;
+    m_searchCount = 0;
     m_debugMode = false;
 
     ClearSearch();
@@ -56,14 +58,19 @@ void Search::ClearSearch() {
 }
 
 void Search::IterativeDeepening(Board &board) {
-    m_counter++;
-    m_clock.Start();
+    m_searchCount++;
 
+    m_clock.Start();
     ClearSearch();
     m_heuristics.history.Age();
 
     for(m_depth = 1; m_depth <= m_maxDepth; m_depth++) {
-        m_ply = 0;
+        assert(m_ply == 0);
+        assert(m_plyqs == 0);
+        assert(m_nullmoveAllowed);
+
+        //m_ply = 0;
+        m_selPly = 0;
         int alpha, beta, score;
 
         //Aspiration window
@@ -89,8 +96,6 @@ void Search::IterativeDeepening(Board &board) {
 
         if(m_stop)
             break;
-
-        //Filling variables
         m_elapsedTime = ElapsedTime();
         m_nps = static_cast<int>(1000 * m_nodes / (m_elapsedTime+1));
 
@@ -114,10 +119,9 @@ void Search::IterativeDeepening(Board &board) {
             newBoard.MakeMove(bestMove);
         }
 
-        //Uci output
         UciOutput(PV);
 
-        if(m_elapsedTime > (m_allocatedTime / 2))
+        if(m_elapsedTime > (m_allocatedTime / 2)) //check
              break;
 
         D( m_debug.Print() );
@@ -147,11 +151,28 @@ void Search::UciOutput(std::string PV) {
     std::cout << std::endl;
 }
 
+//Set limits
+void Search::FixDepth(int depth) {
+    m_allocatedTime = INFINITE;
+    m_maxDepth = depth;
+}
+void Search::FixTime(int time) {
+    m_allocatedTime = INFINITE;
+    m_forcedTime = time;
+}
+void Search::FixNodes(int nodes) {
+    m_allocatedTime = INFINITE;
+    m_forcedNodes = nodes;
+}
+void Search::Infinite() {
+    m_allocatedTime = INFINITE;
+}
+
 int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     Move bestMove;
     int score;
 
-    int alphaOrig = alpha;
+    int alphaOriginal = alpha;
 
     D( m_debug.Increment("RootMax Hit") );
 
@@ -162,15 +183,13 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
     SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
 
-    int count = 0;
-    for(size_t i = 0; i < moves.size(); i++) {
-        count++;
-
-        Move move = moves[i];
+    int moveNumber = 0;
+    for(auto move : moves) {
+        moveNumber++;
 
         //Uci output
-        if(m_elapsedTime > 1000) {
-            std::cout << "info currmovenumber " << count;
+        if(m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
+            std::cout << "info currmovenumber " << moveNumber;
             std::cout << " currmove " << move.Notation();
             std::cout << std::endl;
         }
@@ -200,12 +219,12 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     }
 
     //Fill transposition tables
-    bool outOfLimits = alpha <= alphaOrig || alpha >= beta;
+    bool outOfLimits = alpha <= alphaOriginal || alpha >= beta;
     if(!m_stop && !outOfLimits) {
         m_bestMove = bestMove;
         m_bestScore = alpha;
 
-        Hash::tt.AddEntry(board.ZKey(), m_bestScore, TTENTRY_TYPE::EXACT, m_bestMove, depth, m_ply, m_counter);
+        Hash::tt.AddEntry(board.ZKey(), m_bestScore, TTENTRY_TYPE::EXACT, m_bestMove, depth, m_ply, m_searchCount);
     }
 
     return alpha;
@@ -249,7 +268,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     // --------- Quiescence search -----------
-    if(depth <= 0 && !inCheck) {
+    if(depth <= 0 && !inCheck) { //check !inCheck??
         return QuiescenceSearch(board, alpha, beta);
     }
 
@@ -324,7 +343,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("NullMove Cut-offs - Depth " + std::to_string(depth)) );
             if(IsMateValue(nullScore))
                 nullScore = beta;  //to avoid false mates in zugzwang
-            Hash::tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_counter);
+            Hash::tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount);
             return nullScore;
         }
     }
@@ -384,7 +403,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // ------- Futility pruning --------
         //Don't prune: hash move, promotions, SEE > 0 captures
-        if(doFutility && move.Score() < 241) {
+        const int SEE_ZERO = 240;
+        if(doFutility && move.Score() <= SEE_ZERO) {
             D( m_debug.Increment("Futility - FutileMove - " + std::to_string(depth)) );
             if(eval + futilityMargin > bestScore) {
                 bestScore = eval + futilityMargin;
@@ -453,7 +473,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             if(score >= beta) {
                 D( m_debug.Increment("NegaMax Cutoffs (score >= beta)") );
 
-                Hash::tt.AddEntry(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_counter);
+                Hash::tt.AddEntry(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount);
 
                 //update heuristics
                 if( move.IsQuiet() ) {
@@ -471,7 +491,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     if(bestMove.MoveType() != 0) {
         TTENTRY_TYPE type = (alpha > alphaOriginal) ? TTENTRY_TYPE::EXACT : TTENTRY_TYPE::UPPER_BOUND;
-        Hash::tt.AddEntry(board.ZKey(), bestScore, type, bestMove, depth, m_ply, m_counter);
+        Hash::tt.AddEntry(board.ZKey(), bestScore, type, bestMove, depth, m_ply, m_searchCount);
     }
 
     return bestScore;
@@ -603,37 +623,23 @@ void Search::AllocateLimits(Board &board, Limits limits) {
     m_forcedTime = INFINITE;
     m_forcedNodes = INFINITE_U64;
 
-    if(limits.infinite)   { Infinite(); return; }
-    if(limits.depth)      { FixDepth(limits.depth); return; }
-    if(limits.moveTime)   { FixTime(limits.moveTime); return; }
-    if(limits.nodes)      { FixNodes(limits.nodes); return; }
+    if(limits.infinite) { Infinite(); return; }
+    if(limits.depth)    { FixDepth(limits.depth); return; }
+    if(limits.moveTime) { FixTime(limits.moveTime); return; }
+    if(limits.nodes)    { FixNodes(limits.nodes); return; }
     limits.movesToGo = 20 + 20 * limits.ponderhit; //estimation of the remaining moves
 
     COLOR color = board.ActivePlayer();
 
-    int myTime = (color == WHITE) ? limits.wtime : limits.btime;
+    int myTime   = (color == WHITE) ? limits.wtime : limits.btime;
     int yourTime = (color == WHITE) ? limits.btime : limits.wtime;
 
-    int myInc = (color == WHITE) ? limits.winc : limits.binc;
+    int myInc    = (color == WHITE) ? limits.winc  : limits.binc;
 
     m_allocatedTime = myTime / limits.movesToGo + myInc;
 
     if(m_debugMode)
         std::cout << "info string TimeAllocation " <<  myTime << " " << yourTime << " " << m_allocatedTime << std::endl;
-}
-
-void Search::ProbeBoard(Board& board) {
-    MoveGenerator gen;
-    MoveList moves = gen.GenerateMoves(board);
-
-    for(auto move : moves)  {
-        board.MakeMove(move);
-        TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), 0);
-        if(ttEntry) {
-            P(move.Notation() << " " << ttEntry->type << "\t" << ttEntry->score);
-        }
-        board.TakeMove(move);
-    }
 }
 
 int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV) {
@@ -666,7 +672,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     return reduction;
 }
 
-void Search::Debug::Transform() {
+void SearchDebug::Transform() {
     std::string colorGreen = "\033[1;92m";
     std::string colorBlack = "\033[0m";
     debugVariables[colorGreen+"NegaMax Calls to Evaluation (permil)"+colorBlack] = 1000 * (double)debugVariables["NegaMax Calls to Evaluation"] / debugVariables["NegaMax Hits"];
@@ -676,7 +682,7 @@ void Search::Debug::Transform() {
     debugVariables[colorGreen+"TT Hits (in Quiescence) (permil)"+colorBlack] = 1000 * (double)debugVariables["TT Hits (in Quiescence)"] / debugVariables["Quiescence Hits"];
 }
 
-void Search::Debug::Print() {
+void SearchDebug::Print() {
     Transform();
     for(auto variable : debugVariables) {
         P("\t " << variable.first << " " << variable.second);

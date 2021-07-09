@@ -162,13 +162,10 @@ namespace {
     bool ByScore(const Move &lmove, const Move &rmove) {
         return lmove.Score() > rmove.Score();
     }
-    bool ByNodes(const RootMove &lhs, const RootMove &rhs) {
-        return lhs.nodeCount > rhs.nodeCount;
-    }
 
-}
+} //unnamed namespace
 
-//Named namespace (public interface)
+//Public Interface
 void Sorting::SortQuiescence(Board &board, MoveList &moveList) {
     RateQuiescence(board, moveList);
     std::sort(moveList.begin(), moveList.end(), ByScore);
@@ -179,13 +176,8 @@ void Sorting::SortEvasions(Board &board, MoveList &moveList) {
     std::sort(moveList.begin(), moveList.end(), ByScore);
 }
 
-
 void Sorting::SortMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply) {
     RateMoves(board, moveList, tt, heuristics, ply);
 
     std::sort(moveList.begin(), moveList.end(), ByScore);
-}
-
-void Sorting::SortRootMoves(std::vector<RootMove>& rootMoves) {
-    std::sort(rootMoves.begin(), rootMoves.end(), ByNodes);
 }

@@ -4,6 +4,7 @@
 using namespace Attacks;
 #include "BitboardUtils.h"
 using namespace BitboardUtils;
+#include "Hash.h"
 #include "Move.h"
 #include "MoveGenerator.h"
 
@@ -112,6 +113,20 @@ void Board::Print(bool bits) const {
             std::cout << std::endl << "--------------------------------" << std::endl;
         }
         square++;
+    }
+}
+
+void Board::ShowHashMoves() {
+    MoveGenerator gen;
+    MoveList moves = gen.GenerateMoves(*this);
+
+    for(auto move : moves)  {
+        MakeMove(move);
+        TTEntry* ttEntry = Hash::tt.ProbeEntry(ZKey(), 0);
+        if(ttEntry) {
+            P(move.Notation() << " " << ttEntry->type << "\t" << ttEntry->score);
+        }
+        TakeMove(move);
     }
 }
 

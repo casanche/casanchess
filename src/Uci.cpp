@@ -84,8 +84,8 @@ void Uci::Launch() {
             int depth;
             stream >> depth;
 
-            typedef std::chrono::high_resolution_clock Clock;
-            auto t0 = Clock::now();
+            Utils::Clock clock;
+            clock.Start();
 
             Board board;
             board.Print();
@@ -95,15 +95,13 @@ void Uci::Launch() {
                 board.Divide(depth);
             }
 
-            auto t1 = Clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1-t0);
-            std::cout << "[" << token << " " << depth << "] " << duration.count() << " ms" << std::endl;
+            std::cout << "[" << token << " " << depth << "] " << clock.Elapsed() << " ms" << std::endl;
+        }
+        else if(token == "hashmoves") {
+            m_board.ShowHashMoves();
         }
         else if(token == "mirror") {
             m_board.Mirror();
-        }
-        else if(token == "probe") {
-            m_search.ProbeBoard(m_board);
         }
         else if(token == "print") {
             m_board.Print();

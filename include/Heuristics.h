@@ -2,7 +2,6 @@
 #define HEURISTICS_H
 
 #include "Move.h"
-struct RootMove;
 
 class Board;
 class TT;
@@ -15,7 +14,6 @@ namespace Sorting {
     void SortQuiescence(Board &board, MoveList &moveList);
     void SortEvasions(Board &board, MoveList &moveList);
     void SortMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply);
-    void SortRootMoves(std::vector<RootMove>& rootMoves);
 }
 
 class KillerHeuristics {
@@ -79,8 +77,6 @@ public:
         return m_maxValue;
     }
 private:
-    int m_history[2][64][64]; //[COLOR][SQUARE][SQUARE]
-    int m_maxValue;
     void TestOverflow(const Move& move, COLOR activeColor) {
         int value = m_history[activeColor][move.FromSq()][move.ToSq()];
         if(value > m_maxValue) {
@@ -88,8 +84,12 @@ private:
         }
         if(m_maxValue > VALUE_TO_RESET_HISTORY) {
             LoopHistoryTable(m_history[color][from][to] /= 4);
+            m_maxValue /= 4;
         }
     }
+
+    int m_history[2][64][64]; //[COLOR][SQUARE][SQUARE]
+    int m_maxValue;
 };
 
 struct Heuristics {

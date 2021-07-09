@@ -34,7 +34,9 @@ public:
     u64 Perft(int depth);
     void Divide(int depth);
     
+    //Print, Debug
     void Print(bool bits = false) const;
+    void ShowHashMoves();
     void ShowHistory();
     void ShowMoves();
 
