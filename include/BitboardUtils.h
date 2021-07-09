@@ -6,8 +6,27 @@
 namespace BitboardUtils {
     //Gives the value of the bit in 'position'
     template <typename T>
-    bool GetBit(const T& object, int position) {
+    bool GetBit(T object, int position) {
         return (object >> position) & 1;
+    }
+
+    //BitMask(4) returns 0b1111
+    constexpr u64 BitMask(int width, int startIndex = 0) {
+        return ((ONE << width) - 1) << startIndex;
+    }
+    constexpr u64 ClearMask(int width, int startIndex = 0) {
+        return ~BitMask(width, startIndex);
+    }
+
+    //Take 'width' bits from the 'input', and move them 'startIndex' times
+    template <typename T>
+    inline u32 PushBits(T input, int width, int startIndex) {
+        return (input & BitMask(width)) << startIndex;
+    }
+    //Take 'width' bits from the 'input', starting from 'startIndex'
+    template <typename T>
+    inline u32 RetrieveBits(T input, int width, int startIndex) {
+        return (input & BitMask(width, startIndex)) >> startIndex;
     }
 
     int BitscanForward(Bitboard b);

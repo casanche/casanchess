@@ -10,17 +10,17 @@ Move::Move() : m_move(0) {}
 
 Move::Move(u32 from, u32 to, PIECE_TYPE piece, MOVE_TYPE moveType) : m_move(0) {
     m_move =
-            (from & 0x3f)
-        | ( (to & 0x3f) << 6)
-        | ( (piece & 0xf) << 12)
-        | ( (moveType & 0xf) << 15);
+          PushBits(from, 6, 0)
+        | PushBits(to, 6, 6)
+        | PushBits(piece, 3, 12)
+        | PushBits(moveType, 3, 15);
 }
 
 std::string Move::Notation() {
     if( MoveType() == NULLMOVE ) return "0000";
     
-    bool descriptive = 1;
-    if(descriptive) {
+    const bool useDescriptive = true;
+    if(useDescriptive) {
         return DescriptiveNotation();
     }
 
@@ -108,13 +108,6 @@ void Move::Print() {
     std::cout << std::endl;
 }
 
-void Move::PrintLine() {
-    std::cout
-        << Notation()
-        << " " << " bla "
-        << std::endl;
-}
-
 void Move::PrintBits32(u32 word, int startBit, int endBit) const {
     for(int i = startBit; i < endBit; ++i) {
         std::cout << GetBit(word, i) << "";
@@ -133,6 +126,6 @@ MoveData Move::Data() const {
 
 bool Move::IsUnderpromotion() const {
     bool underpromotion = PromotionType() != PROMOTION_QUEEN;
-    assert( !(underpromotion && !IsPromotion()) );
+    assert( (!IsPromotion() && underpromotion) == false );
     return underpromotion;
 }

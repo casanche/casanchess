@@ -5,8 +5,7 @@
 #include "BitboardUtils.h"
 #include <vector>
 
-//CAPTURE + PROMOTION = PROMOTION_CAPTURE
-enum MOVE_TYPE { NULLMOVE, NORMAL, CAPTURE, CASTLING, PROMOTION, DOUBLE_PUSH, PROMOTION_CAPTURE, ENPASSANT };
+enum MOVE_TYPE { NULLMOVE, NORMAL, CAPTURE, CASTLING, PROMOTION, DOUBLE_PUSH, PROMOTION_CAPTURE, ENPASSANT }; //CAPTURE + PROMOTION = PROMOTION_CAPTURE
 enum PROMOTION_TYPE { PROMOTION_QUEEN, PROMOTION_KNIGHT, PROMOTION_ROOK, PROMOTION_BISHOP };
 enum CASTLING_TYPE { CASTLING_K=1, CASTLING_Q=2, CASTLING_k=4, CASTLING_q=8 };
 
@@ -19,15 +18,14 @@ public:
 
     std::string Notation();
     void Print();
-    void PrintLine();
 
-    inline u32 FromSq() const { return m_move & 0x3f; };
-    inline u32 ToSq() const { return (m_move & 0xfc0) >> 6; };
-    inline PIECE_TYPE PieceType()         const { return (PIECE_TYPE)( (m_move & 0x7000) >> 12);       };
-    inline MOVE_TYPE MoveType()           const { return (MOVE_TYPE)( (m_move & 0x38000) >> 15);       };
-    inline PIECE_TYPE CapturedType()      const { return (PIECE_TYPE)( (m_move & 0x1c0000) >> 18);     };
-    inline PROMOTION_TYPE PromotionType() const { return (PROMOTION_TYPE)( (m_move & 0x600000) >> 21); };
-    inline u8 Score()                     const { return (u8)( (m_move & 0x7f800000) >> 23);           };
+    inline u32            FromSq()        const { return                  RetrieveBits(m_move, 6, 0);  };
+    inline u32            ToSq()          const { return                  RetrieveBits(m_move, 6, 6);  };
+    inline PIECE_TYPE     PieceType()     const { return (PIECE_TYPE)     RetrieveBits(m_move, 3, 12); };
+    inline MOVE_TYPE      MoveType()      const { return (MOVE_TYPE)      RetrieveBits(m_move, 3, 15); };
+    inline PIECE_TYPE     CapturedType()  const { return (PIECE_TYPE)     RetrieveBits(m_move, 3, 18); };
+    inline PROMOTION_TYPE PromotionType() const { return (PROMOTION_TYPE) RetrieveBits(m_move, 2, 21); };
+    inline u8             Score()         const { return (u8)             RetrieveBits(m_move, 8, 23); };
 
     MoveData Data() const;
 
@@ -45,20 +43,20 @@ public:
     bool IsUnderpromotion() const;
 
     inline void SetCapturedType(PIECE_TYPE capturedType) {
-        m_move &= ~0x1c0000; //Clears the bits 18-20
-        m_move |= ( (capturedType & 0x7) << 18); //Take the first three bits, and move them 18 times
+        m_move &= ClearMask(3, 18); //Clears the bits 18-20
+        m_move |= PushBits(capturedType, 3, 18);
     }
     inline void SetPromotionFlag(PROMOTION_TYPE flag) {
-        m_move &= ~0x600000; //Clears the bits 21-22
-        m_move |= ( (flag & 0x3) << 21 );
+        m_move &= ClearMask(2, 21); //Clears the bits 21-22
+        m_move |= PushBits(flag, 2, 21);
     }
     inline void SetScore(u8 score) {
-        m_move &= ~0x7f800000; //Clears the bits 23-30
-        m_move |= ( (score & 0xff) << 23 );
+        m_move &= ClearMask(8, 23); //Clears the bits 23-30
+        m_move |= PushBits(score, 8, 23);
     }
 
     bool operator==(const Move& rmove) const {
-        return (this->m_move & 0x7fffff) == (rmove.m_move & 0x7fffff); //Get only the 0-22 bits
+        return (this->m_move & BitMask(23)) == (rmove.m_move & BitMask(23)); //Get only the 0-22 bits
     };
     bool operator!=(const Move& rmove) const {
         return !(*this == rmove);
@@ -69,7 +67,7 @@ private:
     std::string PieceTypeToNotation(PIECE_TYPE pieceType);
     std::string DescriptiveNotation();
 
-    void PrintBits32(u32 word, int start, int length) const;
+    void PrintBits32(u32 word, int startBit, int endBit) const;
 
     // Integer that stores all the move data
     //  0-5 bits: From Square (6)
