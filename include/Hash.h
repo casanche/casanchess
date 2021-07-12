@@ -5,6 +5,8 @@
 #include "Move.h"
 
 const int MAX_DEPTH = 128;
+const uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
+const int PAWN_HASH_SIZE = 8192; //In number of entries
 
 // =========================
 // == Transposition table ==
@@ -24,8 +26,6 @@ struct TTEntry {
 
     void Clear();
 };
-
-const uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
 
 class TT {
 public:
@@ -51,7 +51,6 @@ private:
 // =====================
 // == Pawn-hash entry ==
 // =====================
-const int PAWN_HASH_SIZE = 8192; //In number of entries
 
 struct PawnEntry {
     u64 zkey;

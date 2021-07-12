@@ -91,5 +91,5 @@ void Interface::Start(std::string fenString) {
 
 void Interface::PrintWelcome() {
     P(" CASANCHESS ");
-    // P(" Author: Carlos Sánchez Mayordomo ");
+    P(" Author: Carlos Sánchez Mayordomo ");
 }
