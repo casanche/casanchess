@@ -7,6 +7,7 @@
 #include <sstream>
 
 extern bool UCI_PONDER;
+extern bool UCI_OUTPUT;
 
 class Uci {
 public:

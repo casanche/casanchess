@@ -106,7 +106,7 @@ void MoveGenerator::GenerateEvasionMoves(Board &board) {
 
 Move MoveGenerator::RandomMove() {
     Utils::PRNG rng;
-    int randomIndex = rng.Random(0, m_moves.size());
+    int randomIndex = rng.Random(0, m_moves.size()-1);
 
     return m_moves[randomIndex];
 }

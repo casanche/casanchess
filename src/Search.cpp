@@ -119,7 +119,8 @@ void Search::IterativeDeepening(Board &board) {
             newBoard.MakeMove(bestMove);
         }
 
-        UciOutput(PV);
+        if(UCI_OUTPUT)
+            UciOutput(PV);
 
         if(m_elapsedTime > (m_allocatedTime / 2)) //check
              break;
@@ -127,10 +128,12 @@ void Search::IterativeDeepening(Board &board) {
         D( m_debug.Print() );
     }
 
-    std::cout << "bestmove " << m_bestMove.Notation();
-    if(UCI_PONDER)
-        std::cout << " ponder " << m_ponderMove.Notation();
-    std::cout << std::endl;
+    if(UCI_OUTPUT) {
+        std::cout << "bestmove " << m_bestMove.Notation();
+        if(UCI_PONDER)
+            std::cout << " ponder " << m_ponderMove.Notation();
+        std::cout << std::endl;
+    }
 }
 void Search::UciOutput(std::string PV) {
     std::cout << "info depth " << m_depth;

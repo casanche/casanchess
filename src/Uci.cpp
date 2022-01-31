@@ -9,6 +9,7 @@
 #include <thread>
 
 bool UCI_PONDER = false;
+bool UCI_OUTPUT = true;
 
 ////https://ucichessengine.wordpress.com/2011/03/16/description-of-uci-protocol/
 

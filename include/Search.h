@@ -59,6 +59,7 @@ public:
 
     //Getters
     Move BestMove() const { return m_bestMove; };
+    int BestScore() const { return m_bestScore; };
 
     //Interface
     void MakeMove(Board &board) { board.MakeMove(m_bestMove); };

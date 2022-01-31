@@ -42,6 +42,7 @@ public:
 
     // Fen
     void SetFen(std::string fenString) { Fen::SetPosition(*this, fenString); }
+    std::string GetSimplifiedFen() { return Fen::GetSimplifiedFen(*this); };
 
     // MoveMaker
     void MakeMove(Move move) { MoveMaker::MakeMove(*this, move); }
