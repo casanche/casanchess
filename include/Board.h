@@ -42,7 +42,8 @@ public:
 
     // Fen
     void SetFen(std::string fenString) { Fen::SetPosition(*this, fenString); }
-    std::string GetSimplifiedFen() { return Fen::GetSimplifiedFen(*this); };
+    std::string SetFenRandom() { return Fen::SetRandomPosition(*this); }
+    std::string GetSimplifiedFen() { return Fen::GetSimplifiedFen(*this); }
 
     // MoveMaker
     void MakeMove(Move move) { MoveMaker::MakeMove(*this, move); }
@@ -64,6 +65,7 @@ public:
     PIECE_TYPE GetPieceAtSquare(COLOR color, int square) const;
     bool IsAttacked(COLOR color, int square) const;
     bool IsCheck();
+    bool IsCheckAnyColor();
     bool IsRepetitionDraw(int searchPly = 0);
     void Mirror();
     int SquareToIndex(std::string square) const;

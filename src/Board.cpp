@@ -291,6 +291,21 @@ bool Board::IsCheck() {
     return m_kingAttackers[color];
 }
 
+bool Board::IsCheckAnyColor() {
+    //Active color
+    m_checkCalculated = false;
+    bool check_active = IsCheck();
+
+    //Inactive color
+    m_checkCalculated = false;
+    m_activePlayer = (COLOR)!m_activePlayer;
+    bool check_inactive = IsCheck();
+    m_activePlayer = (COLOR)!m_activePlayer;
+    m_checkCalculated = false;
+
+    return check_active || check_inactive;
+}
+
 bool Board::IsRepetitionDraw(int searchPly) {
     int rep = 0;
 

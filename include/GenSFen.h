@@ -21,10 +21,12 @@ public:
 private:
     void Games(std::string filename);
     void Random(std::string filename);
-    void RandomBenchmark();
+    void RandomBenchmark(int maxGames);
 
-    void WriteEvals(Board& board, Search& search, CurrentPosition& currentPosition, std::ofstream& outputFile);
+    void WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition,
+                    uint thresholdEval, uint thresholdEvalBoth, uint minPly = 0);
 
+    int GenerateRandomPosition(Board& board, std::string& position);
     bool NoMoves(Board& board);
     BookPositions ReadBook(const std::string& bookPath);
     Move RandomMove(Board& board);
