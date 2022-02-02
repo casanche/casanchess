@@ -39,6 +39,11 @@ add_library(engine STATIC ${SOURCES})
 add_executable(casanchess Main.cpp)
 target_link_libraries(casanchess engine ${LINK_LIBRARIES}) #CMAKE_LINK_LIBRARY_FLAG
 
+## GenSFen
+file(GLOB GENSFEN_SOURCES src/gensfen/*.cpp)
+add_executable(gensfen ${GENSFEN_SOURCES})
+target_link_libraries(gensfen engine ${LINK_LIBRARIES})
+
 option(BUILD_TESTS "Build tests" ON)
 option(BUILD_TESTS_EXTRA "Build extra tests" OFF)
 if(BUILD_TESTS)

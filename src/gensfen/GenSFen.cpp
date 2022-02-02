@@ -1,4 +1,4 @@
-#include "GenSFen.h"
+#include "gensfen/GenSFen.h"
 
 #include "BitboardUtils.h"
 #include "Constants.h"
@@ -8,7 +8,16 @@
 #include <sstream>
 #include <thread>
 
-const int CONCURRENCY = 11;
+const int CONCURRENCY = std::thread::hardware_concurrency() - 1;
+const std::string OUTPUT_PATH = "../dev/nnue/sfen/latest/";
+const std::string BOOK_FILE = "../data/books/book5.epd";
+
+struct CurrentPosition {
+    Move bestMove = Move();
+    int calculatedDepth = -1;
+    int evalFail = 0;
+    int evalPass = 0;
+};
 
 struct State {
     int consecutiveFailedEvals = 0;
@@ -32,7 +41,6 @@ struct State {
 
 GenSFen::GenSFen() : m_rng(0) {
     UCI_OUTPUT = false;
-    m_createDebugFile = false;
 }
 
 // Supported modes: 'games', 'random', 'random_benchmark' or 'benchmark'
@@ -55,7 +63,7 @@ void GenSFen::Run(const std::string& gensfen_mode) {
     }
 
     for(int i = 1; i <= CONCURRENCY; i++) {
-        std::string filename = "../dev/nnue/sfen/latest/evals_latest_" + std::to_string(i) + ".epd";
+        std::string filename = OUTPUT_PATH + "evals_generated_" + std::to_string(i) + ".epd";
         threads.push_back( std::thread(function, this, filename) );
     }
     for(auto& th : threads) {
@@ -67,7 +75,7 @@ void GenSFen::Games(std::string filename) {
     std::ofstream outputFile;
     outputFile.open(filename);
 
-    BookPositions bookPositions = ReadBook("../data/books/book5.epd");
+    BookPositions bookPositions = ReadBook(BOOK_FILE);
 
     Board board;
     Search search;
@@ -206,6 +214,39 @@ void GenSFen::RandomBenchmark(int maxGames) {
     P("passed: " << passed << " total time " << global_clock.Elapsed() );
 }
 
+int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
+    Search search_depth1;
+    search_depth1.FixDepth(1);
+
+    bool validScore = false;
+    int tries = 0;
+
+    do {
+        position = board.SetFenRandom();
+        tries++;
+
+        int nPieces = PopCount(board.AllPieces());
+        if(NoMoves(board) || nPieces <= 6)
+            continue;
+        search_depth1.IterativeDeepening(board);
+        int score_active = search_depth1.BestScore();
+
+        board.MakeNull();
+        if(NoMoves(board))
+            continue;
+        search_depth1.IterativeDeepening(board);
+        int score_inactive = search_depth1.BestScore();
+
+        bool evalPass = (abs(score_active) < 66) || (abs(score_inactive) < 66);
+        bool evalPassBoth = abs(score_active) < 150 && abs(score_inactive) < 150;
+        validScore = evalPass && evalPassBoth;
+        if(validScore)
+            board.TakeNull();
+    } while(!validScore);
+
+    return tries;
+}
+
 // Write evals if:
 // - Board not in check
 // - Best move is quiet at low depths (to skip trivial captures)
@@ -265,39 +306,6 @@ void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     outputFile << fenString << ";" << eval[WHITE]/100. << ";" << eval[BLACK]/100. << std::endl;
 
     board.TakeNull();
-}
-
-int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
-    Search search_depth1;
-    search_depth1.FixDepth(1);
-
-    bool validScore = false;
-    int tries = 0;
-
-    do {
-        position = board.SetFenRandom();
-        tries++;
-
-        int nPieces = PopCount(board.AllPieces());
-        if(NoMoves(board) || nPieces <= 6)
-            continue;
-        search_depth1.IterativeDeepening(board);
-        int score_active = search_depth1.BestScore();
-
-        board.MakeNull();
-        if(NoMoves(board))
-            continue;
-        search_depth1.IterativeDeepening(board);
-        int score_inactive = search_depth1.BestScore();
-
-        bool evalPass = (abs(score_active) < 66) || (abs(score_inactive) < 66);
-        bool evalPassBoth = abs(score_active) < 150 && abs(score_inactive) < 150;
-        validScore = evalPass && evalPassBoth;
-        if(validScore)
-            board.TakeNull();
-    } while(!validScore);
-
-    return tries;
 }
 
 bool GenSFen::NoMoves(Board& board) {
