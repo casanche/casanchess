@@ -1,1 +1,5 @@
+.cache/
+data/
+dev/
+
 *.json
