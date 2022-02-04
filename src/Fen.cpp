@@ -112,9 +112,9 @@ std::string Fen::SetRandomPosition(Board& board) {
         if(p == BISHOP && RedundantBishop(board, c, bb))
             return false;
         int nHeavyPieces = PopCount(board.m_allpieces ^ board.Piece(c, PAWN) ^ board.Piece((COLOR)!c, PAWN));
-        if(p == KING && nHeavyPieces > 4 && RelativeRank(c, square) > RANK2)
+        if(p == KING && nHeavyPieces >= 9 && nHeavyPieces <= 12 && RelativeRank(c, square) > RANK4)
             return false;
-        if(p == KING && nHeavyPieces <= 4 && RelativeRank(c, square) > RANK4)
+        if(p == KING && nHeavyPieces >= 13 && RelativeRank(c, square) > RANK2)
             return false;
         if(p != PAWN && board.AttackersTo(c, square))
             return false;

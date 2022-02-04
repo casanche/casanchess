@@ -108,7 +108,7 @@ void GenSFen::Games(std::string filename) {
             state.UpdateGame(currentPosition.evalPass, currentPosition.evalFail);
 
             int nPieces = PopCount(board.AllPieces());
-            exitGame = (NoMoves(board) || nPieces <= 6 || board.Ply() > 100 || board.IsRepetitionDraw() || state.consecutiveFailedEvals >= 6);
+            exitGame = (NoMoves(board) || nPieces <= 6 || board.Ply() > 200 || board.IsRepetitionDraw() || state.consecutiveFailedEvals >= 10);
         } while(!exitGame);
 
         state.FinishGame();
@@ -155,7 +155,7 @@ void GenSFen::Random(std::string filename) {
             state.UpdateGame(currentPosition.evalPass, currentPosition.evalFail);
 
             int nPieces = PopCount(board.AllPieces());
-            exitGame = (NoMoves(board) || nPieces <= 6 || board.Ply() > 100 || board.IsRepetitionDraw() || state.consecutiveFailedEvals >= 6);
+            exitGame = (NoMoves(board) || nPieces <= 6 || board.Ply() > 40 || board.IsRepetitionDraw() || state.consecutiveFailedEvals >= 6);
         } while(!exitGame);
 
         state.FinishGame();
