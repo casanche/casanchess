@@ -10,6 +10,7 @@
 
 bool UCI_PONDER = false;
 bool UCI_OUTPUT = true;
+bool UCI_CLASSICAL_EVAL = false;
 
 ////https://ucichessengine.wordpress.com/2011/03/16/description-of-uci-protocol/
 
@@ -46,6 +47,7 @@ void Uci::Launch() {
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
             std::cout << "option name Ponder type check default false" << std::endl;
             std::cout << "option name ClearHash type button" << std::endl;
+            std::cout << "option name ClassicalEval type check default false" << std::endl;
 
             std::cout << "uciok" << std::endl;
         }
@@ -220,6 +222,18 @@ void Uci::SetOption(std::istringstream &stream) {
         }
         else if(token == "ClearHash") {
             Hash::tt.Clear();
+        }
+        else if(token == "ClassicalEval") {
+            stream >> token;
+            if(token != "value")
+                return;
+            stream >> token;
+            P(token);
+
+            if(token == "true")
+                UCI_CLASSICAL_EVAL = true;
+            else if(token == "false")
+                UCI_CLASSICAL_EVAL = false;
         }
         else {
             std::cout << "Unknown option: " << token << std::endl;

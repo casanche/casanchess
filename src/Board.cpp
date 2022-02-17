@@ -1,6 +1,7 @@
 #include "Board.h"
 
 #include "Attacks.h"
+#include "Uci.h"
 using namespace Attacks;
 #include "BitboardUtils.h"
 using namespace BitboardUtils;
@@ -483,9 +484,11 @@ void Board::InitStateAndHistory() {
 
     m_checkCalculated = false;
 
-    nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]);
-    nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
-    nnue.Inputs_FullUpdate();
+    if(!UCI_CLASSICAL_EVAL) {
+        nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]);
+        nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
+        nnue.Inputs_FullUpdate();
+    }
 }
 
 bool Board::CheckIntegrity() const {

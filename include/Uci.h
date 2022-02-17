@@ -8,6 +8,7 @@
 
 extern bool UCI_PONDER;
 extern bool UCI_OUTPUT;
+extern bool UCI_CLASSICAL_EVAL;
 
 class Uci {
 public:

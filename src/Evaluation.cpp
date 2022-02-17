@@ -5,6 +5,7 @@ using namespace Evaluation;
 #include "Board.h"
 #include "BitboardUtils.h"
 #include "NNUE.h"
+#include "Uci.h"
 
 namespace Evaluation {
 
@@ -416,10 +417,6 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLOR color) {
 int Evaluation::ClassicalEvaluation(const Board& board) {
     Score score;
     Bitboard attacksMobility[2][8] = {{0}}; //[COLOR][PIECE_TYPE]
-
-    //Automatic draws
-    if( InsufficientMaterial(board) )
-        return 0;
         
     EvalMaterial(board, score);
 
@@ -520,8 +517,13 @@ int Evaluation::Evaluate(const Board& board) {
     if( InsufficientMaterial(board) )
         return 0;
 
-    int color = board.ActivePlayer();
-    int eval = nnue.Evaluate(color);
+    int eval;
+    if(UCI_CLASSICAL_EVAL) {
+        eval = ClassicalEvaluation(board);
+    } else {
+        int color = board.ActivePlayer();
+        eval = nnue.Evaluate(color);
+    }
 
     return eval;
 }

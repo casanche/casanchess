@@ -1,6 +1,7 @@
 #include "MoveMaker.h"
 #include "Board.h"
 #include "NNUE.h"
+#include "Uci.h"
 
 #include <cstring> //for memcpy, delete this
 
@@ -13,7 +14,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     MOVE_TYPE moveType = move.MoveType();
 
     //Before any change in the board state
-    if(update_nnue)
+    if(update_nnue && !UCI_CLASSICAL_EVAL)
         nnue.SavePosition(board.m_ply);
 
     //Increase ply
@@ -85,7 +86,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     board.m_checkCalculated = false;
 
     //NNUE update
-    if(update_nnue) {
+    if(update_nnue && !UCI_CLASSICAL_EVAL) {
         if(pieceType != KING && (moveType == NORMAL || moveType == DOUBLE_PUSH || moveType == CAPTURE)) { //Incremental update
             nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq);
 
@@ -170,7 +171,8 @@ void MoveMaker::TakeMove(Board& board, Move move) {
     board.m_checkCalculated = false;
 
     //Retrieve NNUE
-    nnue.RestorePosition(board.m_ply);
+    if(!UCI_CLASSICAL_EVAL)
+        nnue.RestorePosition(board.m_ply);
 
     //Asserts
     assert(board.CheckIntegrity());
