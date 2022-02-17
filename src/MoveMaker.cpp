@@ -64,7 +64,7 @@ void MoveMaker::MakeMove(Board& board, Move move) {
     board.m_zobristKey.UpdateColor();
 
     //Store irreversible information (to help a later TakeMove)
-    assert(board.m_ply >= 0 && board.m_ply <= MAX_PLIES);
+    assert(board.m_ply >= 0 && board.m_ply <= MAX_PLY);
     board.m_history[board.m_ply].fiftyrule = board.m_fiftyrule;
     board.m_history[board.m_ply].castling = board.m_castlingRights;
     board.m_history[board.m_ply].zkey = board.ZKey();
@@ -165,7 +165,7 @@ void MoveMaker::MakeNull(Board& board) {
     Move move = Move();
 
     board.m_ply++;
-    assert(board.m_ply <= MAX_PLIES);
+    assert(board.m_ply <= MAX_PLY);
 
     //Reset en-passant square
     if(board.m_enPassantSquare) {

@@ -427,7 +427,7 @@ void Board::ClearBits() {
         }
     }
 
-    for(int i = 0; i < MAX_PLIES; ++i) {
+    for(int i = 0; i < MAX_PLY; ++i) {
         m_history[i].Clear();
     }
 
@@ -489,7 +489,7 @@ bool Board::CheckIntegrity() const {
              && PopCount( Piece(WHITE, PAWN) ) <= 8
              && PopCount( Piece(BLACK, PAWN) ) <= 8
              && PopCount( EnPassantSquare() ) <= 1
-             && Ply() <= MAX_PLIES
+             && Ply() <= MAX_PLY
              && ActivePlayer() != NO_COLOR
         ;
 }

@@ -7,8 +7,6 @@
 #include "Fen.h"
 #include "MoveMaker.h"
 
-const int MAX_PLIES = 2560;
-
 struct BoardHistory {
     u64 zkey;
     u64 enpassant;
@@ -122,7 +120,7 @@ private:
 
     //History
     unsigned int m_initialPly;
-    BoardHistory m_history[MAX_PLIES];
+    BoardHistory m_history[MAX_PLY];
 
     friend class Fen;
     friend class MoveMaker;

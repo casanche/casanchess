@@ -26,6 +26,7 @@ typedef uint64_t Bitboard;
 const int INFINITE_SCORE = INFINITE_I16 - 1024;
 const int MATESCORE = INFINITE_SCORE - 1024;
 
+const int MAX_PLY = 2560;
 const int SEE_MATERIAL_VALUES[8] = {0, 100, 350, 350, 500, 1050, 0}; //[PIECE]
 
 enum COLOR { WHITE, BLACK, NO_COLOR };

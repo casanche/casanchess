@@ -235,7 +235,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
 int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
-    assert(m_ply <= MAX_PLIES);
+    assert(m_ply <= MAX_PLY);
 
     bool isPV = (beta - alpha) != 1;
 
@@ -502,7 +502,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
 int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
-    assert(m_ply <= MAX_PLIES);
+    assert(m_ply <= MAX_PLY);
 
     D( m_debug.Increment("Quiescence Hits") );
 
