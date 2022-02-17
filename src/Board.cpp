@@ -7,6 +7,7 @@ using namespace BitboardUtils;
 #include "Hash.h"
 #include "Move.h"
 #include "MoveGenerator.h"
+#include "NNUE.h"
 
 #include <iostream>
 #include <sstream>
@@ -481,6 +482,10 @@ void Board::InitStateAndHistory() {
     m_history[m_ply].zkey = ZKey();
 
     m_checkCalculated = false;
+
+    nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]);
+    nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
+    nnue.Inputs_FullUpdate();
 }
 
 bool Board::CheckIntegrity() const {

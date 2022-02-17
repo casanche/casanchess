@@ -4,6 +4,7 @@ using namespace Evaluation;
 #include "Attacks.h"
 #include "Board.h"
 #include "BitboardUtils.h"
+#include "NNUE.h"
 
 namespace Evaluation {
 
@@ -412,7 +413,7 @@ TaperedScore Evaluation::EvalRookOpen(const Board& board, COLOR color) {
     return score;
 }
 
-int Evaluation::Evaluate(const Board& board) {
+int Evaluation::ClassicalEvaluation(const Board& board) {
     Score score;
     Bitboard attacksMobility[2][8] = {{0}}; //[COLOR][PIECE_TYPE]
 
@@ -512,4 +513,15 @@ int Evaluation::Evaluate(const Board& board) {
 
     const int sign = board.ActivePlayer() == WHITE ? 1 : -1;
     return sign * score.Tapered( Phase(board) );
+}
+
+int Evaluation::Evaluate(const Board& board) {
+    //Automatic draw
+    if( InsufficientMaterial(board) )
+        return 0;
+
+    int color = board.ActivePlayer();
+    int eval = nnue.Evaluate(color);
+
+    return eval;
 }

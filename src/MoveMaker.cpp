@@ -1,13 +1,20 @@
 #include "MoveMaker.h"
 #include "Board.h"
+#include "NNUE.h"
 
-void MoveMaker::MakeMove(Board& board, Move move) {
+#include <cstring> //for memcpy, delete this
+
+void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     // Get move information
     COLOR color = board.ActivePlayer();
     int fromSq = move.FromSq();
     int toSq = move.ToSq();
     PIECE_TYPE pieceType = move.PieceType();
     MOVE_TYPE moveType = move.MoveType();
+
+    //Before any change in the board state
+    if(update_nnue)
+        nnue.SavePosition(board.m_ply);
 
     //Increase ply
     ++board.m_ply;
@@ -76,6 +83,19 @@ void MoveMaker::MakeMove(Board& board, Move move) {
 
     //Reset check calculation
     board.m_checkCalculated = false;
+
+    //NNUE update
+    if(update_nnue) {
+        if(pieceType != KING && (moveType == NORMAL || moveType == DOUBLE_PUSH || moveType == CAPTURE)) { //Incremental update
+            nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq);
+
+            if(moveType == CAPTURE) {
+                nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq);
+            }
+        } else {
+            nnue.Inputs_FullUpdate();
+        }
+    }
 
     //Asserts
     assert(board.CheckIntegrity());
@@ -148,6 +168,9 @@ void MoveMaker::TakeMove(Board& board, Move move) {
 
     //Reset check calculation
     board.m_checkCalculated = false;
+
+    //Retrieve NNUE
+    nnue.RestorePosition(board.m_ply);
 
     //Asserts
     assert(board.CheckIntegrity());

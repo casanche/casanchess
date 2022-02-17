@@ -44,7 +44,7 @@ public:
     std::string GetSimplifiedFen() { return Fen::GetSimplifiedFen(*this); }
 
     // MoveMaker
-    void MakeMove(Move move) { MoveMaker::MakeMove(*this, move); }
+    void MakeMove(Move move, bool update_nnue = true) { MoveMaker::MakeMove(*this, move, update_nnue); }
     void TakeMove(Move move) { MoveMaker::TakeMove(*this, move); }
     //
     void MakeMove(std::string input) { MoveMaker::MakeMove(*this, input); }

@@ -2,6 +2,7 @@
 
 #include "Evaluation.h"
 #include "MoveGenerator.h"
+#include "NNUE.h" //JUST FOR THE PV
 #include "Uci.h"
 using namespace Sorting;
 
@@ -116,7 +117,7 @@ void Search::IterativeDeepening(Board &board) {
             if(depth == 2)
                 m_ponderMove = bestMove;
 
-            newBoard.MakeMove(bestMove);
+            newBoard.MakeMove(bestMove, false);
         }
 
         if(UCI_OUTPUT)

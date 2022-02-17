@@ -155,17 +155,10 @@ std::string Fen::SetRandomPosition(Board& board) {
 
     } while(board.IsCheckAnyColor() || !board.GetPieces(WHITE, KING) || !board.GetPieces(BLACK, KING));
 
-    board.InitStateAndHistory();
-
     int random = rng.Random(0, 1);
     board.m_activePlayer = random ? WHITE : BLACK;
 
-    //NNUE
-    /*
-        nnue.SetPieces(WHITE, board.m_pieces[WHITE][PAWN]);
-        nnue.SetPieces(BLACK, board.m_pieces[BLACK][PAWN]);
-        nnue.Inputs_FullUpdate();
-    */
+    board.InitStateAndHistory();
 
     return GetSimplifiedFen(board);
 }

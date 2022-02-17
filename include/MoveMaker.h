@@ -8,7 +8,7 @@ class Board;
 class MoveMaker {
 public:
     //Standard
-    static void MakeMove(Board& board, Move move);
+    static void MakeMove(Board& board, Move move, bool update_nnue = true);
     static void TakeMove(Board& board, Move move);
     //String
     static void MakeMove(Board& board, std::string input);

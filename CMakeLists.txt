@@ -44,6 +44,11 @@ file(GLOB GENSFEN_SOURCES src/gensfen/*.cpp)
 add_executable(gensfen ${GENSFEN_SOURCES})
 target_link_libraries(gensfen engine ${LINK_LIBRARIES})
 
+## NNUE_Convert
+file(GLOB NNUE_CONVERT_SOURCES src/nnue_convert/*.cpp)
+add_executable(nnue_convert ${NNUE_CONVERT_SOURCES})
+target_link_libraries(nnue_convert engine ${LINK_LIBRARIES})
+
 option(BUILD_TESTS "Build tests" ON)
 option(BUILD_TESTS_EXTRA "Build extra tests" OFF)
 if(BUILD_TESTS)
