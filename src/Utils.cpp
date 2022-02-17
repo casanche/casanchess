@@ -27,5 +27,8 @@ namespace Utils {
     int64_t Clock::Elapsed() {
         return std::chrono::duration_cast<std::chrono::milliseconds>(HighResClock::now() - m_start).count();
     }
+    int64_t Clock::ElapsedNanoseconds() {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(HighResClock::now() - m_start).count();
+    }
 
 } //namespace Utils
