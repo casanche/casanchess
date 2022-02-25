@@ -3,6 +3,7 @@
 #include "Board.h"
 #include "Evaluation.h"
 #include "Hash.h"
+#include "NNUE.h"
 
 #include <iostream>
 #include <string>
@@ -48,6 +49,7 @@ void Uci::Launch() {
             std::cout << "option name Ponder type check default false" << std::endl;
             std::cout << "option name ClearHash type button" << std::endl;
             std::cout << "option name ClassicalEval type check default false" << std::endl;
+            std::cout << "option name NNUE_File type string" << std::endl;
 
             std::cout << "uciok" << std::endl;
         }
@@ -234,6 +236,15 @@ void Uci::SetOption(std::istringstream &stream) {
                 UCI_CLASSICAL_EVAL = true;
             else if(token == "false")
                 UCI_CLASSICAL_EVAL = false;
+        }
+        else if(token == "NNUE_File") {
+            stream >> token;
+            if(token != "value")
+                return;
+            stream >> token;
+            P(token);
+
+            nnue.Load(token.c_str());
         }
         else {
             std::cout << "Unknown option: " << token << std::endl;
