@@ -102,12 +102,16 @@ std::string Fen::SetRandomPosition(Board& board) {
     const int pieceMax[8] = {0, 8, 2, 2, 2, 1, 1, 0};
 
     auto CheckIsValid = [&] (COLOR c, int p, Bitboard bb) {
+        //Illegal
         if(bb & board.m_allpieces)
             return false;
         int square = BitscanForward(bb);
         if(p == PAWN && (Rank(square) == RANK1 || Rank(square) == RANK8))
             return false;
-        if(p == PAWN && RelativeRank(c, square) == RANK7)
+        //Convenient
+        if(p == PAWN && RelativeRank(c, square) == RANK7
+            && PopCount( board.Piece(c,PAWN) & RelativeMaskRank(c, RANK7) ) >= 1 //only one pawn allowed in 7th rank
+        )
             return false;
         if(p == BISHOP && RedundantBishop(board, c, bb))
             return false;

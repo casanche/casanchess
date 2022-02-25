@@ -133,5 +133,8 @@ inline bool IsMateValue(int score) {
 inline int RelativeRank(COLOR color, int square) {
     return color == WHITE ? Rank(square) : 7 ^ Rank(square);
 }
+inline int RelativeMaskRank(COLOR color, RANKS rank) {
+    return color == WHITE ? MaskRank[rank] : MaskRank[RANK8-rank];
+}
 
 #endif //CONSTANTS_H
