@@ -29,6 +29,7 @@ struct State {
         consecutiveFailedEvals = 0;
     }
     void UpdateGame(bool passed, bool failed) {
+        assert(passed != failed);
         gameWrittenEvals += passed;
         if(passed)
             consecutiveFailedEvals = 0;
