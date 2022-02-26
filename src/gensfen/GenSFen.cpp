@@ -8,7 +8,6 @@
 #include <sstream>
 #include <thread>
 
-const int CONCURRENCY = std::thread::hardware_concurrency() - 1;
 const std::string OUTPUT_PATH = "../dev/nnue/sfen/latest/";
 const std::string BOOK_FILE = "../data/books/book5.epd";
 
@@ -45,8 +44,12 @@ GenSFen::GenSFen() : m_rng(0) {
 }
 
 // Supported modes: 'games', 'random', 'random_benchmark' or 'benchmark'
-void GenSFen::Run(const std::string& gensfen_mode) {
+void GenSFen::Run(const std::string& gensfen_mode, int concurrency) {
     std::vector<std::thread> threads;
+
+    if(!concurrency)
+        concurrency = std::thread::hardware_concurrency() - 1;
+    std::cout << "Concurrency set to: " << std::to_string(concurrency) << std::endl;
 
     if(gensfen_mode == "random_benchmark" || gensfen_mode == "benchmark") {
         RandomBenchmark(100);
@@ -63,7 +66,7 @@ void GenSFen::Run(const std::string& gensfen_mode) {
         return;
     }
 
-    for(int i = 1; i <= CONCURRENCY; i++) {
+    for(int i = 1; i <= concurrency; i++) {
         std::string filename = OUTPUT_PATH + "evals_generated_" + std::to_string(i) + ".epd";
         threads.push_back( std::thread(function, this, filename) );
     }

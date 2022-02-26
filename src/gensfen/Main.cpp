@@ -15,16 +15,26 @@ int main(int argc, char** argv) {
 
     UCI_CLASSICAL_EVAL = true;
 
+    std::string mode;
+    int concurrency = 0;
+
     int opt;
-    while( (opt = getopt(argc, argv, "m:")) != -1 ) {
+    while( (opt = getopt(argc, argv, "m:c:")) != -1 ) {
         switch(opt) {
-            case 'm': { //Mode: 'games', 'random' or 'random_benchmark'
-                GenSFen gensfen;
-                gensfen.Run(optarg);
+            //Mode (required): 'games', 'random' or 'random_benchmark'
+            case 'm': {
+                mode = optarg;
+            }
+            //Concurrency (optional). Default: max_threads - 1
+            case 'c': {
+                concurrency = std::atoi(optarg);
             }
             default: break;
         }
     }
+
+    GenSFen gensfen;
+    gensfen.Run(mode, concurrency);
 
     return 0;
 }

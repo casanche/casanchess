@@ -16,7 +16,7 @@ class GenSFen {
 public:
     GenSFen();
 
-    void Run(const std::string& gensfen_mode);
+    void Run(const std::string& gensfen_mode, int concurrency);
     
 private:
     void Games(std::string filename);
