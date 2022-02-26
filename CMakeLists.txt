@@ -3,6 +3,11 @@ project(Casanchess CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
+## Options
+option(BUILD_EXTRA "Build extra executables (GenSFen and NNUE_Convert)" OFF)
+option(BUILD_TESTS "Build tests" ON)
+option(BUILD_TESTS_EXTRA "Build extra tests" OFF)
+
 ## GoogleTest
 include(FetchContent)
 FetchContent_Declare(
@@ -39,18 +44,18 @@ add_library(engine STATIC ${SOURCES})
 add_executable(casanchess Main.cpp)
 target_link_libraries(casanchess engine ${LINK_LIBRARIES}) #CMAKE_LINK_LIBRARY_FLAG
 
-## GenSFen
-file(GLOB GENSFEN_SOURCES src/gensfen/*.cpp)
-add_executable(gensfen ${GENSFEN_SOURCES})
-target_link_libraries(gensfen engine ${LINK_LIBRARIES})
+if(BUILD_EXTRA)
+	## GenSFen
+	file(GLOB GENSFEN_SOURCES src/gensfen/*.cpp)
+	add_executable(gensfen ${GENSFEN_SOURCES})
+	target_link_libraries(gensfen engine ${LINK_LIBRARIES})
 
-## NNUE_Convert
-file(GLOB NNUE_CONVERT_SOURCES src/nnue_convert/*.cpp)
-add_executable(nnue_convert ${NNUE_CONVERT_SOURCES})
-target_link_libraries(nnue_convert engine ${LINK_LIBRARIES})
+	## NNUE_Convert
+	file(GLOB NNUE_CONVERT_SOURCES src/nnue_convert/*.cpp)
+	add_executable(nnue_convert ${NNUE_CONVERT_SOURCES})
+	target_link_libraries(nnue_convert engine ${LINK_LIBRARIES})
+endif()
 
-option(BUILD_TESTS "Build tests" ON)
-option(BUILD_TESTS_EXTRA "Build extra tests" OFF)
 if(BUILD_TESTS)
 	enable_testing()
 
