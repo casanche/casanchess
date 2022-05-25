@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
                 interface.Start("2r1rbk1/p1p2pp1/1p4p1/n1P3P1/3Pq3/P3B2P/R3BP2/3QR1K1 w - - 1 25");
                 return 0;
             }
-            case 'n': { //nn file
+            case 'n': { //Path to .nnue file
                 nnue.Load(optarg);
             }
             default: break;

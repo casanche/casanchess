@@ -40,7 +40,7 @@ file(GLOB SOURCES src/*.cpp)
 list(REMOVE_ITEM SOURCES src/Main.cpp)
 add_library(engine STATIC ${SOURCES})
 
-## Main
+## Main executable
 add_executable(casanchess Main.cpp)
 target_link_libraries(casanchess engine ${LINK_LIBRARIES}) #CMAKE_LINK_LIBRARY_FLAG
 

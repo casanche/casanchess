@@ -16,6 +16,7 @@ void TTEntry::Clear() {
 }
 
 TT::TT() {
+    m_entries = nullptr;
     SetSize(DEFAULT_HASH_SIZE);
 }
 
