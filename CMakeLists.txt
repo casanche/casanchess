@@ -4,21 +4,23 @@ project(Casanchess CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 ## Options
-option(BUILD_TESTS "Build tests" ON)
-option(BUILD_TESTS_EXTRA "Build extra tests" OFF)
+option(BUILD_TESTS "Build standard tests" ON)
+option(BUILD_TESTS_EXTRA "Build extra tests (Perft and Searcht)" OFF)
 option(BUILD_EXECUTABLES_EXTRA "Build extra executables (GenSFen and NNUE_Convert)" OFF)
 
-## GoogleTest
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        release-1.11.0 # 21-Jun-2021
-)
-## For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-set(BUILD_GMOCK OFF CACHE INTERNAL "")
-FetchContent_MakeAvailable(googletest)
+if(BUILD_TESTS)
+	## Download dependency: GoogleTest
+	include(FetchContent)
+	FetchContent_Declare(
+		googletest
+		GIT_REPOSITORY https://github.com/google/googletest.git
+		GIT_TAG        release-1.11.0 # 21-Jun-2021
+	)
+	## For Windows: Prevent overriding the parent project's compiler/linker settings
+	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+	set(BUILD_GMOCK OFF CACHE INTERNAL "")
+	FetchContent_MakeAvailable(googletest)
+endif()
 
 if(UNIX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wshadow -march=native -pedantic") #-Ofast -fprofile-generate=profile -Wextra
