@@ -24,7 +24,7 @@ namespace TestCommon {
         Attacks::Init();
         Evaluation::Init(); //after Attacks
         ZobristKeys::Init();
-        nnue.Init();
+        nnue.Load(NNUE_FILE);
     }
 
     class CoutHelper {

@@ -16,6 +16,7 @@ int main(int argc, char** argv) {
     Attacks::Init();
     Evaluation::Init(); //after Attacks
     ZobristKeys::Init();
+    nnue.Load(NNUE_FILE);
 
     int opt;
     while( (opt = getopt(argc, argv, "ijn:")) != -1 ) {

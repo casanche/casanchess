@@ -23,13 +23,9 @@ NNUE::NNUE() {
     }
 }
 
-void NNUE::Init() {
-    NNUE::Load("../network.nn");
-}
-
-void NNUE::Load(const char* filename) {
+void NNUE::Load(std::string filename) {
     std::ifstream file;
-    file.open(filename, std::ios::binary);
+    file.open(filename.c_str(), std::ios::binary);
 
     assert(file.is_open());
 
@@ -47,9 +43,9 @@ void NNUE::Load(const char* filename) {
     std::memcpy(m_network.b1, nnue_storage->b1, size);
 
     if(file.gcount()) {
-        std::cout << "NN loaded: " << filename << std::endl;
+        std::cout << "NNUE loaded: " << filename << std::endl;
     } else {
-        std::cout << "WARNING: NN not loaded" << std::endl;
+        std::cout << "ERROR: NNUE not loaded. Wrong file: " << filename << std::endl;
     }
 
     delete nnue_storage;

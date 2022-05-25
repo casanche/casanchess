@@ -3,6 +3,8 @@
 
 #include "Constants.h"
 
+const std::string NNUE_FILE = "network-20220225.nnue";
+
 const int NNUE_SIZE = 128;
 const int NNUE_FEATURES = 32*64*5*2; //kingBuckets * square * pieceType * color
 const int CONVERSION_FACTOR = __INT16_MAX__ / 3;
@@ -12,8 +14,7 @@ struct Network;
 class NNUE {
 public:
     NNUE();
-    void Init();
-    void Load(const char* filename);
+    void Load(std::string filename);
 
     int Evaluate(int color);
 
