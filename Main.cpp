@@ -19,16 +19,16 @@ int main(int argc, char** argv) {
     nnue.Load(NNUE_FILE);
 
     int opt;
-    while( (opt = getopt(argc, argv, "ijn:")) != -1 ) {
+    while( (opt = getopt(argc, argv, "ij:n:")) != -1 ) {
         switch(opt) {
             case 'i': { //Interface
                 Interface interface;
                 interface.Start();
                 return 0;
             }
-            case 'j': { //Interface with testing position
+            case 'j': { //Interface from fen position
                 Interface interface;
-                interface.Start("2r1rbk1/p1p2pp1/1p4p1/n1P3P1/3Pq3/P3B2P/R3BP2/3QR1K1 w - - 1 25");
+                interface.Start(optarg);
                 return 0;
             }
             case 'n': { //Path to .nnue file
