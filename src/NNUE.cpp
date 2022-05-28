@@ -17,17 +17,27 @@ const u8 KING_BUCKETS[64] = {
 };
 
 NNUE::NNUE() {
+    m_isLoaded = false;
+    m_filepath = "network-20220225.nnue";
+
     for(int i = 0; i < NNUE_SIZE; i++) {
         m_accumulator[0][i] = 0;
         m_accumulator[1][i] = 0;
     }
 }
 
-void NNUE::Load(std::string filename) {
-    std::ifstream file;
-    file.open(filename.c_str(), std::ios::binary);
+void NNUE::Load(std::string filepath) {
+    if(!filepath.empty()) {
+        m_filepath = filepath;
+    }
 
-    assert(file.is_open());
+    std::ifstream file;
+    file.open(m_filepath.c_str(), std::ios::binary);
+
+    if(!file.is_open()) {
+        std::cout << "ERROR: NNUE file not found: " << m_filepath << std::endl;
+        return;
+    }
 
     NetworkStorage* nnue_storage = new NetworkStorage;
     file.read((char*)nnue_storage, sizeof(NetworkStorage));
@@ -43,9 +53,10 @@ void NNUE::Load(std::string filename) {
     std::memcpy(m_network.b1, nnue_storage->b1, size);
 
     if(file.gcount()) {
-        std::cout << "NNUE loaded: " << filename << std::endl;
+        std::cout << "NNUE loaded: " << m_filepath << std::endl;
+        m_isLoaded = true;
     } else {
-        std::cout << "ERROR: NNUE not loaded. Wrong file: " << filename << std::endl;
+        std::cout << "ERROR: NNUE not loaded correctly from file: " << m_filepath << std::endl;
     }
 
     delete nnue_storage;

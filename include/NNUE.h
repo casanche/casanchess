@@ -3,7 +3,7 @@
 
 #include "Constants.h"
 
-const std::string NNUE_FILE = "network-20220225.nnue";
+#include <string>
 
 const int NNUE_SIZE = 128;
 const int NNUE_FEATURES = 32*64*5*2; //kingBuckets * square * pieceType * color
@@ -14,7 +14,9 @@ struct Network;
 class NNUE {
 public:
     NNUE();
-    void Load(std::string filename);
+    void Load(std::string filepath = "");
+    bool IsLoaded() const { return m_isLoaded; }
+    std::string GetPath() const { return m_filepath; }
 
     int Evaluate(int color);
 
@@ -37,6 +39,9 @@ private:
     float     m_accumulator[2][NNUE_SIZE];
     //Backups
     float     m_backupAccumulator[MAX_PLY][2][NNUE_SIZE];
+
+    bool m_isLoaded;
+    std::string m_filepath;
 };
 
 //Network architecture

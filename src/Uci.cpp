@@ -49,7 +49,7 @@ void Uci::Launch() {
             std::cout << "option name Ponder type check default false" << std::endl;
             std::cout << "option name ClearHash type button" << std::endl;
             std::cout << "option name ClassicalEval type check default false" << std::endl;
-            std::cout << "option name NNUE_File type string default " << NNUE_FILE << std::endl;
+            std::cout << "option name NNUE_Path type string default " << nnue.GetPath() << std::endl;
 
             std::cout << "uciok" << std::endl;
         }
@@ -237,7 +237,7 @@ void Uci::SetOption(std::istringstream &stream) {
             else if(token == "false")
                 UCI_CLASSICAL_EVAL = false;
         }
-        else if(token == "NNUE_File") {
+        else if(token == "NNUE_Path") {
             stream >> token;
             if(token != "value")
                 return;
