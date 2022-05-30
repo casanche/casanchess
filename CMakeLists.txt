@@ -4,7 +4,7 @@ project(Casanchess CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 ## Options
-option(BUILD_TESTS "Build standard tests" OFF)
+option(BUILD_TESTS "Build standard tests" ON)
 option(BUILD_TESTS_EXTRA "Build extra tests (Perft and Searcht)" OFF)
 option(BUILD_EXECUTABLES_EXTRA "Build extra executables (GenSFen and NNUE_Convert)" OFF)
 
@@ -52,6 +52,11 @@ elseif(MSVC)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 endif()
 set(LINK_LIBRARIES Threads::Threads)
+
+if(WIN32)
+	message(STATUS "Set linking mode -- STATIC")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+endif()
 
 ## Library
 include_directories(./include)
