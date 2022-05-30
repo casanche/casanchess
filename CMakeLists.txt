@@ -8,6 +8,22 @@ option(BUILD_TESTS "Build standard tests" ON)
 option(BUILD_TESTS_EXTRA "Build extra tests (Perft and Searcht)" OFF)
 option(BUILD_EXECUTABLES_EXTRA "Build extra executables (GenSFen and NNUE_Convert)" OFF)
 
+## Threads library
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+## Activate IPO/LTO for Release builds
+if(NOT (CMAKE_BUILD_TYPE MATCHES Debug))
+	include(CheckIPOSupported)	
+	check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+endif()
+if(ipo_supported)
+	message(STATUS "IPO/LTO enabled")
+	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+	message(STATUS "IPO/LTO not supported: ${ipo_error}")
+endif()
+
 if(BUILD_TESTS)
 	## Download dependency: GoogleTest
 	include(FetchContent)
@@ -16,18 +32,18 @@ if(BUILD_TESTS)
 		GIT_REPOSITORY https://github.com/google/googletest.git
 		GIT_TAG        release-1.11.0 # 21-Jun-2021
 	)
-	## For Windows: Prevent overriding the parent project's compiler/linker settings
-	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 	set(BUILD_GMOCK OFF CACHE INTERNAL "")
 	FetchContent_MakeAvailable(googletest)
+
+	set_property(TARGET gtest PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+	set_property(TARGET gtest_main PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 endif()
 
 if(UNIX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wshadow -march=native -pedantic") #-Ofast -fprofile-generate=profile -Wextra
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -DNDEBUG -flto=auto")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -DNDEBUG")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -g")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -DDEBUG -g")
-	set(LINK_LIBRARIES "pthread")
 elseif(MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /W3")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -DNDEBUG /GL /fp:fast /Ob3") #/arch:AVX /fp:fast /Ob3 /clr
@@ -35,6 +51,7 @@ elseif(MSVC)
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -DDEBUG")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 endif()
+set(LINK_LIBRARIES Threads::Threads)
 
 ## Library
 include_directories(./include)
