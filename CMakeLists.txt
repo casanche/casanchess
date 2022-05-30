@@ -24,8 +24,8 @@ else()
 	message(STATUS "IPO/LTO not supported: ${ipo_error}")
 endif()
 
+## Download dependency: GoogleTest
 if(BUILD_TESTS)
-	## Download dependency: GoogleTest
 	include(FetchContent)
 	FetchContent_Declare(
 		googletest
@@ -58,7 +58,7 @@ add_library(engine STATIC ${SOURCES})
 
 ## Main executable
 add_executable(casanchess Main.cpp)
-target_link_libraries(casanchess engine ${LINK_LIBRARIES}) #CMAKE_LINK_LIBRARY_FLAG
+target_link_libraries(casanchess engine ${LINK_LIBRARIES})
 
 ## Copy .nnue file to build/ folder
 file(GLOB NNUE_FILES "${CMAKE_SOURCE_DIR}/data/*.nnue")
