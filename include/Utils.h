@@ -35,7 +35,7 @@ namespace Utils {
         int64_t Elapsed();
         int64_t ElapsedNanoseconds();
     private:
-        std::chrono::system_clock::time_point m_start;
+        std::chrono::high_resolution_clock::time_point m_start;
     };
 
 } //namespace Utils
