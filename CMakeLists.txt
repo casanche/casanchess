@@ -4,7 +4,7 @@ project(Casanchess CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 ## Options
-option(BUILD_TESTS "Build standard tests" ON)
+option(BUILD_TESTS "Build standard tests" OFF)
 option(BUILD_TESTS_EXTRA "Build extra tests (Perft and Searcht)" OFF)
 option(BUILD_EXECUTABLES_EXTRA "Build extra executables (GenSFen and NNUE_Convert)" OFF)
 
@@ -64,10 +64,8 @@ add_executable(casanchess Main.cpp)
 target_link_libraries(casanchess engine ${LINK_LIBRARIES}) #CMAKE_LINK_LIBRARY_FLAG
 
 ## Copy .nnue file to build/ folder
-add_custom_command(
-	TARGET casanchess POST_BUILD
-	COMMAND $(CMAKE_COMMAND) -E copy $(CMAKE_SOURCE_DIR)/data/*.nnue .
-)
+file(GLOB NNUE_FILES "${CMAKE_SOURCE_DIR}/data/*.nnue")
+file(COPY ${NNUE_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 if(BUILD_EXECUTABLES_EXTRA)
 	## GenSFen
