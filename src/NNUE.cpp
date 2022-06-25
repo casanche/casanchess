@@ -18,7 +18,7 @@ const u8 KING_BUCKETS[64] = {
 
 NNUE::NNUE() {
     m_isLoaded = false;
-    m_filepath = "network-20220225.nnue";
+    m_filepath = "network-20220625.nnue";
 
     for(int i = 0; i < NNUE_SIZE; i++) {
         m_accumulator[0][i] = 0;
