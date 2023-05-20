@@ -8,7 +8,7 @@ class TT;
 struct Heuristics;
 
 const int HEURISTICS_MAX_PLY = 128;
-const int VALUE_TO_RESET_HISTORY = INFINITE / 30;
+const int VALUE_TO_RESET_HISTORY = INFINITE / 512;
 
 namespace Sorting {
     void SortQuiescence(Board &board, MoveList &moveList);
@@ -83,8 +83,8 @@ private:
             m_maxValue = value;
         }
         if(m_maxValue > VALUE_TO_RESET_HISTORY) {
-            LoopHistoryTable(m_history[color][from][to] /= 4);
-            m_maxValue /= 4;
+            LoopHistoryTable(m_history[color][from][to] /= 16);
+            m_maxValue /= 16;
         }
     }
 
