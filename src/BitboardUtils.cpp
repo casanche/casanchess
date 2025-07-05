@@ -3,11 +3,6 @@
 #include <bit>
 #include <iostream>
 
-#ifdef _MSC_VER
-    #include <intrin.h>
-    #define __builtin_bswap64 _byteswap_uint64
-#endif
-
 /*
 ----------------
 Basic operations
@@ -16,7 +11,7 @@ x & -x: get the LSB-only (LSB isolation)
 x & (x-1): removes the LSB (LSB reset)
 */
 
-//Gives the index of the first '1' bit (LSB)
+// Returns the index of the first '1' bit (LSB)
 int BitboardUtils::BitscanForward(Bitboard b) {
     if(b)
         return std::countr_zero(b);
@@ -74,7 +69,7 @@ Bitboard BitboardUtils::East(Bitboard bitboard, int times) {
 
 //Mirrors the board in the north-south direction
 Bitboard BitboardUtils::Mirror(Bitboard bitboard) {
-    return __builtin_bswap64(bitboard);
+    return std::byteswap(bitboard);
 }
 
 void BitboardUtils::PrintBits(Bitboard bitboard) {
