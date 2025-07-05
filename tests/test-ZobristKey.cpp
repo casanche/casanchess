@@ -75,3 +75,18 @@ TEST_F(ZobristKeyTest, ZobristAfterPerft) {
     boardCastling.Perft(3);
     EXPECT_EQ(initialKeyCastling, boardCastling.ZKey());
 }
+
+TEST_F(ZobristKeyTest, HashConsistency) {
+    Board board1;
+    board1.SetFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    
+    uint64_t hash1 = board1.ZKey();
+    
+    // Run the same position multiple times
+    for (int i = 0; i < 10; i++) {
+        Board board2;
+        board2.SetFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        uint64_t hash2 = board2.ZKey();
+        EXPECT_EQ(hash1, hash2) << "Hash inconsistent at iteration " << i;
+    }
+}
