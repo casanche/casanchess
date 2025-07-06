@@ -5,16 +5,21 @@
 #include <cstring>
 #include <fstream>
 
-const u8 KING_BUCKETS[64] = {
-	 0, 1, 2, 3, 4, 5, 6, 7,
-	 8, 9,10,11,12,13,14,15,
-	16,16,17,17,18,18,19,19,
-	20,20,21,21,22,22,23,23,
-	24,24,25,25,26,26,27,27,
-	24,24,25,25,26,26,27,27,
-	28,28,29,29,30,30,31,31,
-	28,28,29,29,30,30,31,31
-};
+namespace NNUEConstants {
+    constexpr u8 KING_BUCKETS[64] = {
+        0, 1, 2, 3, 4, 5, 6, 7,
+        8, 9,10,11,12,13,14,15,
+       16,16,17,17,18,18,19,19,
+       20,20,21,21,22,22,23,23,
+       24,24,25,25,26,26,27,27,
+       24,24,25,25,26,26,27,27,
+       28,28,29,29,30,30,31,31,
+       28,28,29,29,30,30,31,31
+   };
+   constexpr int KING_BUCKET_MULTIPLIER = 640;
+   constexpr int PIECE_INDEX_MULTIPLIER = 64;
+   constexpr int BLACK_PERSPECTIVE_XOR = 56;
+}
 
 NNUE::NNUE() {
     m_isLoaded = false;
@@ -119,19 +124,19 @@ void NNUE::Inputs_FullUpdate() {
 
 void NNUE::Inputs_AddPiece(int color, int pieceType, int square) {
     const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
-    const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ 56;
+    const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int kingBucket_w = KING_BUCKETS[kingSquare_w];
-    const int kingBucket_b = KING_BUCKETS[kingSquare_b];
+    const int kingBucket_w = NNUEConstants::KING_BUCKETS[kingSquare_w];
+    const int kingBucket_b = NNUEConstants::KING_BUCKETS[kingSquare_b];
 
     const int index_w = (pieceType * 2) + (color);
 	const int index_b = (pieceType * 2) + (1 - color);
 
     const int square_w = square;
-	const int square_b = square ^ 56;
+	const int square_b = square ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int feature_w = (640 * kingBucket_w) + (64 * index_w) + (square_w);
-	const int feature_b = (640 * kingBucket_b) + (64 * index_b) + (square_b);
+    const int feature_w = (NNUEConstants::KING_BUCKET_MULTIPLIER * kingBucket_w) + (NNUEConstants::PIECE_INDEX_MULTIPLIER * index_w) + (square_w);
+	const int feature_b = (NNUEConstants::KING_BUCKET_MULTIPLIER * kingBucket_b) + (NNUEConstants::PIECE_INDEX_MULTIPLIER * index_b) + (square_b);
 
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
@@ -144,19 +149,19 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square) {
 
 void NNUE::Inputs_RemovePiece(int color, int pieceType, int square) {
     const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
-    const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ 56;
+    const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int kingBucket_w = KING_BUCKETS[kingSquare_w];
-    const int kingBucket_b = KING_BUCKETS[kingSquare_b];
+    const int kingBucket_w = NNUEConstants::KING_BUCKETS[kingSquare_w];
+    const int kingBucket_b = NNUEConstants::KING_BUCKETS[kingSquare_b];
 
     const int index_w = (pieceType * 2) + (color);
 	const int index_b = (pieceType * 2) + (1 - color);
 
     const int square_w = square;
-	const int square_b = square ^ 56;
+	const int square_b = square ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int feature_w = (640 * kingBucket_w) + (64 * index_w) + (square_w);
-	const int feature_b = (640 * kingBucket_b) + (64 * index_b) + (square_b);
+    const int feature_w = (NNUEConstants::KING_BUCKET_MULTIPLIER * kingBucket_w) + (NNUEConstants::PIECE_INDEX_MULTIPLIER * index_w) + (square_w);
+	const int feature_b = (NNUEConstants::KING_BUCKET_MULTIPLIER * kingBucket_b) + (NNUEConstants::PIECE_INDEX_MULTIPLIER * index_b) + (square_b);
 
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
@@ -169,25 +174,25 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square) {
 
 void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq) {
     const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
-    const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ 56;
+    const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int kingBucket_w = KING_BUCKETS[kingSquare_w];
-    const int kingBucket_b = KING_BUCKETS[kingSquare_b];
+    const int kingBucket_w = NNUEConstants::KING_BUCKETS[kingSquare_w];
+    const int kingBucket_b = NNUEConstants::KING_BUCKETS[kingSquare_b];
 
     const int index_w = (pieceType * 2) + (color);
 	const int index_b = (pieceType * 2) + (1 - color);
 
     const int fromSq_w = fromSq;
-	const int fromSq_b = fromSq ^ 56;
+	const int fromSq_b = fromSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int toSq_w = toSq;
-	const int toSq_b = toSq ^ 56;
+	const int toSq_b = toSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int feature_from_w = (640 * kingBucket_w) + (64 * index_w) + (fromSq_w);
-	const int feature_from_b = (640 * kingBucket_b) + (64 * index_b) + (fromSq_b);
+    const int feature_from_w = (NNUEConstants::KING_BUCKET_MULTIPLIER * kingBucket_w) + (NNUEConstants::PIECE_INDEX_MULTIPLIER * index_w) + (fromSq_w);
+	const int feature_from_b = (NNUEConstants::KING_BUCKET_MULTIPLIER * kingBucket_b) + (NNUEConstants::PIECE_INDEX_MULTIPLIER * index_b) + (fromSq_b);
 
-    const int feature_to_w = (640 * kingBucket_w) + (64 * index_w) + (toSq_w);
-	const int feature_to_b = (640 * kingBucket_b) + (64 * index_b) + (toSq_b);
+    const int feature_to_w = (NNUEConstants::KING_BUCKET_MULTIPLIER * kingBucket_w) + (NNUEConstants::PIECE_INDEX_MULTIPLIER * index_w) + (toSq_w);
+	const int feature_to_b = (NNUEConstants::KING_BUCKET_MULTIPLIER * kingBucket_b) + (NNUEConstants::PIECE_INDEX_MULTIPLIER * index_b) + (toSq_b);
 
     assert(feature_from_w <= NNUE_FEATURES);
     assert(feature_from_b <= NNUE_FEATURES);
