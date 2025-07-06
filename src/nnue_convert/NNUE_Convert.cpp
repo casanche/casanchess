@@ -29,7 +29,7 @@ void Convert(std::string ifilename, std::string ofilename) {
     for(uint col = 0; col < ARCH[L1][COL]; col++) {
         for(uint row = 0; row < ARCH[L1][ROW]; row++) {
             float decimal = GetNumber(ifile);
-            int converted_value = decimal * CONVERSION_FACTOR;
+            int converted_value = CastInt(decimal * CONVERSION_FACTOR);
             assert(std::abs(converted_value) < __INT16_MAX__);
             if(std::abs(converted_value) >= __INT16_MAX__)
                 std::cout << "Watch out! Int16 overflow (" << decimal << ")" << std::endl;

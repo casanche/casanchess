@@ -90,7 +90,7 @@ int NNUE::Evaluate(int color) {
     ComputeLayer(o2, o3, m_network.b3, m_network.w3, ARCH[L3][ROW], ARCH[L3][COL], true);
     ComputeLayer(o3, o4, m_network.b4, m_network.w4, ARCH[L4][ROW], ARCH[L4][COL], false);
 
-    return o4[0] * 100;
+    return CastInt(o4[0] * 100);
 }
 
 void NNUE::SavePosition(int ply) {

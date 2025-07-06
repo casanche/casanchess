@@ -6,8 +6,8 @@
 namespace BitboardUtils {
     //Gives the value of the bit in 'position'
     template <typename T>
-    bool GetBit(T object, int position) {
-        if(position < 0 || position >= sizeof(T) * 8) {
+    bool GetBit(T object, uint position) {
+        if(position >= sizeof(T) * 8) {
             return false;
         }
         return (object >> position) & 1;

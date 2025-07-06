@@ -192,10 +192,10 @@ namespace Evaluation {
     const struct Calculations {
         Calculations() {
             for(GAME_PHASE ph : {MG, EG}) {
-                for(int mob = 0; mob <  9; mob++) MOBILITY_KNIGHT[ph][mob] = Mobility(KNIGHT, ph, mob);
-                for(int mob = 0; mob < 14; mob++) MOBILITY_BISHOP[ph][mob] = Mobility(BISHOP, ph, mob);
-                for(int mob = 0; mob < 15; mob++) MOBILITY_ROOK[ph][mob] = Mobility(ROOK, ph, mob);
-                for(int mob = 0; mob < 28; mob++) MOBILITY_QUEEN[ph][mob] = Mobility(QUEEN, ph, mob);
+                for(int mob = 0; mob <  9; mob++) MOBILITY_KNIGHT[ph][mob] = SafeCastInt16(Mobility(KNIGHT, ph, mob));
+                for(int mob = 0; mob < 14; mob++) MOBILITY_BISHOP[ph][mob] = SafeCastInt16(Mobility(BISHOP, ph, mob));
+                for(int mob = 0; mob < 15; mob++) MOBILITY_ROOK[ph][mob]   = SafeCastInt16(Mobility(ROOK,   ph, mob));
+                for(int mob = 0; mob < 28; mob++) MOBILITY_QUEEN[ph][mob]  = SafeCastInt16(Mobility(QUEEN, ph, mob));
             }
             for(int x = 0; x < 13; x++) KS_WEAK_SQUARES[x] = WeakSquares(x);
         };
@@ -203,7 +203,7 @@ namespace Evaluation {
         #define LINEAR(a, b) (std::lrint( a + b*mob )) //a + bx
         #define QUADRATIC(a, b, c) (std::lrint( a + b*mob + c*mob*mob )) //a + bx + cx^2
         #define SCALED_CUBIC(f, a, b, c, d) (std::lrint( f*(a + b*mob + c*mob*mob + d*mob*mob*mob) )) //f*(a + bx + cx^2 + dx^3)
-
+        
         int Mobility(PIECE_TYPE pieceType, GAME_PHASE ph, int mob) {
             if(ph == MG) {
                 switch(pieceType) {
@@ -226,10 +226,11 @@ namespace Evaluation {
             assert(false);
             return 0;
         }
-        int WeakSquares(int x) {
+        i16 WeakSquares(int x) {
             if(x < 2) return 0;
             if(x > 6) x = 6;
-            return parameters.KS_WEAK_SQUARES_GROW * sqrt(x-2);
+            double result = parameters.KS_WEAK_SQUARES_GROW * sqrt(x-2);
+            return SafeCastInt16(static_cast<int>(result));
         }
 
         i16 MOBILITY_KNIGHT[2][9];
