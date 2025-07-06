@@ -94,7 +94,7 @@ void Convert(std::string ifilename, std::string ofilename) {
     ofile.close();
 }
 
-int main(int argc, char** argv) {
+int main([[maybe_unused]] int argc, char** argv) {
     std::filesystem::path filepath = argv[1];
     std::string inputFile = filepath.string();
     std::string outputFile = filepath.replace_extension(".nn").string();

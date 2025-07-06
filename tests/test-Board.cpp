@@ -34,9 +34,7 @@ TEST(EvaluationTest, Mirror) {
     std::ifstream in("../tests/suites/real_games.epd");
     std::string line;
 
-    int count = 0;
     while( std::getline(in, line) ) {
-        count++;
         EPDPosition pos = ReadEPDLine(line);
 
         board.SetFen(pos.fen);
