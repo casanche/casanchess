@@ -23,7 +23,7 @@ endif()
 if(MSVC)
     message(STATUS "Compiler: MSVC")
     set(COMPILER_OPTIONS
-        /W4 /arch:AVX2
+        /W4 /EHsc /arch:AVX2
         $<$<CONFIG:RELEASE>:/O2 /GL /fp:fast /DNDEBUG>
         $<$<CONFIG:RELWITHDEBINFO>:/O2 /GL /fp:fast /DNDEBUG /Zi>
         $<$<CONFIG:DEBUG>:/Od /DDEBUG /Zi>
