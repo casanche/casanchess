@@ -136,7 +136,7 @@ namespace {
         }
     }
 
-    void RateEvasions(Board &board, MoveList& moveList) {
+    void RateEvasions([[maybe_unused]] Board &board, MoveList& moveList) {
         // Captures > Other moves
         for(auto &move : moveList) {
             if(move.CapturedType())
