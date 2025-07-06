@@ -21,13 +21,13 @@ endif()
 # Compiler Configuration
 # =============================================================================
 if(MSVC)
+    message(STATUS "Compiler: MSVC")
     set(COMPILER_OPTIONS
-        /W4 /WX /arch:AVX2
-        $<$<CONFIG:RELEASE>:/O2 /GL /fp:fast /QxHost /DNDEBUG>
-        $<$<CONFIG:RELWITHDEBINFO>:/O2 /GL /fp:fast /QxHost /DNDEBUG /Zi>
+        /W4 /arch:AVX2
+        $<$<CONFIG:RELEASE>:/O2 /GL /fp:fast /DNDEBUG>
+        $<$<CONFIG:RELWITHDEBINFO>:/O2 /GL /fp:fast /DNDEBUG /Zi>
         $<$<CONFIG:DEBUG>:/Od /DDEBUG /Zi>
     )
-    message(STATUS "Compiler: MSVC")
 else()
     set(WARNING_FLAGS -Wall -Wextra -Wshadow)
     set(ARCH_FLAGS -march=haswell -mtune=generic)
@@ -59,8 +59,10 @@ endif()
 
 # Windows-specific configuration
 if(WIN32)
-	message(STATUS "Set linking mode -- STATIC")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    if(NOT MSVC)
+        message(STATUS "Set linking mode -- STATIC")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    endif()
 endif()
 
 # =============================================================================
