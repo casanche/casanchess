@@ -210,11 +210,7 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq) {
 }
 
 float NNUE::Clamp(float n) {
-    const float min = 0;
-    const float max = 1;
-    if(n < min) return min;
-    if(n > max) return max;
-    return n;
+    return std::clamp(n, 0.0f, 1.0f);
 }
 
 //Horizontal sum of 8 floats (256-bits)

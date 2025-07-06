@@ -55,16 +55,20 @@ Bitboard BitboardUtils::South(Bitboard bitboard, int times) {
     return bitboard >> 8*times;
 }
 Bitboard BitboardUtils::West(Bitboard bitboard, int times) {
-    for(int i = 0; i < times; ++i) {
-        bitboard = (bitboard >> 1) & ClearFile[FILEH];
+    // Optimized: use precalculated lookup table
+    if (times >= 0 && times < 8) {
+        return (bitboard >> times) & WestMask[times];
     }
-    return bitboard;
+    // For larger values, return 0 as bits fall off the board
+    return 0;
 }
 Bitboard BitboardUtils::East(Bitboard bitboard, int times) {
-    for(int i = 0; i < times; ++i) {
-        bitboard = (bitboard << 1) & ClearFile[FILEA];
+    // Optimized: use precalculated lookup table
+    if (times >= 0 && times < 8) {
+        return (bitboard << times) & EastMask[times];
     }
-    return bitboard;
+    // For larger values, return 0 as bits fall off the board
+    return 0;
 }
 
 //Mirrors the board in the north-south direction
