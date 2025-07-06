@@ -125,7 +125,7 @@ void Uci::Launch() {
             };
             
             u64 totalNodes = 0;
-            int totalTime = 0;
+            int64_t totalTime = 0;
             int totalNps = 0;
             int positionCount = 0;
             
@@ -153,7 +153,7 @@ void Uci::Launch() {
                 m_search.IterativeDeepening(m_board);
                 
                 // Get results using the engine's own calculations
-                int elapsed = m_search.ElapsedTime();
+                int64_t elapsed = m_search.ElapsedTime();
                 u64 nodes = m_search.GetNodes();
                 int nps = m_search.GetNps();
                 

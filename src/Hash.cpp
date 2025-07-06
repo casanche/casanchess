@@ -60,8 +60,8 @@ void TT::AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int dep
     if(age != m_entries[index].age || depth >= m_entries[index].depth) {
         TTEntry entry;
         entry.zkey = zkey;
-        entry.score = ScoreToHash(score, ply);
-        entry.depth = depth;
+        entry.score = SafeCastInt16(ScoreToHash(score, ply));
+        entry.depth = SafeCastU8(depth);
         entry.type = type;
         entry.age = age;
         entry.bestMove = bestMove;
@@ -130,15 +130,12 @@ void PawnHash::Clear() {
 }
 
 void PawnHash::AddEntry(u64 zkey, int evalMg, int evalEg) {
-    assert( abs(evalMg) <= MATESCORE );
-    assert( abs(evalEg) <= MATESCORE );
-
     u64 index = zkey % PAWN_HASH_SIZE;
 
     PawnEntry pawnEntry;
     pawnEntry.zkey = zkey;
-    pawnEntry.evalMg = evalMg;
-    pawnEntry.evalEg = evalEg;
+    pawnEntry.evalMg = SafeCastInt16(evalMg);
+    pawnEntry.evalEg = SafeCastInt16(evalEg);
 
     m_pawnEntries[index] = pawnEntry;
 }

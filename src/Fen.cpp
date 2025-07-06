@@ -77,7 +77,7 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     token = "-";
     fenStream >> token;
     if(token != "-")
-        board.m_fiftyrule = std::stoi(token);
+        board.m_fiftyrule = SafeCastU8(std::stoi(token));
 
     //Move number
     token = "-";

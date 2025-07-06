@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
     Uci uci;
     uci.Launch();
 
-    int elapsed = clock.Elapsed();
+    int64_t elapsed = clock.Elapsed();
     std::cout << "[TIME] " << elapsed << " ms" << std::endl;
 
     return 0;

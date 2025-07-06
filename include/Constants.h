@@ -139,9 +139,22 @@ const Bitboard EastMask[8] = {
     ClearFile[FILEA] & ClearFile[FILEB] & ClearFile[FILEC] & ClearFile[FILED] & ClearFile[FILEE] & ClearFile[FILEF] & ClearFile[FILEG] // 7 moves
 };
 
+//Casts
+constexpr int CastInt(double value) {
+    return static_cast<int>(value);
+}
+constexpr u8 SafeCastU8(int value) {
+    assert(value >= 0 && value <= std::numeric_limits<u8>::max());
+    return static_cast<u8>(value);
+}
+constexpr i16 SafeCastInt16(int value) {
+    assert(value >= std::numeric_limits<i16>::min() && value <= std::numeric_limits<i16>::max());
+    return static_cast<i16>(value);
+}
+
 //Operators over enums
 inline PIECE_TYPE& operator++(PIECE_TYPE& pieceType) {
-    int i = static_cast<int>(pieceType);
+    int i = CastInt(pieceType);
     assert(i+1 > 0);
     assert(i+1 <= (int)ALL_PIECES);
     return pieceType = static_cast<PIECE_TYPE>(++i);

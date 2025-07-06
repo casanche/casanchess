@@ -57,8 +57,9 @@ namespace {
 
                     if(see > 0) {
                         int score = ((see - 1) * 8 / 1024) + 241;
-                        score = std::min(score, 249); 
-                        move.SetScore(score); continue;
+                        score = std::min(score, 249);
+                        assert(score >= 241 && score <= 249);
+                        move.SetScore(SafeCastU8(score)); continue;
                     }
                     else if(see == 0) {
                         move.SetScore(240); continue;
@@ -66,7 +67,8 @@ namespace {
                     else if(see < 0) {
                         int score = ((see + 1) * 8 / 1024) + 189;
                         score = std::max(score, 181);
-                        move.SetScore(score); continue;
+                        assert(score >= 181 && score <= 189);
+                        move.SetScore(SafeCastU8(score)); continue;
                     }
                     
                 }
@@ -76,7 +78,9 @@ namespace {
                 PIECE_TYPE capturedType = move.CapturedType();
                 PIECE_TYPE pieceType = move.PieceType();
                 if(capturedType) {
-                    move.SetScore(200 + 6*capturedType - pieceType); //200 + capturedType
+                    int score = 200 + 6*capturedType - pieceType; //200 + capturedType
+                    assert(score >= 200 && score <= 236);
+                    move.SetScore(SafeCastU8(score));
                     continue;
                 }
             }
@@ -106,7 +110,7 @@ namespace {
             const int minScore = 1;
             historyScore = minScore + historyScore * (maxScore-minScore) / (maxValue+1);
             assert(historyScore >= minScore && historyScore <= maxScore);
-            move.SetScore(historyScore);
+            move.SetScore(SafeCastU8(historyScore));
 
         }
     }
