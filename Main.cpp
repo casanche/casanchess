@@ -7,7 +7,8 @@
 #include "ZobristKeys.h"
 
 #include <iostream>
-#include <unistd.h>
+#include <span>
+#include <string_view>
 
 int main(int argc, char** argv) {
     Utils::Clock clock;
@@ -18,23 +19,26 @@ int main(int argc, char** argv) {
     ZobristKeys::Init();
     nnue.Load();
 
-    int opt;
-    while( (opt = getopt(argc, argv, "ij:n:")) != -1 ) {
-        switch(opt) {
-            case 'i': { //Interface
-                Interface interface;
-                interface.Start();
-                return 0;
-            }
-            case 'j': { //Interface from fen position
-                Interface interface;
-                interface.Start(optarg);
-                return 0;
-            }
-            case 'n': { //Path to .nnue file
-                nnue.Load(optarg);
-            }
-            default: break;
+    // Parse command line arguments
+    std::span<char*> args(argv, argc);
+    for (size_t i = 1; i < args.size(); ++i) {
+        std::string_view arg = args[i];
+        
+        if (arg == "-i") {
+            Interface interface;
+            interface.Start();
+            return 0;
+        }
+        else if (arg == "-j" && i + 1 < args.size()) {
+            // Interface from fen position
+            Interface interface;
+            interface.Start(args[i + 1]);
+            return 0;
+        }
+        else if (arg == "-n" && i + 1 < args.size()) {
+            // Path to .nnue file
+            nnue.Load(args[i + 1]);
+            ++i; // Skip next argument as it's the path
         }
     }
 
