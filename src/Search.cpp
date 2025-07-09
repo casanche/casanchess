@@ -336,7 +336,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_nullmoveAllowed = false;
 
         int R = NULLMOVE_REDUCTION_FACTOR + (depth / 4);
-        int nullDepth = depth - R;
+        int nullDepth = std::max(0, depth - R);
         int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1);
 
         board.TakeNull();
@@ -445,7 +445,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // -------- Principal Variation Search -----------
         int fullDepth = depth - 1 + extension + localExtension;
-        int reducedDepth = fullDepth - reduction;
+        int reducedDepth = std::max(0, fullDepth - reduction);
 
         //PV move: full window, full depth
         //Other moves: zero window, reduced depth
