@@ -60,6 +60,8 @@ public:
     //Getters
     Move BestMove() const { return m_bestMove; };
     int BestScore() const { return m_bestScore; };
+    u64 GetNodes() const { return m_nodes; };
+    int GetNps() const { return m_nps; };
 
     //Interface
     void MakeMove(Board &board) { board.MakeMove(m_bestMove); };
