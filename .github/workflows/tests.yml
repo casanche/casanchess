@@ -1,0 +1,115 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ feature/windows-compilation ]
+  pull_request:
+    branches: [ feature/windows-compilation ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Release, Debug]
+        compiler: [g++, cl]
+        include:
+          - os: ubuntu-latest
+            compiler: g++
+          - os: windows-latest
+            compiler: cl
+          - build_type: Release
+            build_dir: build-release
+          - build_type: Debug
+            build_dir: build-debug
+        exclude:
+          - os: ubuntu-latest
+            compiler: cl
+          - os: windows-latest
+            compiler: g++
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build-${{ matrix.build_type }}" >> $GITHUB_OUTPUT
+      
+    - name: Install dependencies (Ubuntu)
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake
+        g++ --version
+        cmake --version
+
+    # - name: Install dependencies (Windows)
+    #   if: ${{ matrix.os == 'windows-latest' }}
+    #   run: |
+    #     choco install -y cmake ninja
+
+    - name: Configure with CMake
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -S ${{ github.workspace }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+        -DBUILD_TESTS=ON
+        -DBUILD_TESTS_EXTRA=ON
+        -DBUILD_EXECUTABLES_EXTRA=ON
+        
+    - name: Build
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}-${{ matrix.build_type }}-artifacts
+        path: ${{ steps.strings.outputs.build-output-dir }}/
+        retention-days: 1
+
+  test:
+    runs-on: ${{ matrix.os }}
+    needs: build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Release, Debug]
+        include:
+          - build_type: Release
+            build_dir: build-release
+          - build_type: Debug
+            build_dir: build-debug
+          
+    steps:
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build-${{ matrix.build_type }}" >> $GITHUB_OUTPUT
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ matrix.os }}-${{ matrix.build_type }}-artifacts
+        path: ${{ steps.strings.outputs.build-output-dir }}/
+        
+    - name: Fix permissions
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: chmod +x casanchess tests perft
+
+    - name: Test - Bench
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: echo bench | ./casanchess
+
+    - name: Test - Unit
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: ./tests
+
+    - name: Test - Perft
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: ./perft
