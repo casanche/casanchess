@@ -115,6 +115,30 @@ const Bitboard ClearFile[8] = {
     ~MaskFile[FILEH],
 };
 
+// Precalculated masks for West/East operations (optimization)
+// Each entry contains the combined mask for that many moves
+const Bitboard WestMask[8] = {
+    ALL,                                    // 0 moves
+    ClearFile[FILEH],                       // 1 move
+    ClearFile[FILEH] & ClearFile[FILEG],    // 2 moves
+    ClearFile[FILEH] & ClearFile[FILEG] & ClearFile[FILEF], // 3 moves
+    ClearFile[FILEH] & ClearFile[FILEG] & ClearFile[FILEF] & ClearFile[FILEE], // 4 moves
+    ClearFile[FILEH] & ClearFile[FILEG] & ClearFile[FILEF] & ClearFile[FILEE] & ClearFile[FILED], // 5 moves
+    ClearFile[FILEH] & ClearFile[FILEG] & ClearFile[FILEF] & ClearFile[FILEE] & ClearFile[FILED] & ClearFile[FILEC], // 6 moves
+    ClearFile[FILEH] & ClearFile[FILEG] & ClearFile[FILEF] & ClearFile[FILEE] & ClearFile[FILED] & ClearFile[FILEC] & ClearFile[FILEB] // 7 moves
+};
+
+const Bitboard EastMask[8] = {
+    ALL,                                    // 0 moves
+    ClearFile[FILEA],                       // 1 move
+    ClearFile[FILEA] & ClearFile[FILEB],    // 2 moves
+    ClearFile[FILEA] & ClearFile[FILEB] & ClearFile[FILEC], // 3 moves
+    ClearFile[FILEA] & ClearFile[FILEB] & ClearFile[FILEC] & ClearFile[FILED], // 4 moves
+    ClearFile[FILEA] & ClearFile[FILEB] & ClearFile[FILEC] & ClearFile[FILED] & ClearFile[FILEE], // 5 moves
+    ClearFile[FILEA] & ClearFile[FILEB] & ClearFile[FILEC] & ClearFile[FILED] & ClearFile[FILEE] & ClearFile[FILEF], // 6 moves
+    ClearFile[FILEA] & ClearFile[FILEB] & ClearFile[FILEC] & ClearFile[FILED] & ClearFile[FILEE] & ClearFile[FILEF] & ClearFile[FILEG] // 7 moves
+};
+
 //Operators over enums
 inline PIECE_TYPE& operator++(PIECE_TYPE& pieceType) {
     int i = static_cast<int>(pieceType);

@@ -3,11 +3,6 @@
 #include <bit>
 #include <iostream>
 
-#ifdef _MSC_VER
-    #include <intrin.h>
-    #define __builtin_bswap64 _byteswap_uint64
-#endif
-
 /*
 ----------------
 Basic operations
@@ -16,7 +11,7 @@ x & -x: get the LSB-only (LSB isolation)
 x & (x-1): removes the LSB (LSB reset)
 */
 
-//Gives the index of the first '1' bit (LSB)
+// Returns the index of the first '1' bit (LSB)
 int BitboardUtils::BitscanForward(Bitboard b) {
     if(b)
         return std::countr_zero(b);
@@ -60,21 +55,25 @@ Bitboard BitboardUtils::South(Bitboard bitboard, int times) {
     return bitboard >> 8*times;
 }
 Bitboard BitboardUtils::West(Bitboard bitboard, int times) {
-    for(int i = 0; i < times; ++i) {
-        bitboard = (bitboard >> 1) & ClearFile[FILEH];
+    // Optimized: use precalculated lookup table
+    if (times >= 0 && times < 8) {
+        return (bitboard >> times) & WestMask[times];
     }
-    return bitboard;
+    // For larger values, return 0 as bits fall off the board
+    return 0;
 }
 Bitboard BitboardUtils::East(Bitboard bitboard, int times) {
-    for(int i = 0; i < times; ++i) {
-        bitboard = (bitboard << 1) & ClearFile[FILEA];
+    // Optimized: use precalculated lookup table
+    if (times >= 0 && times < 8) {
+        return (bitboard << times) & EastMask[times];
     }
-    return bitboard;
+    // For larger values, return 0 as bits fall off the board
+    return 0;
 }
 
 //Mirrors the board in the north-south direction
 Bitboard BitboardUtils::Mirror(Bitboard bitboard) {
-    return __builtin_bswap64(bitboard);
+    return std::byteswap(bitboard);
 }
 
 void BitboardUtils::PrintBits(Bitboard bitboard) {

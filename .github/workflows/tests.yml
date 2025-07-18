@@ -1,0 +1,120 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ "master", "feature/**", "bugfix/**" ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # RELEASE
+          - os: ubuntu-latest
+            build_type: Release
+            compiler: g++
+          - os: ubuntu-latest
+            build_type: Release
+            compiler: clang++
+          - os: windows-latest
+            build_type: Release
+            compiler: cl
+          # DEBUG
+          - os: ubuntu-latest
+            build_type: Debug
+            compiler: g++
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Install dependencies (Ubuntu)
+      if: ${{ runner.os == 'Linux' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake
+        g++ --version
+        cmake --version
+
+    - name: Configure with CMake
+      run: >
+        cmake -B build
+        -S ${{ github.workspace }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+        -DBUILD_TESTS=ON
+        -DBUILD_TESTS_EXTRA=ON
+        -DBUILD_EXECUTABLES_EXTRA=ON
+        
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }} --parallel
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.compiler }}-artifacts
+        path: build/
+        retention-days: 1
+
+  test:
+    runs-on: ${{ matrix.os }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # RELEASE
+          - os: ubuntu-latest
+            build_type: Release
+            compiler: g++
+          - os: ubuntu-latest
+            build_type: Release
+            compiler: clang++
+          - os: windows-latest
+            build_type: Release
+            compiler: cl
+          # DEBUG
+          - os: ubuntu-latest
+            build_type: Debug
+            compiler: g++
+          
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.compiler }}-artifacts
+        path: build/
+        
+    - name: Fix permissions
+      if: ${{ runner.os == 'Linux' }}
+      working-directory: ./build
+      run: chmod +x casanchess tests perft
+
+    - name: Tests - Unit and Perft
+      working-directory: ./build
+      shell: bash
+      run: |
+        EXT=""
+        BASE_PATH=""
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          EXT=".exe"
+          BASE_PATH="${{ matrix.build_type }}/"
+        fi
+
+        for exe in tests perft; do
+          ./${BASE_PATH}${exe}${EXT}
+        done
+
+    - name: Bench
+      working-directory: ./build
+      shell: bash
+      run: |
+        EXT=""
+        BASE_PATH=""
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          EXT=".exe"
+          BASE_PATH="${{ matrix.build_type }}/"
+        fi
+
+        echo bench | ./${BASE_PATH}casanchess$EXT
