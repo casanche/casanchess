@@ -6,7 +6,8 @@
 #include "ZobristKeys.h"
 
 #include <iostream>
-#include <unistd.h>
+#include <span>
+#include <string_view>
 
 int main(int argc, char** argv) {
     Attacks::Init();
@@ -18,18 +19,15 @@ int main(int argc, char** argv) {
     std::string mode;
     int concurrency = 0;
 
-    int opt;
-    while( (opt = getopt(argc, argv, "m:c:")) != -1 ) {
-        switch(opt) {
-            //Mode (required): 'games', 'random' or 'random_benchmark'
-            case 'm': {
-                mode = optarg;
-            }
-            //Concurrency (optional). Default: max_threads - 1
-            case 'c': {
-                concurrency = std::atoi(optarg);
-            }
-            default: break;
+    std::span<char*> args(argv, argc);
+    for (size_t i = 1; i < args.size(); ++i) {
+        std::string_view arg = args[i];
+        if (arg == "-m" && i + 1 < args.size()) {
+            mode = args[i + 1];
+            ++i;
+        } else if (arg == "-c" && i + 1 < args.size()) {
+            concurrency = std::atoi(args[i + 1]);
+            ++i;
         }
     }
 
