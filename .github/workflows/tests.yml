@@ -2,7 +2,7 @@ name: Build and Test
 
 on:
   push:
-    branches: [ "master", "feature/**", "bugfix/**" ]
+    branches: [ "master", "*/**" ]
 
 jobs:
   build:
