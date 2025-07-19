@@ -20,6 +20,7 @@ const int NULLMOVE_REDUCTION_FACTOR = 3;
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
 
+const bool TURNOFF_DEBUG_OUTPUT = true;
 const int UCI_OUTPUT_CURRMOVE_MINTIME = 1000; //ms
 
 #define DRAW_SCORE(ply) (ply & 1 ? 10 : -10)
@@ -126,7 +127,8 @@ void Search::IterativeDeepening(Board &board) {
         if(m_elapsedTime > (m_allocatedTime / 2)) //check
              break;
 
-        D( m_debug.Print() );
+        if(!TURNOFF_DEBUG_OUTPUT)
+            D( m_debug.Print() );
     }
 
     if(UCI_OUTPUT) {
@@ -191,12 +193,14 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     for(auto move : moves) {
         moveNumber++;
 
+#ifndef DEBUG
         //Uci output
         if(m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
             std::cout << "info currmovenumber " << moveNumber;
             std::cout << " currmove " << move.Notation();
             std::cout << std::endl;
         }
+#endif
 
         board.MakeMove(move);
         m_ply++; m_nodes++;
