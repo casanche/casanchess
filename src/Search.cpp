@@ -10,6 +10,8 @@ using namespace Sorting;
 #include <cmath> //INFINITY
 #include <iomanip> //debug output
 
+const int MAX_QS_PLIES = 128; // depth limit for quiescence search
+
 const bool TURNOFF_ASPIRATION_WINDOW = false;
 const int ASPIRATION_WINDOW_DEPTH = 4;
 const int ASPIRATION_WINDOW = 25;
@@ -508,6 +510,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
     assert(m_ply <= MAX_PLY);
+    
+    if (m_plyqs >= MAX_QS_PLIES) { // unlikely
+        D( m_debug.Increment("Quiescence MAX_QS_PLIES reached") );
+        return Evaluation::Evaluate(board);
+    }
 
     D( m_debug.Increment("Quiescence Hits") );
 
