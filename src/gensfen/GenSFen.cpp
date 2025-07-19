@@ -88,7 +88,8 @@ void GenSFen::Games(std::string filename) {
     const int maxGames = INFINITE;
     for(int n_game = 0; n_game < maxGames; n_game++) {
         //New starting position
-        std::string position = bookPositions[ m_rng.Random(0, bookPositions.size()-1) ];
+        uint32_t randomIndex = m_rng.Random(0, static_cast<uint32_t>(bookPositions.size())-1);
+        std::string position = bookPositions[randomIndex];
         board.SetFen(position);
 
         //To avoid overlap in standard output due to multiple threads
@@ -177,8 +178,8 @@ void GenSFen::Random(std::string filename) {
 void GenSFen::RandomBenchmark(int maxGames) {
     Utils::Clock clock, global_clock;
     global_clock.Start();
-    int time_choose = 0;
-    int time_search = 0;
+    int64_t time_choose = 0;
+    int64_t time_search = 0;
     int passed = 0;
 
     Board board;
@@ -255,7 +256,7 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
 // - Board not in check
 // - Best move is quiet at low depths (to skip trivial captures)
 // - Evaluation conditions: At least one color has [-200,200]. Both colors have [-800,800].
-void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition, uint thresholdEval, uint thresholdEvalBoth, uint minPly) {
+void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition, int thresholdEval, int thresholdEvalBoth, uint minPly) {
     search.FixDepth(5);
     search.IterativeDeepening(board);
     currentPosition.calculatedDepth = 5;

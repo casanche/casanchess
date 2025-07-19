@@ -29,7 +29,7 @@ private:
 
     Bitboard GenerateKingDangerAttacks(Board &board);
     Bitboard PinnedPieces(Board &board, COLOR color);
-    Bitboard FillPinned(COLOR color, PIECE_TYPE slidingType, int square, int kingSquare);
+    Bitboard FillPinned(PIECE_TYPE slidingType, int square, int kingSquare);
 
     MoveList m_moves;
 

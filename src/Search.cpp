@@ -385,7 +385,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     //Prune quiet moves in the loop?
     bool doFutility = false;
     int futilityMargin = 0;
-    if (depth <= 4 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
+    if (!TURNOFF_FUTILITY && depth <= 4 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
         futilityMargin = 150 + depth * 150;
         if(eval + futilityMargin < alpha) {
             D( m_debug.Increment("Futility - Depth " + std::to_string(depth)) );
@@ -408,7 +408,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // ------- Futility pruning --------
         //Don't prune: hash move, promotions, SEE > 0 captures
         const int SEE_ZERO = 240;
-        if(doFutility && move.Score() <= SEE_ZERO) {
+        if(!TURNOFF_FUTILITY && doFutility && move.Score() <= SEE_ZERO) {
             D( m_debug.Increment("Futility - FutileMove - " + std::to_string(depth)) );
             if(eval + futilityMargin > bestScore) {
                 bestScore = eval + futilityMargin;
@@ -649,27 +649,31 @@ void Search::AllocateLimits(Board &board, Limits limits) {
 int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV) {
     int reduction = 0;
 
+    float moveScore_f = static_cast<float>(moveScore);
+    float depth_f = static_cast<float>(depth);
+    float moveNumber_f = static_cast<float>(moveNumber);
+
     //History moves
     if(moveScore < 180) {
-        float logscore = logf(moveScore+1);
-        reduction = (int)floorf(
-            -0.5 -0.2*logscore
-            - 2*(isPV)
-            + (2.0 - 0.3*logscore) * logf(depth)
-            + (0.3 + 0.15*logscore) * logf(moveNumber)
-            );
+        float logscore = logf(moveScore_f + 1.0f);
+        reduction = CastInt(floorf(
+            -0.5f -0.2f * logscore
+            - 2.0f * (isPV)
+            + (2.0f - 0.3f * logscore) * logf(depth_f)
+            + (0.3f + 0.15f * logscore) * logf(moveNumber_f)
+            ));
     }
     //SEE << 0
     else if(moveScore >= 181 && moveScore <= 184) {
-        reduction = (int)floorf(0.5 - 0.4*(isPV) + 1.35*logf(depth) + 0.4*logf(moveNumber));
+        reduction = CastInt(floorf( 0.5f - 0.4f*(isPV) + 1.35f*logf(depth_f) + 0.4f*logf(moveNumber_f) ));
     }
     //SEE < 0
     else if(moveScore >= 185 && moveScore <= 189) {
-        reduction = (int)floorf(-0.85 + 1.35*logf(depth) + 0.4*logf(moveNumber));
+        reduction = CastInt(floorf( -0.85f + 1.35f * logf(depth_f) + 0.4f * logf(moveNumber_f) ));
     }
     //Killers 2,3,4
     else if(moveScore >= 191 && moveScore <= 193 && !isPV) {
-        reduction = (int)floorf(-1.85 + 0.5*logf(depth) + 1.65*logf(moveNumber));
+        reduction = CastInt(floorf( -1.85f + 0.5f * logf(depth_f) + 1.65f * logf(moveNumber_f) ));
     }
 
     reduction = std::min(4, std::max(0, reduction));
@@ -679,11 +683,11 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
 void SearchDebug::Transform() {
     std::string colorGreen = "\033[1;92m";
     std::string colorBlack = "\033[0m";
-    debugVariables[colorGreen+"NegaMax Calls to Evaluation (permil)"+colorBlack] = 1000 * (double)debugVariables["NegaMax Calls to Evaluation"] / debugVariables["NegaMax Hits"];
-    debugVariables[colorGreen+"NegaMax Cutoffs (permil)"+colorBlack] = 1000 * (double)debugVariables["NegaMax Cutoffs (score >= beta)"] / debugVariables["NegaMax Hits"];
-    debugVariables[colorGreen+"NegaMax GenerateMoves (permil)"+colorBlack] = 1000 * (double)debugVariables["NegaMax GenerateMoves Hits"] / debugVariables["NegaMax Hits"];
-    debugVariables[colorGreen+"TT Hits (in NegaMax) (permil)"+colorBlack] = 1000 * (double)debugVariables["TT Hits (in NegaMax)"] / debugVariables["NegaMax Hits"];
-    debugVariables[colorGreen+"TT Hits (in Quiescence) (permil)"+colorBlack] = 1000 * (double)debugVariables["TT Hits (in Quiescence)"] / debugVariables["Quiescence Hits"];
+    debugVariables[colorGreen+"NegaMax Calls to Evaluation (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["NegaMax Calls to Evaluation"] / debugVariables["NegaMax Hits"]);
+    debugVariables[colorGreen+"NegaMax Cutoffs (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["NegaMax Cutoffs (score >= beta)"] / debugVariables["NegaMax Hits"]);
+    debugVariables[colorGreen+"NegaMax GenerateMoves (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["NegaMax GenerateMoves Hits"] / debugVariables["NegaMax Hits"]);
+    debugVariables[colorGreen+"TT Hits (in NegaMax) (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["TT Hits (in NegaMax)"] / debugVariables["NegaMax Hits"]);
+    debugVariables[colorGreen+"TT Hits (in Quiescence) (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["TT Hits (in Quiescence)"] / debugVariables["Quiescence Hits"]);
 }
 
 void SearchDebug::Print() {

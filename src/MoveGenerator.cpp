@@ -106,7 +106,8 @@ void MoveGenerator::GenerateEvasionMoves(Board &board) {
 
 Move MoveGenerator::RandomMove() {
     Utils::PRNG rng;
-    int randomIndex = rng.Random(0, m_moves.size()-1);
+    int max_index = static_cast<int>(m_moves.size()) - 1;
+    uint32_t randomIndex = rng.Random(0, max_index);
 
     return m_moves[randomIndex];
 }
@@ -141,7 +142,7 @@ void MoveGenerator::GeneratePawnMoves(Board &board) {
     Bitboard promotionPush = (singlePush & MaskRank[relativeRank8]);
     Bitboard promotionAttack[2] = { attack[LEFT]  & m_enemyPieces & MaskRank[relativeRank8],
                                     attack[RIGHT] & m_enemyPieces & MaskRank[relativeRank8] };
-    Bitboard enpassant[2] = {{0}};
+    Bitboard enpassant[2] = {0};
     if(board.EnPassantSquare()) {
         enpassant[LEFT]  = RWest(RNorth(thePawns)) & board.EnPassantSquare();
         enpassant[RIGHT] = REast(RNorth(thePawns)) & board.EnPassantSquare();
@@ -413,14 +414,14 @@ Bitboard MoveGenerator::PinnedPieces(Board &board, COLOR color) {
             int slidingSquare = ResetLsb(enemySlidings);
             switch(pieceType) {
                 case BISHOP: {
-                    pinned |= FillPinned(color, BISHOP, slidingSquare, kingSquare);
+                    pinned |= FillPinned(BISHOP, slidingSquare, kingSquare);
                 } break;
                 case ROOK: {
-                    pinned |= FillPinned(color, ROOK, slidingSquare, kingSquare);
+                    pinned |= FillPinned(ROOK, slidingSquare, kingSquare);
                 } break;
                 case QUEEN: {
-                    pinned |= FillPinned(color, BISHOP, slidingSquare, kingSquare);
-                    pinned |= FillPinned(color, ROOK, slidingSquare, kingSquare);
+                    pinned |= FillPinned(BISHOP, slidingSquare, kingSquare);
+                    pinned |= FillPinned(ROOK, slidingSquare, kingSquare);
                 } break;
                 default: break;
             };
@@ -429,7 +430,7 @@ Bitboard MoveGenerator::PinnedPieces(Board &board, COLOR color) {
     return pinned;
 }
 
-Bitboard MoveGenerator::FillPinned(COLOR color, PIECE_TYPE slidingType, int slidingSquare, int kingSquare) {
+Bitboard MoveGenerator::FillPinned(PIECE_TYPE slidingType, int slidingSquare, int kingSquare) {
     assert(slidingType == BISHOP || slidingType == ROOK);
 
     Bitboard pinned = ZERO;

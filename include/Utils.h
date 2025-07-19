@@ -10,7 +10,7 @@ namespace Utils {
     class PRNG {
     public:
         PRNG(int seed = 0);
-        uint32_t Random(int min, int max);
+        uint32_t Random(uint32_t min, uint32_t max);
     private:
         std::random_device m_device;
         std::mt19937 m_mersenne;

@@ -471,8 +471,6 @@ void Board::UpdateKingAttackers(COLOR color) {
 }
 
 void Board::InitStateAndHistory() {
-    assert(m_ply >= 0);
-
     UpdateBitboards();
 
     m_history[m_ply].fiftyrule = m_fiftyrule;

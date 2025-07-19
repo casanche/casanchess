@@ -25,7 +25,7 @@ private:
 
     int GenerateRandomPosition(Board& board, std::string& position);
     void WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition,
-                    uint thresholdEval, uint thresholdEvalBoth, uint minPly = 0);
+                    int thresholdEval, int thresholdEvalBoth, uint minPly = 0);
 
     bool NoMoves(Board& board);
     BookPositions ReadBook(const std::string& bookPath);

@@ -72,7 +72,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     board.m_zobristKey.UpdateColor();
 
     //Store irreversible information (to help a later TakeMove)
-    assert(board.m_ply >= 0 && board.m_ply <= MAX_PLY);
+    assert(board.m_ply <= MAX_PLY);
     board.m_history[board.m_ply].fiftyrule = board.m_fiftyrule;
     board.m_history[board.m_ply].castling = board.m_castlingRights;
     board.m_history[board.m_ply].zkey = board.ZKey();
@@ -220,8 +220,8 @@ void MoveMaker::TakeNull(Board& board) {
     //Change the active player
     board.m_activePlayer = board.InactivePlayer();
 
+    assert(board.m_ply != 0);
     board.m_ply--;
-    assert(board.m_ply >= 0);
 
     //Retrieve state
     board.m_fiftyrule = board.m_history[board.m_ply].fiftyrule;
