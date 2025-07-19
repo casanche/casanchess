@@ -59,6 +59,7 @@ u64 Board::Perft(int depth) {
         //Integrity check: after
         D( Board boardAfter = *this; );
         D( assert(boardBefore == boardAfter); );
+        D( boardAfter.CheckIntegrity(); );
     }
 
     return nodes;
@@ -210,6 +211,8 @@ int Board::SEE(Move move) {
 
 //Attackers
 Bitboard Board::AttackersTo(COLOR color, int square) const {
+    assert(square >= 0 && square < 64);
+
     Bitboard attackers = ZERO;
 
     COLOR enemyColor = (COLOR)!color;
@@ -234,6 +237,8 @@ Bitboard Board::AttackersTo(COLOR color, int square) const {
 }
 
 Bitboard Board::AttackersTo(COLOR color, int square, Bitboard blockers) const {
+    assert(square >= 0 && square < 64);
+    
     Bitboard attackers = ZERO;
     COLOR enemyColor = (COLOR)!color;
 
@@ -403,18 +408,19 @@ bool Board::operator==(const Board& rhs) const {
     bool pieceIntegrity = true;
     for(COLOR color : {WHITE, BLACK}) {
         for(PIECE_TYPE piece = PAWN; piece <= KING; ++piece) {
-            if( this->GetPieces(color, piece) != rhs.GetPieces(color, piece) )
+            if( this->Piece(color, piece) != rhs.Piece(color, piece) )
                 pieceIntegrity = false;
         }
     }
-    if( this->m_allpieces != rhs.m_allpieces )
-                pieceIntegrity = false;
+    if( this->AllPieces() != rhs.AllPieces() )
+        pieceIntegrity = false;
     
     return pieceIntegrity && 
         this->ActivePlayer() == rhs.ActivePlayer() &&
         this->CastlingRights() == rhs.CastlingRights() &&
         this->EnPassantSquare() == rhs.EnPassantSquare() &&
         this->MoveNumber() == rhs.MoveNumber() &&
+        this->PawnKey() == rhs.PawnKey() &&
         this->Ply() == rhs.Ply() &&
         this->ZKey() == rhs.ZKey();
 }
@@ -490,12 +496,28 @@ void Board::InitStateAndHistory() {
 }
 
 bool Board::CheckIntegrity() const {
-    return PopCount( Piece(WHITE, KING) ) == 1
-             && PopCount( Piece(BLACK, KING) ) == 1
-             && PopCount( Piece(WHITE, PAWN) ) <= 8
-             && PopCount( Piece(BLACK, PAWN) ) <= 8
-             && PopCount( EnPassantSquare() ) <= 1
-             && Ply() <= MAX_PLY
-             && ActivePlayer() != NO_COLOR
-        ;
+    // Bitboard data consistency
+    bool bitboardIntegrity = true;
+
+    Bitboard allPiecesFromLists = ZERO;
+    for (COLOR c : {WHITE, BLACK}) {
+        for (PIECE_TYPE pt = PAWN; pt <= KING; ++pt) {
+            const Bitboard piece_bb = m_pieces[c][pt];
+            assert((allPiecesFromLists & piece_bb) == ZERO); // Check that the pieces do not overlap
+            allPiecesFromLists |= piece_bb;
+        }
+    }
+    bitboardIntegrity &= (allPiecesFromLists == m_allpieces); // m_allpieces should match piece-lists
+ 
+    // Chess rules consistency
+    return bitboardIntegrity &&
+        (m_pieces[WHITE][PAWN] & (MaskRank[RANK1] | MaskRank[RANK8])) == 0 &&
+        (m_pieces[BLACK][PAWN] & (MaskRank[RANK1] | MaskRank[RANK8])) == 0 &&
+        PopCount( Piece(WHITE, KING) ) == 1 &&
+        PopCount( Piece(BLACK, KING) ) == 1 &&
+        PopCount( Piece(WHITE, PAWN) ) <= 8 &&
+        PopCount( Piece(BLACK, PAWN) ) <= 8 &&
+        PopCount( EnPassantSquare() ) <= 1 &&
+        Ply() <= MAX_PLY &&
+        ActivePlayer() != NO_COLOR;
 }
