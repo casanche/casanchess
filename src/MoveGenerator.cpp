@@ -142,7 +142,7 @@ void MoveGenerator::GeneratePawnMoves(Board &board) {
     Bitboard promotionPush = (singlePush & MaskRank[relativeRank8]);
     Bitboard promotionAttack[2] = { attack[LEFT]  & m_enemyPieces & MaskRank[relativeRank8],
                                     attack[RIGHT] & m_enemyPieces & MaskRank[relativeRank8] };
-    Bitboard enpassant[2] = {{0}};
+    Bitboard enpassant[2] = {0};
     if(board.EnPassantSquare()) {
         enpassant[LEFT]  = RWest(RNorth(thePawns)) & board.EnPassantSquare();
         enpassant[RIGHT] = REast(RNorth(thePawns)) & board.EnPassantSquare();
