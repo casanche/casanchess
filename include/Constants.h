@@ -1,7 +1,9 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <array>
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <limits>
@@ -139,6 +141,21 @@ const Bitboard EastMask[8] = {
     ClearFile[FILEA] & ClearFile[FILEB] & ClearFile[FILEC] & ClearFile[FILED] & ClearFile[FILEE] & ClearFile[FILEF], // 6 moves
     ClearFile[FILEA] & ClearFile[FILEB] & ClearFile[FILEC] & ClearFile[FILED] & ClearFile[FILEE] & ClearFile[FILEF] & ClearFile[FILEG] // 7 moves
 };
+
+//Logarithm lookup table
+const int LOG_TABLE_SIZE = 512;
+const int LOG_TABLE_SCALE = 100;
+
+constexpr std::array<u16, LOG_TABLE_SIZE> generate_log_table() {
+    std::array<u16, LOG_TABLE_SIZE> table{};
+    table[0] = 0;
+    for(size_t i = 1; i < LOG_TABLE_SIZE; ++i) {
+        table[i] = static_cast<u16>( LOG_TABLE_SCALE * std::log(static_cast<double>( i )) );
+    }
+    return table;
+}
+
+const std::array<u16, LOG_TABLE_SIZE> LogTable = generate_log_table();
 
 //Casts
 constexpr int CastInt(double value) {

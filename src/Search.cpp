@@ -6,9 +6,11 @@
 #include "Uci.h"
 using namespace Sorting;
 
-#include <algorithm> //max()
+#include <algorithm> //max(), clamp()
 #include <cmath> //INFINITY
 #include <iomanip> //debug output
+
+const int MAX_QS_PLIES = 128; // depth limit for quiescence search
 
 const bool TURNOFF_ASPIRATION_WINDOW = false;
 const int ASPIRATION_WINDOW_DEPTH = 4;
@@ -20,6 +22,7 @@ const int NULLMOVE_REDUCTION_FACTOR = 3;
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
 
+const bool TURNOFF_DEBUG_OUTPUT = true;
 const int UCI_OUTPUT_CURRMOVE_MINTIME = 1000; //ms
 
 #define DRAW_SCORE(ply) (ply & 1 ? 10 : -10)
@@ -126,7 +129,8 @@ void Search::IterativeDeepening(Board &board) {
         if(m_elapsedTime > (m_allocatedTime / 2)) //check
              break;
 
-        D( m_debug.Print() );
+        if(!TURNOFF_DEBUG_OUTPUT)
+            D( m_debug.Print() );
     }
 
     if(UCI_OUTPUT) {
@@ -191,12 +195,14 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     for(auto move : moves) {
         moveNumber++;
 
+#ifndef DEBUG
         //Uci output
         if(m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
             std::cout << "info currmovenumber " << moveNumber;
             std::cout << " currmove " << move.Notation();
             std::cout << std::endl;
         }
+#endif
 
         board.MakeMove(move);
         m_ply++; m_nodes++;
@@ -504,6 +510,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
     assert(m_ply <= MAX_PLY);
+    
+    if (m_plyqs >= MAX_QS_PLIES) { // unlikely
+        D( m_debug.Increment("Quiescence MAX_QS_PLIES reached") );
+        return Evaluation::Evaluate(board);
+    }
 
     D( m_debug.Increment("Quiescence Hits") );
 
@@ -647,36 +658,47 @@ void Search::AllocateLimits(Board &board, Limits limits) {
 }
 
 int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV) {
+    assert(moveScore  >= 0 && moveScore  <= LOG_TABLE_SIZE - 1);
+    assert(depth      >= 0 && depth      <= LOG_TABLE_SIZE - 1);
+    assert(moveNumber >= 0 && moveNumber <= LOG_TABLE_SIZE - 1);
+
     int reduction = 0;
 
-    float moveScore_f = static_cast<float>(moveScore);
-    float depth_f = static_cast<float>(depth);
-    float moveNumber_f = static_cast<float>(moveNumber);
+    int logScore = LogTable[moveScore + 1];
+    int logDepth = LogTable[depth];
+    int logMoveNumber = LogTable[moveNumber];
+
+    int lmr_value = 0;
+    const int MULT_FACTOR = 100;
 
     //History moves
     if(moveScore < 180) {
-        float logscore = logf(moveScore_f + 1.0f);
-        reduction = CastInt(floorf(
-            -0.5f -0.2f * logscore
-            - 2.0f * (isPV)
-            + (2.0f - 0.3f * logscore) * logf(depth_f)
-            + (0.3f + 0.15f * logscore) * logf(moveNumber_f)
-            ));
+        lmr_value = -50 - 200*(isPV)
+            + (
+                - (20 * logScore)
+                + (200 * logDepth)
+                + (30 * logMoveNumber)
+            ) / LOG_TABLE_SCALE
+            + (
+                - (30 * logScore * logDepth)
+                + (15 * logScore * logMoveNumber)
+            ) / (LOG_TABLE_SCALE * LOG_TABLE_SCALE);
     }
     //SEE << 0
     else if(moveScore >= 181 && moveScore <= 184) {
-        reduction = CastInt(floorf( 0.5f - 0.4f*(isPV) + 1.35f*logf(depth_f) + 0.4f*logf(moveNumber_f) ));
+        lmr_value = 50 - 40*(isPV) + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
     }
     //SEE < 0
     else if(moveScore >= 185 && moveScore <= 189) {
-        reduction = CastInt(floorf( -0.85f + 1.35f * logf(depth_f) + 0.4f * logf(moveNumber_f) ));
+        lmr_value = -85 + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
     }
     //Killers 2,3,4
     else if(moveScore >= 191 && moveScore <= 193 && !isPV) {
-        reduction = CastInt(floorf( -1.85f + 0.5f * logf(depth_f) + 1.65f * logf(moveNumber_f) ));
+        lmr_value = -185 + ( (50*logDepth) + (165*logMoveNumber) ) / LOG_TABLE_SCALE;
     }
 
-    reduction = std::min(4, std::max(0, reduction));
+    reduction = lmr_value / MULT_FACTOR;
+    reduction = std::clamp(reduction, 0, 4);
     return reduction;
 }
 

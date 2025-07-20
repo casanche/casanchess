@@ -13,6 +13,9 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     PIECE_TYPE pieceType = move.PieceType();
     MOVE_TYPE moveType = move.MoveType();
 
+    assert(fromSq >= 0 && fromSq < 64);
+    assert(toSq >= 0 && toSq < 64);
+
     //Before any change in the board state
     if(update_nnue && !UCI_CLASSICAL_EVAL)
         nnue.SavePosition(board.m_ply);
