@@ -429,7 +429,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         //     extension++;
 
         // ----- Recapture extension ------
-        if(isPV && !extension && move.MoveType() == CAPTURE
+        if(!extension
+            && move.MoveType() == CAPTURE
+            && board.LastMove().MoveType() == CAPTURE
             && move.ToSq() == board.LastMove().ToSq()
             && move.CapturedType() == board.LastMove().CapturedType()
         ) {
