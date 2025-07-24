@@ -16,6 +16,7 @@ const bool DEBUG_PRINT_STATISTICS = true;
 // Object to collect and print search statistics
 class SearchDebug {
 public:
+    void Clear() { debugVariables.clear(); };
     void Increment(std::string theVariable) { debugVariables[theVariable]++; };
     void Print();
 private:
