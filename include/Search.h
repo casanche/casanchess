@@ -11,6 +11,7 @@
 
 const int MAX_ROOTMOVES = 256;
 
+// Search limits from UCI
 struct Limits {
     bool infinite = false;
     bool ponderhit = false;
@@ -41,81 +42,86 @@ class Search {
 public:
     Search();
 
-    //Start search
+    // Start search
     void IterativeDeepening(Board &board);
 
-    //Flow
+    // Flow
     int64_t ElapsedTime() { return m_clock.Elapsed(); }
     void Stop() { m_stop = true; }
     void DebugMode() { m_debugMode = true; }
 
-    //Limits
+    // Limits management
     Limits GetLimits() { return m_limits; }
     void AllocateLimits(Board &board, Limits limits);
     void FixDepth(int depth);
-    void FixTime(int time); //In milliseconds
+    void FixTime(int time); // (ms)
     void FixNodes(int nodes);
     void Infinite();
 
-    //Getters
+    // Getters
     Move BestMove() const { return m_bestMove; };
     int BestScore() const { return m_bestScore; };
     u64 GetNodes() const { return m_nodes; };
     int GetNps() const { return m_nps; };
 
-    //Interface
+    // Interface
     void MakeMove(Board &board) { board.MakeMove(m_bestMove); };
 
 private:
+    // Internal search algorithms
     int RootMax(Board &board, int depth, int alpha, int beta);
     int NegaMax(Board  &board, int depth, int alpha, int beta);
     int QuiescenceSearch(Board &board, int alpha, int beta);
 
-    int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
-
-    bool TimeOver();
-    bool NodeLimit() { return m_nodes >= m_forcedNodes; };
-
-    //IterativeDeepening methods
+    // IterativeDeepening methods
     void ClearSearch();
     void UciOutput(std::string PV);
 
-    //Debug
+    // NegaMax methods
+    int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
+
+    // Limits
+    bool TimeOver();
+    bool NodeLimit() { return m_nodes >= m_forcedNodes; };
+
+    // Debug
     void ShowDebugInfo();
 
-    //Limits
+    // --- Private variables ---
+
+    // Search state
+    int m_bestScore; // Best score found so far for the current search
+    Move m_bestMove; // Best move found so far for the current search
+    Move m_ponderMove; // Ponder move (used in UCI output)
+    bool m_nullmoveAllowed; // Prevents two consecutive null moves
+    u8 m_searchCount; // Used as 'age' in transposition tables
+    // Nodes
+    u64 m_nodes; // Number of nodes searched
+    int m_nps; // Nodes per second
+    // Depth
+    int m_depth; // Current search depth, in plies, for this iteration
+    int m_ply; // Distance from root
+    int m_plyqs; // Distance within the Quiescence Search
+    int m_selPly; // Maximum ply reached (UCI reporting)
+
+    // Limits
     Limits m_limits;
-    int m_maxDepth;
-    int m_allocatedTime;
-    int m_forcedTime;
-    u64 m_forcedNodes;
-
-    //Info variables
-    int m_depth;
-    int64_t m_elapsedTime;
-    u64 m_nodes;
-    int m_nps;
-    int m_bestScore;
-    Move m_bestMove;
-    Move m_ponderMove;
-
-    //Time management
+    int m_maxDepth; // Fixed depth limit
+    int m_forcedTime; // Fixed time limit (ms)
+    u64 m_forcedNodes; // Fixed nodes limit
+    bool m_stop; // Flag to indicate search stop
+    
+    // Time management
     Utils::Clock m_clock;
-    bool m_stop;
-    int m_nodesTimeCheck;
+    int64_t m_elapsedTime; // Time passed since the start of the search (ms)
+    int m_allocatedTime; // In normal timed games, estimation of the time to use within the search (ms)
+    int m_nodesTimeCheck; // Number of nodes searched since the last time check
 
-    //Helpers
-    int m_ply;
-    int m_plyqs;
-    int m_selPly;
-    u8 m_searchCount;
-    bool m_nullmoveAllowed;
+    // Heuristics
+    Heuristics m_heuristics; // Heuristics for move ordering (history, killers)
 
-    //Heuristics
-    Heuristics m_heuristics;
-
-    //Debug
-    bool m_debugMode;
+    // Debug
+    bool m_debugMode; // UCI debug mode
     SearchDebug m_debug;
 };
 
