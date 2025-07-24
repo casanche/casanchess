@@ -2,7 +2,8 @@
 #define SEARCH_H
 
 #include "Board.h"
-#include "Hash.h"
+#include "Constants.h"
+#include "Debug.h"
 #include "Heuristics.h"
 #include "Move.h"
 #include "Utils.h"
@@ -26,16 +27,6 @@ struct Limits {
     int binc;
 
     int movesToGo = 0;
-};
-
-class SearchDebug {
-public:
-    void Increment(std::string theVariable) { debugVariables[theVariable]++; };
-    void Print();
-private:
-    void Transform();
-    
-    std::map<std::string, int> debugVariables;
 };
 
 class Search {

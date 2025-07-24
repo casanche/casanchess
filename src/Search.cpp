@@ -59,7 +59,6 @@ const int NULLMOVE_REDUCTION_FACTOR = 3;
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
 
-const bool TURNOFF_DEBUG_OUTPUT = true;
 const int UCI_OUTPUT_CURRMOVE_MINTIME = 1000; //ms
 
 // Draw contempt to discourage premature draws
@@ -116,11 +115,15 @@ void Search::ClearSearch() {
 // Main loop: increase depth one by one and call the root search.
 // Manage time, aspiration window, and UCI output.
 void Search::IterativeDeepening(Board &board) {
+    D( m_debug.Increment("IterativeDeepening: Start") );
+
     m_searchCount++;
 
     m_clock.Start();
     ClearSearch();
-    m_heuristics.history.Age(); // Reduce history from old positions, but do not remove entirely
+    
+    D( m_debug.Increment("IterativeDeepening: _: Start") );
+    m_searchCount++;
 
     for(m_depth = 1; m_depth <= m_maxDepth; m_depth++) {
         assert(m_ply == 0);
@@ -144,11 +147,11 @@ void Search::IterativeDeepening(Board &board) {
         
         // Out of aspiration bounds. Repeat search with a wider window
         while(score <= alpha || score >= beta) {
+            D( m_debug.Increment("IterativeDeepening: AspirationWindow: Out of bounds") );
+
             alpha = -INFINITE_SCORE;
             beta  =  INFINITE_SCORE;
             score = RootMax(board, m_depth, alpha, beta);
-
-            D( m_debug.Increment("IterativeDeepening Out of AspirationWindow") );
         }
 
         // Stop search if limits are reached within the loop
@@ -187,7 +190,7 @@ void Search::IterativeDeepening(Board &board) {
         if(m_elapsedTime > (m_allocatedTime / 2)) //check
              break;
 
-        if(!TURNOFF_DEBUG_OUTPUT)
+        if(DEBUG_PRINT_STATISTICS && m_depth == m_maxDepth)
             D( m_debug.Print() );
     }
 
@@ -238,12 +241,15 @@ void Search::Infinite() {
 // Root search. Handle special root-level logic.
 // Iterate over all moves, call NegaMax, and update the best move found.
 int Search::RootMax(Board &board, int depth, int alpha, int beta) {
+    assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
+    assert(depth > 0);
+
+    D( m_debug.Increment("RootMax: _: Hit") );
+
     Move bestMove;
     int score;
 
     int alphaOriginal = alpha; // Save the original alpha for TT logic
-
-    D( m_debug.Increment("RootMax: Hit") );
 
     MoveGenerator gen;
     MoveList moves = gen.GenerateMoves(board);
@@ -274,14 +280,14 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         m_ply--;
 
         if(score > alpha) {
-            D( m_debug.Increment("RootMax: NewBestMove") );
+            D( m_debug.Increment("RootMax: AlphaBeta: Update: BestMove (score > alpha)") );
             alpha = score;
             bestMove = move;
         }
 
         // Not useful to store in TT due to aspiration window
         if(score >= beta) {
-            D( m_debug.Increment("RootMax: BetaCutoff") );
+            D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
             break;
         }
 
@@ -297,8 +303,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         m_bestMove = bestMove;
         m_bestScore = alpha;
 
-        D( m_debug.Increment("RootMax: StoreExact") );
-
+        D( m_debug.Increment("RootMax: AlphaBeta: Exact") );
         Hash::tt.AddEntry(board.ZKey(), m_bestScore, TTENTRY_TYPE::EXACT, m_bestMove, depth, m_ply, m_searchCount);
     }
 
@@ -313,7 +318,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     bool isPV = (beta - alpha) != 1; // PV node if wide window
 
-    D( m_debug.Increment("NegaMax Hits (at start)") );
+    D( m_debug.Increment("NegaMax: _: Entering function") );
 
     // --------- Termination checks -----------
     m_nodesTimeCheck++;
@@ -323,8 +328,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     // --------- Draw detection: repetition and 50-move rule -----------
-    if(board.IsRepetitionDraw(m_ply) || board.FiftyRule() >= 100) {
-        D( m_debug.Increment("NegaMax: DrawDetection") );
+    if(board.FiftyRule() >= 100) {
+        D( m_debug.Increment("NegaMax: Draw: FiftyRule") );
+        return DRAW_SCORE(m_ply);
+    }
+    if(board.IsRepetitionDraw(m_ply)) {
+        D( m_debug.Increment("NegaMax: Draw: Repetition") );
         return DRAW_SCORE(m_ply);
     }
 
@@ -334,7 +343,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     alpha = std::max(alpha, -MATESCORE + m_ply);
     beta = std::min(beta, +MATESCORE - m_ply - 1);
     if(alpha >= beta) {
-        D( m_debug.Increment("NegaMax: MateDistancePruning") );
+        D( m_debug.Increment("NegaMax: Pruning: MateDistance") );
         return alpha;
     }
 
@@ -354,7 +363,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         return QuiescenceSearch(board, alpha, beta);
     }
 
-    D( m_debug.Increment("NegaMax: Hits") );
+    D( m_debug.Increment("NegaMax: _: Hits") );
 
     // --------- Transposition table probe --------
     Move bestMove; // For later storage in the TT
@@ -363,13 +372,13 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     
     TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), depth);
     if(ttEntry && !isPV) {
-        D( m_debug.Increment("NegaMax: TT Hits") );
+        D( m_debug.Increment("NegaMax: TT Hit") );
         int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
         if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
             || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
             || (ttEntry->type == TTENTRY_TYPE::EXACT && score >= alpha && score <= beta) )
         {
-            D( m_debug.Increment("NegaMax: TT Hits: Cut-Off") );
+            D( m_debug.Increment("NegaMax: TT Hit: Cut-Off") );
             return score;
         }
     }
@@ -377,7 +386,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // Calculate static evaluation once, used for pruning heuristics
     int eval = 0;
     if(!inCheck) {
-        D( m_debug.Increment("NegaMax Calls to Evaluation") );
+        D( m_debug.Increment("NegaMax: _: Call to Evaluation") );
         eval = Evaluation::Evaluate(board);
     }
 
@@ -387,7 +396,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     if(depth <= 4 && !isPV && !inCheck) {
         int staticEval = eval - depth * staticMargin;
         if(staticEval >= beta) {
-            D( m_debug.Increment("NegaMax: Reverse Futility - Depth " + std::to_string(depth)) );
+            D( m_debug.Increment("NegaMax: Pruning: Reverse Futility") );
+            D( m_debug.Increment("NegaMax: Pruning: Reverse Futility - Depth " + std::to_string(depth)) );
             return staticEval;
         }
     }
@@ -396,7 +406,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // Reduction in hopeless nodes (eval << alpha)
     if(depth == 3 && eval + 1150 <= alpha && !isPV && !extension && Evaluation::AreHeavyPieces(board))
     {
-        D( m_debug.Increment("NegaMax: Razoring - Depth " + std::to_string(depth)) );
+        D( m_debug.Increment("NegaMax: Pruning: Razoring") );
+        D( m_debug.Increment("NegaMax: Pruning: Razoring - Depth " + std::to_string(depth)) );
         depth--;
     }
 
@@ -410,7 +421,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // && depth >= NULLMOVE_REDUCTION_FACTOR + (depth / 5)  //enough depth
         && Evaluation::AreHeavyPieces(board)  // Avoid zugzwang in K+P endgames
     ) {
-        D( m_debug.Increment("NegaMax: NullMove Hits - Depth " + std::to_string(depth)) );
+        D( m_debug.Increment("NegaMax: Pruning: NullMove: Hit") );
+        D( m_debug.Increment("NegaMax: Pruning: NullMove: Hit - Depth " + std::to_string(depth)) );
 
         board.MakeNull();
         m_ply++;
@@ -425,7 +437,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_nullmoveAllowed = true;
 
         if(nullScore >= beta) {
-            D( m_debug.Increment("NegaMax: NullMove Cut-offs - Depth " + std::to_string(depth)) );
+            D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff") );
+            D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff - Depth " + std::to_string(depth)) );
             if(IsMateValue(nullScore))
                 nullScore = beta;  // Avoid reporting false mates in zugzwang
             Hash::tt.AddEntry(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount);
@@ -439,7 +452,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     MoveGenerator gen;
     MoveList moves = gen.GenerateMoves(board);
 
-    D( m_debug.Increment("NegaMax: GenerateMoves Hits") );
+    D( m_debug.Increment("NegaMax: _: GenerateMoves") );
 
     //----- One-reply extension -------
     if(moves.size() == 1) {
@@ -450,11 +463,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // --------- Check for checkmate and stalemate -----------
     if( moves.empty() ) {
         if(inCheck) {
-            D( m_debug.Increment("NegaMax: Checkmate") );
+            D( m_debug.Increment("NegaMax: EmptyMoves: Checkmate") );
             return -MATESCORE + m_ply; // Checkmate
         }
         else {
-            D( m_debug.Increment("NegaMax: Stalemate") );
+            D( m_debug.Increment("NegaMax: EmptyMoves: Stalemate") );
             return DRAW_SCORE(m_ply); // Stalemate
         }
     }
@@ -470,7 +483,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     if (!TURNOFF_FUTILITY && depth <= 4 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
         futilityMargin = 150 + depth * 150;
         if(eval + futilityMargin < alpha) {
-            D( m_debug.Increment("NegaMax: Futility preparation - Depth " + std::to_string(depth)) );
+            D( m_debug.Increment("NegaMax: Pruning: Futility preparation") );
+            D( m_debug.Increment("NegaMax: Pruning: Futility preparation - Depth " + std::to_string(depth)) );
             doFutility = true;
         }
     }
@@ -492,7 +506,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // Only quiet and bad captures are pruned
         const int SEE_ZERO = 240;
         if(!TURNOFF_FUTILITY && doFutility && move.Score() <= SEE_ZERO) {
-            D( m_debug.Increment("NegaMax: Futility - FutileMove - " + std::to_string(depth)) );
+            D( m_debug.Increment("NegaMax: Pruning: Futility - FutileMove") );
+            D( m_debug.Increment("NegaMax: Pruning: Futility - FutileMove - " + std::to_string(depth)) );
             if(eval + futilityMargin > bestScore) {
                 bestScore = eval + futilityMargin;
             }
@@ -555,13 +570,13 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_ply--;
 
         if(score > bestScore) {
-            D( m_debug.Increment("NegaMax: Update BestMove") );
+            D( m_debug.Increment("NegaMax: AlphaBeta: Update: BestMove") );
             bestScore = score;
             bestMove = move;
         }
 
         if(score >= beta) {
-            D( m_debug.Increment("NegaMax: Beta Cutoff") );
+            D( m_debug.Increment("NegaMax: AlphaBeta: Cutoff") );
 
             Hash::tt.AddEntry(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount);
 
@@ -575,7 +590,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
 
         if(score > alpha) {
-            D( m_debug.Increment("NegaMax: Update alpha") );
+            D( m_debug.Increment("NegaMax: AlphaBeta: Update: Alpha") );
             alpha = score;
         }
 
@@ -583,12 +598,18 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // Store score in transposition table
     if(bestMove.MoveType() != 0) {
-        TTENTRY_TYPE type = (alpha > alphaOriginal) ? TTENTRY_TYPE::EXACT : TTENTRY_TYPE::UPPER_BOUND;
+        bool alphaWithinBounds = (alpha > alphaOriginal);
+        alphaWithinBounds ? D( m_debug.Increment("NegaMax: AlphaBeta: Exact") )
+                          : D( m_debug.Increment("NegaMax: AlphaBeta: UpperBound") );
+        TTENTRY_TYPE type = alphaWithinBounds ? TTENTRY_TYPE::EXACT
+                                              : TTENTRY_TYPE::UPPER_BOUND;
         Hash::tt.AddEntry(board.ZKey(), bestScore, type, bestMove, depth, m_ply, m_searchCount);
     }
 
     return bestScore;
 }
+
+#include <format>
 
 // Quiescence search: extends the search at the leaf nodes to avoid the horizon effect
 // in tactical sequences (captures and checks).
@@ -596,8 +617,11 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
     assert(m_ply <= MAX_PLY);
 
-    D( m_debug.Increment("Quiescence: Hits") );
-    
+    D( m_debug.Increment("Quiescence: _: Hits") );
+    D( m_debug.Increment("Quiescence: QPly " + std::format("{:03}", m_plyqs)) );
+    if(m_plyqs > 0)
+        D( m_debug.Increment("Quiescence: QPly > 0") );
+
     // Prevent infinite recursion in rare cases (unlikely to occur)
     if (m_plyqs >= MAX_QS_PLIES) {
         D( m_debug.Increment("Quiescence: MAX_QS_PLIES reached (unlikely)") );
@@ -616,7 +640,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
         if(standPat > alpha) {
             if(standPat >= beta) {
-                D( m_debug.Increment("Quiescence: Cutoff (standPat >= beta)") );
+                D( m_debug.Increment("Quiescence: StandPat Cutoff (>= beta)") );
                 return standPat;
             }
             alpha = standPat;
@@ -649,12 +673,12 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // Checkmate or stalemate
     if( moves.empty() ) {
         if(inCheck) {
-            D( m_debug.Increment("Quiescence: Checkmate") );
+            D( m_debug.Increment("Quiescence: EmptyMoves: Checkmate") );
             return -MATESCORE + m_ply; // Checkmate
         }
         // Generate all the moves to verify stalemate
-        else if( gen.GenerateMoves(board).empty() ) { 
-            D( m_debug.Increment("Quiescence: Stalemate") );
+        else if( gen.GenerateMoves(board).empty() ) {
+            D( m_debug.Increment("Quiescence: EmptyMoves: Stalemate") );
             return DRAW_SCORE(m_ply); // Stalemate
         }
     }
@@ -689,7 +713,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
         board.MakeMove(move);
         m_ply++; m_plyqs++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
-        D( m_debug.Increment("Quiescence: Nodes") );
+        D( m_debug.Increment("Quiescence: MakeMove") );
 
         int score = -QuiescenceSearch(board, -beta, -alpha);
         
@@ -813,21 +837,4 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     reduction = lmr_value / MULT_FACTOR;
     reduction = std::clamp(reduction, 0, 4);
     return reduction;
-}
-
-void SearchDebug::Transform() {
-    std::string colorGreen = "\033[1;92m";
-    std::string colorBlack = "\033[0m";
-    debugVariables[colorGreen+"NegaMax Calls to Evaluation (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["NegaMax Calls to Evaluation"] / debugVariables["NegaMax Hits"]);
-    debugVariables[colorGreen+"NegaMax Cutoffs (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["NegaMax Cutoffs (score >= beta)"] / debugVariables["NegaMax Hits"]);
-    debugVariables[colorGreen+"NegaMax GenerateMoves (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["NegaMax GenerateMoves Hits"] / debugVariables["NegaMax Hits"]);
-    debugVariables[colorGreen+"TT Hits (in NegaMax) (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["TT Hits (in NegaMax)"] / debugVariables["NegaMax Hits"]);
-    debugVariables[colorGreen+"TT Hits (in Quiescence) (permil)"+colorBlack] = CastInt(1000 * (double)debugVariables["TT Hits (in Quiescence)"] / debugVariables["Quiescence Hits"]);
-}
-
-void SearchDebug::Print() {
-    Transform();
-    for(auto variable : debugVariables) {
-        P("\t " << variable.first << " " << variable.second);
-    }
 }
