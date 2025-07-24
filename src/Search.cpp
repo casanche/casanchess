@@ -88,9 +88,9 @@ Search::Search() {
     m_debugMode = false;
 }
 
-// Reset state for a new root search.
+// Reset state for a new position search.
 // Called at the beginning of each iteration in Iterative Deepening.
-void Search::ClearSearch() {
+void Search::ClearSearch(bool clearHistoryHeuristics) {
     // Node counters
     m_nodes = 0;
     m_nps = 0;
@@ -99,6 +99,10 @@ void Search::ClearSearch() {
     m_elapsedTime = 0;
     m_stop = false;
     m_nodesTimeCheck = 0;
+
+    // Search state
+    m_bestScore = -INFINITE_SCORE;
+    m_bestMove = Move();
 
     // Depth tracking
     m_ply = 0;
@@ -110,15 +114,16 @@ void Search::ClearSearch() {
 
     // Move ordering
     m_heuristics.killer.Clear();
+    clearHistoryHeuristics ? m_heuristics.history.Clear()
+                           : m_heuristics.history.Age(); // Reduce history from old positions, but do not remove entirely
+
+    // Debug
+    m_debug.Clear();
 }
 
 // Main loop: increase depth one by one and call the root search.
 // Manage time, aspiration window, and UCI output.
 void Search::IterativeDeepening(Board &board) {
-    D( m_debug.Increment("IterativeDeepening: Start") );
-
-    m_searchCount++;
-
     m_clock.Start();
     ClearSearch();
     

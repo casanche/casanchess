@@ -37,6 +37,7 @@ public:
     void IterativeDeepening(Board &board);
 
     // Flow
+    void ClearSearch(bool clearHistoryHeuristics = false);
     int64_t ElapsedTime() { return m_clock.Elapsed(); }
     void Stop() { m_stop = true; }
     void DebugMode() { m_debugMode = true; }
@@ -65,7 +66,6 @@ private:
     int QuiescenceSearch(Board &board, int alpha, int beta);
 
     // IterativeDeepening methods
-    void ClearSearch();
     void UciOutput(std::string PV);
 
     // NegaMax methods

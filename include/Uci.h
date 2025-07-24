@@ -16,6 +16,7 @@ public:
     void Launch();
 
 private:
+    void Bench(int depth);
     void Go(std::istringstream &stream);
     void Position(std::istringstream &stream);
     void SetOption(std::istringstream &stream);
