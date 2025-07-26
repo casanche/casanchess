@@ -97,7 +97,7 @@ void Uci::Launch() {
             Board board;
             board.Print();
             if(token == "perft") {
-                P( board.Perft(depth) );
+                std::cout << board.Perft(depth) << std::endl;
             } else {
                 board.Divide(depth);
             }
@@ -149,9 +149,9 @@ void Uci::Bench(int depth) {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Starting position
         "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", // Kiwipete
         "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", // Perft 5
-        "8/5p2/2B2k2/p7/1pr5/4r3/P1P3P1/3R2K1 w - - 12 48", // RG4 - Ending
         "r1bqr1k1/ppp2ppp/3p1n2/4n3/2PNP3/2P2P2/P3B1PP/1RBQ1RK1 b - - 1 11", // RG16 - Opening
         "6r1/1ppnr1kp/pq1b1p2/2p1pPP1/P3P3/1P1P1N2/R1PB3Q/5R1K b - - 2 30", // RG10 - Midgame Closed
+        "8/5p2/2B2k2/p7/1pr5/4r3/P1P3P1/3R2K1 w - - 12 48", // RG4 - Ending
         "r3qb1k/1b4p1/p2pr2p/3n4/Pnp1N1N1/6RP/1B3PP1/1B1QR1K1 w - - 0 1", // Nolot 1 - Wide tree
         "rnbq1b1r/p1pp1p1p/4k3/1p1NP1p1/2QP1p2/5N2/PP1B1KPP/n6R/ w - -", // Albillo 11 - Checks and mates
         "8/3P4/n2K2kp/2p3nN/1b6/2p1p1P1/8/3B4 w - - 4 3"  // Quiescence and deep pruning
