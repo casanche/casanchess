@@ -44,6 +44,7 @@ using namespace Sorting;
 #include <algorithm> //max(), clamp()
 #include <cmath> //INFINITY
 #include <iomanip> //debug output
+#include <format>
 
 // Search parameters
 const int MAX_QS_PLIES = 128;  // Maximum depth limit for quiescence search 
@@ -266,6 +267,9 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     int moveNumber = 0;
     for(auto move : moves) {
         moveNumber++;
+
+        if(DEBUG_SEARCH_TREE)
+            P( "RootMax: " << move.Notation() );
 
 #ifdef NDEBUG
         //Uci output: show the root move number under analysis
@@ -502,9 +506,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         int score, reduction = 0;
         int localExtension = 0;
 
-#ifdef DEBUG_NEGAMAX
-        P("  NegamaxLoop, ply " << m_ply << " move: " << move.Notation());
-#endif
+        if(DEBUG_SEARCH_TREE)
+            P("  NegamaxLoop, ply " << m_ply << " move: " << move.Notation());
 
         // ------- Futility pruning --------
         // Prune moves if evaluation is too low (eval << alpha)
@@ -614,18 +617,14 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     return bestScore;
 }
 
-#include <format>
-
 // Quiescence search: extends the search at the leaf nodes to avoid the horizon effect
 // in tactical sequences (captures and checks).
 int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
     assert(m_ply <= MAX_PLY);
 
-    D( m_debug.Increment("Quiescence: _: Hits") );
-    D( m_debug.Increment("Quiescence: QPly " + std::format("{:03}", m_plyqs)) );
-    if(m_plyqs > 0)
-        D( m_debug.Increment("Quiescence: QPly > 0") );
+    D( m_debug.Increment("Quiescence: _: Hits"); );
+    D( if(m_plyqs <= 2 || m_plyqs % 5 == 0) m_debug.Increment("Quiescence: QPly " + std::format("{:03}", m_plyqs)) );
 
     // Prevent infinite recursion in rare cases (unlikely to occur)
     if (m_plyqs >= MAX_QS_PLIES) {
@@ -669,11 +668,10 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     // Generate captures.
     // If in check, generate check evasions.
+    D( m_debug.Increment("Quiescence: GenerateMoves") );
     MoveGenerator gen;
     MoveList moves = inCheck ? gen.GenerateMoves(board)
                              : gen.GenerateCaptures(board);
-
-    D( m_debug.Increment("Quiescence: GenerateMoves") );
 
     // Checkmate or stalemate
     if( moves.empty() ) {
@@ -693,6 +691,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             : SortQuiescence(board, moves);
 
     for(auto move : moves) {
+
+        if(DEBUG_SEARCH_TREE)
+            D( board.ShowHistory(); );
 
         if(!inCheck) {
             // Futility pruning for low-value captures
@@ -717,8 +718,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         D( Board bef = board );
 
         board.MakeMove(move);
+
         m_ply++; m_plyqs++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
-        D( m_debug.Increment("Quiescence: MakeMove") );
+        D( m_debug.Increment("Quiescence: MakeMove (QPly > 0)") );
 
         int score = -QuiescenceSearch(board, -beta, -alpha);
         

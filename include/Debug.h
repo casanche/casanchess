@@ -6,6 +6,8 @@
 
 const bool DEBUG_PRINT_STATISTICS = true;
 
+const bool DEBUG_SEARCH_TREE = false;
+
 // Macros
 #ifdef DEBUG
     #define D(x) x
@@ -17,11 +19,9 @@ const bool DEBUG_PRINT_STATISTICS = true;
 class SearchDebug {
 public:
     void Clear() { debugVariables.clear(); };
-    void Increment(std::string theVariable) { debugVariables[theVariable]++; };
+    void Increment(const std::string& theVariable);
     void Print();
 private:
-    void Transform();
-    
     std::map<std::string, int> debugVariables;
 };
 
