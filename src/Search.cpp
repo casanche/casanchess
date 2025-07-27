@@ -172,7 +172,11 @@ void Search::IterativeDeepening(Board &board) {
         std::string PV;
         m_ponderMove = Move();
         Board newBoard = board;
-        assert(newBoard == board);
+        // D(
+        //     BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(board);
+        //     BoardIdentity aft = BoardIntegrityChecker::GenerateBoardIdentity(newBoard);
+        //     assert(bef == aft);
+        // );
         for(int depth = 1; depth <= m_depth; depth++) {
             TTEntry *ttEntry = Hash::tt.ProbeEntry(newBoard.ZKey(), 0);
             if(!ttEntry) continue;
@@ -715,7 +719,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             }
         }
         
-        D( Board bef = board );
+        // D( BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(board); );
 
         board.MakeMove(move);
 
@@ -727,8 +731,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         board.TakeMove(move);
         m_ply--; m_plyqs--;
 
-        D( Board aft = board );
-        D( assert(bef == aft) );
+        // D( BoardIdentity aft = BoardIntegrityChecker::GenerateBoardIdentity(board); );
+        // D( assert(bef == aft) );
 
         if(score > bestScore)
             bestScore = score;

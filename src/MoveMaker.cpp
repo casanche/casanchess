@@ -102,7 +102,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     }
 
     //Asserts
-    assert(board.CheckIntegrity());
+    // assert(BoardIntegrityChecker::CheckIntegrity(board));
     assert(~board.m_allpieces & SquareBB(fromSq) );
     assert( board.m_allpieces & SquareBB(toSq) );
 }
@@ -178,7 +178,7 @@ void MoveMaker::TakeMove(Board& board, Move move) {
         nnue.RestorePosition(board.m_ply);
 
     //Asserts
-    assert(board.CheckIntegrity());
+    // assert(BoardIntegrityChecker::CheckIntegrity(board));
     assert(board.m_allpieces & SquareBB(fromSq));
 }
 

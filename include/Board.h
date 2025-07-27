@@ -2,6 +2,7 @@
 #define BOARD_H
 
 #include "Constants.h"
+#include "Debug.h"
 #include "ZobristKeys.h"
 
 #include "Fen.h"
@@ -97,9 +98,6 @@ private:
     //Static Exchange Evaluation
     Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType);
 
-    // Debug
-    bool CheckIntegrity() const;
-
     //State
     COLOR m_activePlayer;
     u8 m_castlingRights; //[0-4] bits: the castling rights
@@ -122,6 +120,10 @@ private:
     unsigned int m_initialPly;
     BoardHistory m_history[MAX_PLY];
 
+    //Debug
+    // BoardIntegrityChecker m_integrityChecker;
+
+    friend class BoardIntegrityChecker;
     friend class Fen;
     friend class MoveMaker;
     friend class MoveGenerator;
