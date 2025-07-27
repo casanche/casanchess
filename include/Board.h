@@ -85,9 +85,6 @@ public:
     inline unsigned int Ply() const         { return m_ply; }
     inline u64 ZKey() const                 { return m_zobristKey.Key(); }
 
-    //Operators
-    bool operator==(const Board& rhs) const;
-
 private:
     void ClearBits();
     void UpdateBitboards();
@@ -96,9 +93,6 @@ private:
 
     //Static Exchange Evaluation
     Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType);
-
-    // Debug
-    bool CheckIntegrity() const;
 
     //State
     COLOR m_activePlayer;

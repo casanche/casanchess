@@ -172,7 +172,11 @@ void Search::IterativeDeepening(Board &board) {
         std::string PV;
         m_ponderMove = Move();
         Board newBoard = board;
-        assert(newBoard == board);
+        D(
+            BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(board);
+            BoardIdentity aft = BoardIntegrityChecker::GenerateBoardIdentity(newBoard);
+            assert(bef == aft);
+        );
         for(int depth = 1; depth <= m_depth; depth++) {
             TTEntry *ttEntry = Hash::tt.ProbeEntry(newBoard.ZKey(), 0);
             if(!ttEntry) continue;
@@ -271,14 +275,14 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         if(DEBUG_SEARCH_TREE)
             P( "RootMax: " << move.Notation() );
 
-#ifdef NDEBUG
-        //Uci output: show the root move number under analysis
-        if(m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
-            std::cout << "info currmovenumber " << moveNumber;
-            std::cout << " currmove " << move.Notation();
-            std::cout << std::endl;
+        if(UCI_OUTPUT) {
+            //Uci output: show the root move number under analysis
+            if(m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
+                std::cout << "info currmovenumber " << moveNumber;
+                std::cout << " currmove " << move.Notation();
+                std::cout << std::endl;
+            }
         }
-#endif
 
         board.MakeMove(move);
         m_ply++; m_nodes++;
@@ -715,7 +719,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             }
         }
         
-        D( Board bef = board );
+        D( BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(board); );
 
         board.MakeMove(move);
 
@@ -727,7 +731,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         board.TakeMove(move);
         m_ply--; m_plyqs--;
 
-        D( Board aft = board );
+        D( BoardIdentity aft = BoardIntegrityChecker::GenerateBoardIdentity(board); );
         D( assert(bef == aft) );
 
         if(score > bestScore)
