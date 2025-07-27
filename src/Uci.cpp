@@ -180,15 +180,9 @@ void Uci::Bench(int depth) {
         limits.depth = depth;
         limits.infinite = false;
 
-        // Clear hash table and history heuristics for fair comparison
-        Hash::tt.Clear();
-        Hash::pawnHash.Clear();
-        bool clearHistoryHeuristics = true; // Clear history heuristics for each position
-        m_search.ClearSearch(clearHistoryHeuristics);
-
         // Run search
         m_search.AllocateLimits(m_board, limits);
-        m_search.IterativeDeepening(m_board);
+        m_search.IterativeDeepening(m_board, true);
 
         // Get results using the engine's own calculations
         int64_t elapsed = m_search.ElapsedTime();

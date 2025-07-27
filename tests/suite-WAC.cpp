@@ -30,7 +30,7 @@ TEST(WAC, WAC) {
         board.SetFen(pos.fen);
 
         search.FixTime(3000);
-        search.IterativeDeepening(board);
+        search.IterativeDeepening(board, true);
         Move move = search.BestMove();
 
         std::string toSq = move.Notation().substr(2,2);

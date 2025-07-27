@@ -78,7 +78,7 @@ Search::Search() {
     m_bestScore = -INFINITE_SCORE;
     m_searchCount = 0;
 
-    ClearSearch();
+    ClearSearch(true);
     m_heuristics.history.Clear();
 
     // Clear transposition tables
@@ -91,7 +91,7 @@ Search::Search() {
 
 // Reset state for a new position search.
 // Called at the beginning of each iteration in Iterative Deepening.
-void Search::ClearSearch(bool clearHistoryHeuristics) {
+void Search::ClearSearch(bool fullSearchClearFlag) {
     // Node counters
     m_nodes = 0;
     m_nps = 0;
@@ -115,18 +115,26 @@ void Search::ClearSearch(bool clearHistoryHeuristics) {
 
     // Move ordering
     m_heuristics.killer.Clear();
-    clearHistoryHeuristics ? m_heuristics.history.Clear()
-                           : m_heuristics.history.Age(); // Reduce history from old positions, but do not remove entirely
+    m_heuristics.history.Age(); // Reduce history from old positions, but do not remove entirely
 
     // Debug
     m_debug.Clear();
+
+    // Completely clear TT and history heuristics for a reproducible search
+    if(fullSearchClearFlag) {
+        Hash::tt.Clear();
+        Hash::pawnHash.Clear();
+
+        m_heuristics.history.Clear();
+    }
 }
 
 // Main loop: increase depth one by one and call the root search.
 // Manage time, aspiration window, and UCI output.
-void Search::IterativeDeepening(Board &board) {
+void Search::IterativeDeepening(Board &board, bool fullSearchClearFlag) {
     m_clock.Start();
-    ClearSearch();
+
+    ClearSearch(fullSearchClearFlag);
     
     D( m_debug.Increment("IterativeDeepening: _: Start") );
     m_searchCount++;

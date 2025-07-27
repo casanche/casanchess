@@ -34,10 +34,10 @@ public:
     Search();
 
     // Start search
-    void IterativeDeepening(Board &board);
+    void IterativeDeepening(Board &board, bool fullSearchClearFlag = false);
 
     // Flow
-    void ClearSearch(bool clearHistoryHeuristics = false);
+    void ClearSearch(bool fullSearchClearFlag);
     int64_t ElapsedTime() { return m_clock.Elapsed(); }
     void Stop() { m_stop = true; }
     void DebugMode() { m_debugMode = true; }
