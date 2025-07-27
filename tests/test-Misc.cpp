@@ -25,6 +25,14 @@ TEST_F(PositionMisc, Fine70) {
     EXPECT_EQ(search.BestMove().Notation(), "a1b1");
 }
 
+//https://www.talkchess.com/forum/viewtopic.php?p=710549
+TEST_F(PositionMisc, QuiescenceExplosion) {
+    board.SetFen("1QqQqQq1/r6Q/Q6q/q6Q/B2q4/q6Q/k6K/1qQ1QqRb w - -");
+    search.FixDepth(1);
+    search.IterativeDeepening(board);
+    EXPECT_EQ(search.BestScore(), MATESCORE-1);
+}
+
 //Mate tests
 
 // Difficult mate in #5. Too much pruning will see mate in #6
