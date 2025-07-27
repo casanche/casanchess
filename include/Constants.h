@@ -46,13 +46,6 @@ const Bitboard ALL = (Bitboard)~0; //universal bitboard (all ones)
 
 #define SquareBB(square) (ONE << (square))
 
-//Debug
-#ifdef DEBUG
-    #define D(x) x
-#else
-    #define D(x) ((void)0)
-#endif
-
 #define P(x) std::cout << x << std::endl;
 #define PL(x) std::cout << x << " " << std::flush;
 

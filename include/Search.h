@@ -2,7 +2,8 @@
 #define SEARCH_H
 
 #include "Board.h"
-#include "Hash.h"
+#include "Constants.h"
+#include "Debug.h"
 #include "Heuristics.h"
 #include "Move.h"
 #include "Utils.h"
@@ -28,24 +29,15 @@ struct Limits {
     int movesToGo = 0;
 };
 
-class SearchDebug {
-public:
-    void Increment(std::string theVariable) { debugVariables[theVariable]++; };
-    void Print();
-private:
-    void Transform();
-    
-    std::map<std::string, int> debugVariables;
-};
-
 class Search {
 public:
     Search();
 
     // Start search
-    void IterativeDeepening(Board &board);
+    void IterativeDeepening(Board &board, bool fullSearchClearFlag = false);
 
     // Flow
+    void ClearSearch(bool fullSearchClearFlag);
     int64_t ElapsedTime() { return m_clock.Elapsed(); }
     void Stop() { m_stop = true; }
     void DebugMode() { m_debugMode = true; }
@@ -74,7 +66,6 @@ private:
     int QuiescenceSearch(Board &board, int alpha, int beta);
 
     // IterativeDeepening methods
-    void ClearSearch();
     void UciOutput(std::string PV);
 
     // NegaMax methods

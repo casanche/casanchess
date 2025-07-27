@@ -21,8 +21,16 @@ protected:
 TEST_F(PositionMisc, Fine70) {
     board.SetFen("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -");
     search.FixTime(3000);
-    search.IterativeDeepening(board);
+    search.IterativeDeepening(board, true);
     EXPECT_EQ(search.BestMove().Notation(), "a1b1");
+}
+
+//https://www.talkchess.com/forum/viewtopic.php?p=710549
+TEST_F(PositionMisc, QuiescenceExplosion) {
+    board.SetFen("1QqQqQq1/r6Q/Q6q/q6Q/B2q4/q6Q/k6K/1qQ1QqRb w - -");
+    search.FixDepth(1);
+    search.IterativeDeepening(board, true);
+    EXPECT_EQ(search.BestScore(), MATESCORE-1);
 }
 
 //Mate tests
@@ -31,7 +39,7 @@ TEST_F(PositionMisc, Fine70) {
 // TEST_F(PositionMisc, Mate1) {
 //     board.SetFen("8/3N4/6p1/1p5p/5b1p/P2k2n1/1B6/3KQ3 w - -");
 //     search.FixTime(2000);
-//     search.IterativeDeepening(board);
+//     search.IterativeDeepening(board, true);
 //     EXPECT_EQ(search.BestMove().Notation(), "b2a1");
 // }
 
