@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 project(Casanchess 
     VERSION 0.9.0
     LANGUAGES CXX
@@ -8,6 +8,13 @@ project(Casanchess
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Check GCC version for C++23 support
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
+        message(FATAL_ERROR "GCC >= 13 is required for C++23 support. Detected: ${CMAKE_CXX_COMPILER_VERSION}")
+    endif()
+endif()
 
 # =============================================================================
 # Project Options
