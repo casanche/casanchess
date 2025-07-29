@@ -319,6 +319,7 @@ void Evaluation::EvalPawns(const Board &board, Score& score) {
 
     //Debug
     D(
+        test_total++;
         if(test_total % 10000000 == 0) {
             P("PawnKey: " << board.PawnKey());
             P("PawnHash hitrate: calls " << test_total \
@@ -327,7 +328,6 @@ void Evaluation::EvalPawns(const Board &board, Score& score) {
                         << ", rate " << 100 * (float)test_hit / test_total << "%" \
                         << ", fill " << 100 * Hash::pawnHash.Occupancy() << "%");
         }
-        test_total++;
     );
 
     PawnEntry* pawnEntry = Hash::pawnHash.ProbeEntry( board.PawnKey() );

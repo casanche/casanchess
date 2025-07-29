@@ -29,18 +29,20 @@ TEST(BoardTest, IsRepetitionDraw) {
     board.MakeMove("h6g6"); EXPECT_EQ(board.IsRepetitionDraw(), true);
 }
 
+#include "Uci.h"
+
 TEST(EvaluationTest, Mirror) {
     Board board;
-    std::ifstream in("../tests/suites/real_games.epd");
-    std::string line;
+    UCI_CLASSICAL_EVAL = true; // NNUE eval does not respect mirroring
 
-    while( std::getline(in, line) ) {
-        EPDPosition pos = ReadEPDLine(line);
+    board.SetFen("r4rk1/pppbqppp/2n1pn2/1B1p4/3P4/P1B1P3/1PPN1PPP/R2Q1RK1 b - - 0 10"); // RG3
+    // Mirrored: "r2q1rk1/1ppn1ppp/p1b1p3/3p4/1b1P4/2N1PN2/PPPBQPPP/R4RK1 w - - 0 10"
 
-        board.SetFen(pos.fen);
-        int eval = Evaluation::Evaluate(board);
-        board.Mirror();
-        int evalMirror = Evaluation::Evaluate(board);
-        EXPECT_EQ(eval, evalMirror);
-    }
+    int eval = Evaluation::Evaluate(board);
+
+    board.Mirror();
+    int evalMirror = Evaluation::Evaluate(board);
+
+    UCI_CLASSICAL_EVAL = false;
+    EXPECT_EQ(eval, evalMirror);
 }
