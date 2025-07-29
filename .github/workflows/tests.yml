@@ -11,16 +11,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # RELEASE
+          # RELEASE - Linux
           - os: ubuntu-latest
             build_type: Release
             compiler: g++
           - os: ubuntu-latest
             build_type: Release
             compiler: clang++
+          # RELEASE - Windows
           - os: windows-latest
             build_type: Release
             compiler: cl
+          - os: windows-2025
+            build_type: Release
+            compiler: g++
           # DEBUG
           - os: ubuntu-latest
             build_type: Debug
@@ -28,9 +32,10 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
-      
-    - name: Install dependencies (Ubuntu)
+
+    - name: Setup dependencies (Linux)
       if: ${{ runner.os == 'Linux' }}
+      shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential cmake
@@ -41,8 +46,10 @@ jobs:
       run: >
         cmake -B build
         -S ${{ github.workspace }}
+        ${{ runner.os == 'Windows' && matrix.compiler == 'g++' && '-G Ninja' || '' }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+        -DENABLE_STATIC=ON
         -DBUILD_TESTS=ON
         -DBUILD_TESTS_EXTRA=ON
         -DBUILD_EXECUTABLES_EXTRA=ON
@@ -60,20 +67,27 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     needs: build
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
         include:
-          # RELEASE
+          # RELEASE - Linux
           - os: ubuntu-latest
             build_type: Release
             compiler: g++
           - os: ubuntu-latest
             build_type: Release
             compiler: clang++
+          # RELEASE - Windows
           - os: windows-latest
             build_type: Release
             compiler: cl
+          - os: windows-2025
+            build_type: Release
+            compiler: g++
           # DEBUG
           - os: ubuntu-latest
             build_type: Debug
@@ -86,35 +100,25 @@ jobs:
         name: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.compiler }}-artifacts
         path: build/
         
-    - name: Fix permissions
+    - name: Fix permissions (Linux)
       if: ${{ runner.os == 'Linux' }}
       working-directory: ./build
       run: chmod +x casanchess tests perft
 
     - name: Tests - Unit and Perft
       working-directory: ./build
-      shell: bash
       run: |
-        EXT=""
-        BASE_PATH=""
-        if [ "${{ runner.os }}" == "Windows" ]; then
-          EXT=".exe"
-          BASE_PATH="${{ matrix.build_type }}/"
-        fi
+        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
+        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
 
-        for exe in tests perft; do
-          ./${BASE_PATH}${exe}${EXT}
+        for exe_name in tests perft; do
+          ./${BASE_PATH}${exe_name}${EXTENSION_SUFFIX}
         done
 
     - name: Bench
       working-directory: ./build
-      shell: bash
       run: |
-        EXT=""
-        BASE_PATH=""
-        if [ "${{ runner.os }}" == "Windows" ]; then
-          EXT=".exe"
-          BASE_PATH="${{ matrix.build_type }}/"
-        fi
+        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
+        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
 
-        echo bench | ./${BASE_PATH}casanchess$EXT
+        echo bench | ./${BASE_PATH}casanchess${EXTENSION_SUFFIX}

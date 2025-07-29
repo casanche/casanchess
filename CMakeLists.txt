@@ -1,8 +1,20 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 project(Casanchess 
     VERSION 0.9.0
     LANGUAGES CXX
 )
+
+# C++ Standard Configuration
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Check GCC version for C++23 support
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
+        message(FATAL_ERROR "GCC >= 13 is required for C++23 support. Detected: ${CMAKE_CXX_COMPILER_VERSION}")
+    endif()
+endif()
 
 # =============================================================================
 # Project Options
@@ -11,6 +23,7 @@ option(BUILD_TESTS "Build standard tests" OFF)
 option(BUILD_TESTS_EXTRA "Build extra tests (Perft and Searcht)" OFF)
 option(BUILD_EXECUTABLES_EXTRA "Build extra executables (GenSFen and NNUE_Convert)" OFF)
 option(ENABLE_LTO "Enable Link Time Optimization for Release builds" ON)
+option(ENABLE_STATIC "Enable static compilation" ON)
 
 # Set Release as default build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -41,29 +54,29 @@ else()
     )
 endif()
 
-# C++ Standard Configuration
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# =============================================================================
+# Linker Configuration
+# =============================================================================
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 
-# IPO/LTO Configuration
-if(ENABLE_LTO AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
-    if(ipo_supported)
-        message(STATUS "IPO/LTO enabled")
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    else()
-        message(STATUS "IPO/LTO not supported: ${ipo_error}")
+    # IPO/LTO Configuration
+    if(ENABLE_LTO)
+        include(CheckIPOSupported)
+        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+        if(ipo_supported)
+            message(STATUS "IPO/LTO enabled")
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        else()
+            message(STATUS "IPO/LTO not supported: ${ipo_error}")
+        endif()
     endif()
-endif()
 
-# Windows-specific configuration
-if(WIN32)
-    if(NOT MSVC)
-        message(STATUS "Set linking mode -- STATIC")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    # Static Compilation
+    if(ENABLE_STATIC AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        message(STATUS "STATIC linking mode enabled")
+        set(LINK_FLAGS ${LINK_FLAGS} -static)
     endif()
+    
 endif()
 
 # =============================================================================
@@ -118,31 +131,26 @@ add_library(engine OBJECT ${ENGINE_SOURCES})
 add_library(engine_static STATIC ${ENGINE_SOURCES})
 
 # Set include directories for both libraries
-target_include_directories(engine
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-)
-target_include_directories(engine_static
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-)
-
-# Link dependencies
-target_link_libraries(engine PUBLIC Threads::Threads)
-target_link_libraries(engine_static PUBLIC Threads::Threads)
+target_include_directories(engine        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_include_directories(engine_static PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
 # Apply compiler configuration to both libraries
-target_compile_options(engine PRIVATE ${COMPILER_OPTIONS})
+target_compile_options(engine        PRIVATE ${COMPILER_OPTIONS})
 target_compile_options(engine_static PRIVATE ${COMPILER_OPTIONS})
+
+# Link dependencies
+target_link_libraries(engine        PUBLIC Threads::Threads)
+target_link_libraries(engine_static PUBLIC Threads::Threads)
 
 # =============================================================================
 # Casanchess Executable
 # =============================================================================
 add_executable(casanchess Main.cpp)
-
-target_link_libraries(casanchess PRIVATE $<TARGET_OBJECTS:engine>)
 target_include_directories(casanchess PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 target_compile_options(casanchess PRIVATE ${COMPILER_OPTIONS})
+target_link_libraries(casanchess PRIVATE $<TARGET_OBJECTS:engine>)
+target_link_options(casanchess PRIVATE ${LINK_FLAGS})
 
 # =============================================================================
 # Data Files
@@ -154,26 +162,6 @@ if(NNUE_FILES)
     message(STATUS "Copied NNUE files: ${NNUE_FILES}")
 else()
     message(WARNING "No NNUE files found in data/ directory")
-endif()
-
-# =============================================================================
-# Extra Executables
-# =============================================================================
-if(BUILD_EXECUTABLES_EXTRA)
-    # GenSFen executable
-    add_executable(gensfen
-        src/gensfen/GenSFen.cpp
-        src/gensfen/Main.cpp
-    )
-    target_link_libraries(gensfen PRIVATE engine_static)
-    target_compile_options(gensfen PRIVATE ${COMPILER_OPTIONS})
-
-    # NNUE_Convert executable
-    add_executable(nnue_convert
-        src/nnue_convert/NNUE_Convert.cpp
-    )
-    target_link_libraries(nnue_convert PRIVATE engine_static)
-    target_compile_options(nnue_convert PRIVATE ${COMPILER_OPTIONS})
 endif()
 
 # =============================================================================
@@ -191,19 +179,39 @@ if(BUILD_TESTS)
         tests/test-ZobristKey.cpp
     )
     
-    target_link_libraries(tests PRIVATE engine_static gtest)
     target_compile_options(tests PRIVATE ${COMPILER_OPTIONS})
+    target_link_libraries(tests PRIVATE engine_static gtest)
 
     # Extra tests
     if(BUILD_TESTS_EXTRA)
         # Perft test
         add_executable(perft tests/test-Perft.cpp)
-        target_link_libraries(perft PRIVATE engine_static gtest)
         target_compile_options(perft PRIVATE ${COMPILER_OPTIONS})
+        target_link_libraries(perft PRIVATE engine_static gtest)
 
         # Search test
         add_executable(searcht tests/test-Search.cpp)
-        target_link_libraries(searcht PRIVATE engine_static gtest)
         target_compile_options(searcht PRIVATE ${COMPILER_OPTIONS})
+        target_link_libraries(searcht PRIVATE engine_static gtest)
     endif()
+endif()
+
+# =============================================================================
+# Extra Executables
+# =============================================================================
+if(BUILD_EXECUTABLES_EXTRA)
+    # GenSFen executable
+    add_executable(gensfen
+        src/gensfen/GenSFen.cpp
+        src/gensfen/Main.cpp
+    )
+    target_compile_options(gensfen PRIVATE ${COMPILER_OPTIONS})
+    target_link_libraries(gensfen PRIVATE engine_static)
+
+    # NNUE_Convert executable
+    add_executable(nnue_convert
+        src/nnue_convert/NNUE_Convert.cpp
+    )
+    target_compile_options(nnue_convert PRIVATE ${COMPILER_OPTIONS})
+    target_link_libraries(nnue_convert PRIVATE engine_static)
 endif()
