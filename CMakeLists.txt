@@ -50,22 +50,26 @@ endif()
 # =============================================================================
 # Linker Configuration
 # =============================================================================
-# IPO/LTO Configuration
-if(ENABLE_LTO AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
-    if(ipo_supported)
-        message(STATUS "IPO/LTO enabled")
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    else()
-        message(STATUS "IPO/LTO not supported: ${ipo_error}")
-    endif()
-endif()
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 
-# Static Compilation
-if(ENABLE_STATIC AND NOT MSVC)
-    message(STATUS "STATIC linking mode enabled")
-    set(LINK_FLAGS ${LINK_FLAGS} -static)
+    # IPO/LTO Configuration
+    if(ENABLE_LTO)
+        include(CheckIPOSupported)
+        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+        if(ipo_supported)
+            message(STATUS "IPO/LTO enabled")
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        else()
+            message(STATUS "IPO/LTO not supported: ${ipo_error}")
+        endif()
+    endif()
+
+    # Static Compilation
+    if(ENABLE_STATIC AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        message(STATUS "STATIC linking mode enabled")
+        set(LINK_FLAGS ${LINK_FLAGS} -static)
+    endif()
+    
 endif()
 
 # =============================================================================
