@@ -43,6 +43,7 @@ jobs:
         -S ${{ github.workspace }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+        -DENABLE_STATIC=ON
         -DBUILD_TESTS=ON
         -DBUILD_TESTS_EXTRA=ON
         -DBUILD_EXECUTABLES_EXTRA=ON
