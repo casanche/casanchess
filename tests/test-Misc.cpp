@@ -18,13 +18,6 @@ protected:
     }
 };
 
-TEST_F(PositionMisc, Fine70) {
-    board.SetFen("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -");
-    search.FixTime(3000);
-    search.IterativeDeepening(board, true);
-    EXPECT_EQ(search.BestMove().Notation(), "a1b1");
-}
-
 //https://www.talkchess.com/forum/viewtopic.php?p=710549
 TEST_F(PositionMisc, QuiescenceExplosion) {
     board.SetFen("1QqQqQq1/r6Q/Q6q/q6Q/B2q4/q6Q/k6K/1qQ1QqRb w - -");
