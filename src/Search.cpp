@@ -83,6 +83,7 @@ Search::Search() {
 
     // Clear transposition tables
     Hash::tt.Clear();
+    Hash::evalCache.Clear();
     Hash::pawnHash.Clear();
 
     // Debug
@@ -123,6 +124,7 @@ void Search::ClearSearch(bool fullSearchClearFlag) {
     // Completely clear TT and history heuristics for a reproducible search
     if(fullSearchClearFlag) {
         Hash::tt.Clear();
+        Hash::evalCache.Clear();
         Hash::pawnHash.Clear();
 
         m_heuristics.history.Clear();
@@ -651,8 +653,15 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // Stand pat: static evaluation (if not in check)
     int standPat = 0;
     if(!inCheck) {
-        standPat = Evaluation::Evaluate(board);
-        D( m_debug.Increment("Quiescence: StandPat evaluated") );
+        // Probe evaluation cache first (modifies standPat if hit)
+        const bool cacheHit = Hash::evalCache.Probe(board.ZKey(), standPat);
+        if(cacheHit) {
+            D( m_debug.Increment("Quiescence: StandPat: EvalCache hit") );
+        } else {
+            D( m_debug.Increment("Quiescence: StandPat: Evaluation called") );
+            standPat = Evaluation::Evaluate(board);
+            Hash::evalCache.Store(board.ZKey(), standPat);
+        }
 
         if(standPat > alpha) {
             if(standPat >= beta) {
@@ -663,7 +672,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         }
         bestScore =  standPat;
     }
-    
+
     // Probe transposition table.
     // Only non-PV nodes: PV nodes require the most accurate score possible.
     TTEntry* ttEntry = Hash::tt.ProbeEntry(board.ZKey(), 0);
