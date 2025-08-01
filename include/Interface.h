@@ -2,7 +2,8 @@
 #define INTERFACE_H
 
 #include "Board.h"
-#include "MoveGenerator.h"
+
+#include <string>
 
 class Interface {
 public:

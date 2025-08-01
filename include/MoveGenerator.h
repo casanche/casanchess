@@ -8,15 +8,21 @@ class Board;
 
 class MoveGenerator {
 public:
+    // Generate all legal moves
     MoveList GenerateMoves(Board &board);
-    MoveList GenerateCaptures(Board &board);
-    Move RandomMove();
+
+    // Generate check evasions when in check
+    MoveList GenerateEvasionMoves(Board &board);
+    // Generate tactical moves (captures and promotions)
+    MoveList GenerateTacticalMoves(Board &board);
+
+    // Pick a random move from the move list
+    static Move RandomMove(const MoveList& moves);
 
 private:
     void Init(const Board &board);
 
     void GeneratePseudoMoves(Board &board);
-    void GenerateEvasionMoves(Board &board);
 
     void GeneratePawnMoves(Board &board);
     void GenerateKnightMoves(Board &board);

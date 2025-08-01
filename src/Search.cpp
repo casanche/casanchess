@@ -650,7 +650,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     int bestScore = -INFINITE_SCORE;
     bool inCheck = board.IsCheck();
 
-    // Stand pat: static evaluation (if not in check)
+    // Stand pat: static evaluation of current position
     int standPat = 0;
     if(!inCheck) {
         // Probe evaluation cache first (modifies standPat if hit)
@@ -691,8 +691,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // If in check, generate check evasions.
     D( m_debug.Increment("Quiescence: GenerateMoves") );
     MoveGenerator gen;
-    MoveList moves = inCheck ? gen.GenerateMoves(board)
-                             : gen.GenerateCaptures(board);
+    MoveList moves = inCheck ? gen.GenerateEvasionMoves(board)
+                             : gen.GenerateTacticalMoves(board);
 
     // Checkmate or stalemate
     if( moves.empty() ) {
@@ -709,30 +709,38 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     // Different move ordering for efficiency
     inCheck ? SortEvasions(board, moves)
-            : SortQuiescence(board, moves);
+            : SortTactical(board, moves);
 
     for(auto move : moves) {
+        
+        if(!inCheck && move.MoveType() == CAPTURE) {
+            const int seeValue = SEE::FromScore(move.Score());
 
-        if(DEBUG_SEARCH_TREE)
-            D( board.ShowHistory(); );
+            // --- Static SEE Pruning ---
+            // Quick filter to discard tactically hopeless captures
+            const int SEE_PRUNING_THRESHOLD = -250;
+            if(seeValue < SEE_PRUNING_THRESHOLD) {
+                D( m_debug.Increment("Quiescence: Pruning: SEE << 0") );
+                continue;
+            }
+            
+            // --- Delta Pruning ---
+            // Calculate a heuristic score for futility pruning. Depending on the SEE:
+            //  - For safe captures (SEE >= 0): an optimistic score using the maximum potential gain to represent the move impact.
+            //  - For sacrifices    (SEE  < 0): a realistic estimate using the material cost to determine if the sacrifice is affordable.
+            int estimatedScore;
+            if(seeValue >= 0) {
+                const int DELTA_MARGIN_SAFE = 90;
+                estimatedScore = standPat + DELTA_MARGIN_SAFE + SEE::MATERIAL_VALUES[move.CapturedType()];
+            } else {
+                const int DELTA_MARGIN_RISKY = 0;
+                estimatedScore = standPat + DELTA_MARGIN_RISKY + seeValue;
+            }
 
-        if(!inCheck) {
-            // Futility pruning for low-value captures
-            if(move.MoveType() == CAPTURE) {
-                const int SEE_ZERO = 127;  // Equivalent to SEE = 0 (neutral capture)
-                const int deltaMargin = 90;
-
-                // Below SEE = 0: prune
-                if(move.Score() < SEE_ZERO) continue;
-
-                // Above and equal to SEE = 0: prune based on a margin
-                int evalMargin = move.Score() > SEE_ZERO ? standPat + deltaMargin + SEE_MATERIAL_VALUES[move.CapturedType()]
-                                                         : standPat + deltaMargin;
-                if(evalMargin < alpha) {
-                    if(evalMargin > bestScore)
-                        bestScore = evalMargin;
-                    continue;
-                }
+            if(estimatedScore < alpha) {
+                if(estimatedScore > bestScore)
+                    bestScore = estimatedScore;
+                continue;
             }
         }
         
@@ -754,11 +762,11 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         if(score > bestScore)
             bestScore = score;
 
-        if(score > alpha) {
-            if(score >= beta)
-                return score;
+        if(score >= beta)
+            return score;
+
+        if(score > alpha)
             alpha = score;
-        }
     }
 
     return bestScore;
