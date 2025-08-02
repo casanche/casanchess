@@ -118,13 +118,15 @@ namespace {
     }
 
     void RateTactical(Board &board, MoveList& moveList) {
-        const int TACTICAL_PROMOTION_SCORE = 255;
+        const int TACTICAL_PROMOTION_CAPTURE_SCORE = 255;
+        const int TACTICAL_PROMOTION_NORMAL_SCORE = 254;
 
         for(auto &move : moveList) {
-            if(move.IsPromotion()) {
-                move.SetScore(TACTICAL_PROMOTION_SCORE);
-            }
-            else if(move.IsCapture()) {
+            if(move.MoveType() == PROMOTION_CAPTURE) {
+                move.SetScore(TACTICAL_PROMOTION_CAPTURE_SCORE);
+            } else if(move.MoveType() == PROMOTION) {
+                move.SetScore(TACTICAL_PROMOTION_NORMAL_SCORE);
+            } else if(move.MoveType() == CAPTURE || move.MoveType() == ENPASSANT) { // includes enpassant
                 int see = board.SEE(move);
                 move.SetScore( SEE::ToScore(see) );
             }
