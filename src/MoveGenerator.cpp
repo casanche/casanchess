@@ -13,79 +13,69 @@ const int MAX_MOVES_RESERVE = 256;
 const int MAX_TACTICAL_MOVES_RESERVE = 64;
 const int MAX_EVASION_MOVES_RESERVE = 64;
 
-//Legal moves
 MoveList MoveGenerator::GenerateMoves(Board &board) {
     if(board.IsCheck()) {
         return GenerateEvasionMoves(board);
     }
 
-    Init(board);
-    m_moves.reserve(MAX_MOVES_RESERVE);
-    m_generateQuiet = true;
-
-    //Calculations
-    m_kingDangerSquares = GenerateKingDangerAttacks(board);
-    m_pinned = PinnedPieces(board, m_color);
-
-    GeneratePseudoMoves(board);
-
+    Generate(board, LEGAL);
     return m_moves;
 }
 
 MoveList MoveGenerator::GenerateEvasionMoves(Board &board) {
-    Init(board);
-    m_moves.reserve(MAX_EVASION_MOVES_RESERVE);
-    m_generateQuiet = true;
-
-    //Calculations
-    m_kingDangerSquares = GenerateKingDangerAttacks(board);
-    m_pinned = PinnedPieces(board, m_color);
-
-    Bitboard checkers = board.Checkers();
-    int numCheckers = PopCount(checkers);
-
-    if(numCheckers > 1) {
-        GenerateKingMoves(board);
-    }
-    else if(numCheckers == 1) {
-        //Create the capture mask
-        m_captureMask = checkers;
-
-        //Create the push mask (block moves)
-        int checkerSquare = BitscanForward(checkers);
-        PIECE_TYPE checkerType = board.GetPieceAtSquare(m_enemyColor, checkerSquare);
-        switch(checkerType) {
-            case PAWN: case KNIGHT: {
-                m_pushMask = ZERO; //only capture solves the check
-            } break;
-            case BISHOP: case ROOK: case QUEEN: {
-                int kingSquare = BitscanForward( board.Piece(m_color, KING) );
-                m_pushMask = Attacks::Between(checkerSquare, kingSquare);
-            } break;
-            default: assert(false);
-        };
-
-        GeneratePseudoMoves(board);
-    }
-
+    Generate(board, EVASION);
     return m_moves;
 }
 
 MoveList MoveGenerator::GenerateTacticalMoves(Board &board) {
-    Init(board);
-    m_moves.reserve(MAX_TACTICAL_MOVES_RESERVE);
-    m_generateQuiet = false;
+    Generate(board, TACTICAL);
+    return m_moves;
+}
 
-    //Calculations
+void MoveGenerator::Generate(Board& board, GENERATION_TYPE type) {
+    Init(board);
+
+    m_generateQuiet = (type == TACTICAL) ? false : true;
     m_kingDangerSquares = GenerateKingDangerAttacks(board);
     m_pinned = PinnedPieces(board, m_color);
 
-    //Don't allow king moves to empty squares
-    m_kingDangerSquares |= ~m_allPieces; // TODO: Pre-optimization not needed.
+    switch(type) {
+        case LEGAL: {
+            m_moves.reserve(MAX_MOVES_RESERVE);
+            break;
+        }
+        case TACTICAL: {
+            m_moves.reserve(MAX_TACTICAL_MOVES_RESERVE);
+            break;
+        }
+        case EVASION: {
+            m_moves.reserve(MAX_EVASION_MOVES_RESERVE);
+
+            Bitboard checkers = board.Checkers();
+            int numCheckers = PopCount(checkers);
+
+            if(numCheckers > 1) {
+                // Double-check, only king moves allowed
+                GenerateKingMoves(board);
+                return;
+            }
+            else if(numCheckers == 1) {
+                m_captureMask = checkers;
+                int checkerSquare = BitscanForward(checkers);
+                PIECE_TYPE checkerType = board.GetPieceAtSquare(m_enemyColor, checkerSquare);
+                if(checkerType == PAWN || checkerType == KNIGHT) {
+                    m_pushMask = ZERO; // No in-between moves are possible
+                } else {
+                    assert((checkerType == BISHOP) || (checkerType == ROOK) || (checkerType == QUEEN));
+                    int kingSquare = BitscanForward( board.Piece(m_color, KING) );
+                    m_pushMask = Attacks::Between(checkerSquare, kingSquare);
+                }
+            }
+            break;
+        }
+    }
 
     GeneratePseudoMoves(board);
-
-    return m_moves;
 }
 
 Move MoveGenerator::RandomMove(const MoveList& moves) {

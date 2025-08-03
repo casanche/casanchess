@@ -20,7 +20,11 @@ public:
     static Move RandomMove(const MoveList& moves);
 
 private:
+    enum GENERATION_TYPE {LEGAL, EVASION, TACTICAL};
+
     void Init(const Board &board);
+
+    void Generate(Board &board, GENERATION_TYPE type);
 
     void GeneratePseudoMoves(Board &board);
 
@@ -37,8 +41,6 @@ private:
     Bitboard PinnedPieces(Board &board, COLOR color);
     Bitboard FillPinned(PIECE_TYPE slidingType, int square, int kingSquare);
 
-    MoveList m_moves;
-
     COLOR m_color;
     COLOR m_enemyColor;
     bool m_generateQuiet;
@@ -49,12 +51,14 @@ private:
 
     Bitboard m_kingDangerSquares;
 
-    Bitboard m_captureMask; //the piece giving check
-    Bitboard m_pushMask; //squares that block a check
+    Bitboard m_captureMask; // Squares where capture is allowed. In case of check, the piece giving check
+    Bitboard m_pushMask; // Squares where push is allowed. In case of check, squares that block a check
 
     Bitboard m_pinned;
     Bitboard m_pinnedCaptureMask[64];
     Bitboard m_pinnedPushMask[64];
+
+    MoveList m_moves;
 };
 
 #endif //MOVEGENERATOR_H
