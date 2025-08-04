@@ -1,10 +1,15 @@
 #include "Hash.h"
 
+#include "Debug.h"
+
 // Extern declarations
 TT Hash::tt;
+EvalCache Hash::evalCache;
 PawnHash Hash::pawnHash;
 
-// -- Transposition table
+// =========================
+// == Transposition table ==
+// =========================
 
 void TTEntry::Clear() {
     zkey = 0;
@@ -97,16 +102,67 @@ u64 TT::NumEntries() {
 }
 
 void TT::SetSize(int size) {  // size in MB
-    const u64 hashEntries = size * (1024*1024) / sizeof(TTEntry);
+    m_size = size * (1024*1024) / sizeof(TTEntry);
 
     delete [] m_entries;
-    m_entries = new TTEntry[hashEntries];
+    m_entries = new TTEntry[m_size];
     
-    m_size = hashEntries;
     Clear();
 }
 
-// -- Pawn-hash
+// ================
+// == Eval cache ==
+// ================
+
+void EvalEntry::Clear() {
+    zkey32 = 0;
+    eval = 0;
+}
+
+EvalCache::EvalCache() {
+    m_size = EVALCACHE_ENTRIES;
+    m_mask = m_size - 1;
+    Clear();
+}
+
+void EvalCache::Clear() {
+    for(u64 i = 0; i < m_size; ++i) {
+        m_evalEntries[i].Clear();
+    }
+}
+
+void EvalCache::Store(u64 zkey, int eval) {
+    assert(abs(eval) < MATESCORE);
+
+    EvalEntry& entry = m_evalEntries[zkey & m_mask];
+
+    // Always-replace strategy
+    entry.zkey32 = static_cast<u32>(zkey);
+    entry.eval = SafeCastInt16(eval);
+}
+
+bool EvalCache::Probe(u64 zkey, int& eval) {
+    u32 key32 = static_cast<u32>(zkey);
+    EvalEntry& entry = m_evalEntries[zkey & m_mask];
+
+    if(entry.zkey32 == key32) {
+        eval = entry.eval;
+        return true;
+    }
+    return false;
+}
+
+int EvalCache::OccupancyPerMil() {
+    int count = 0;
+    for(int i = 0; i < 1000; i++) {
+        count += (m_evalEntries[i].zkey32 != 0);
+    }
+    return count;
+}
+
+// ===============
+// == Pawn-hash ==
+// ===============
 
 void PawnEntry::Clear() {
     zkey = 0;
