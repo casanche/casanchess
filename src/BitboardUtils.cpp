@@ -13,9 +13,8 @@ x & (x-1): removes the LSB (LSB reset)
 
 // Returns the index of the first '1' bit (LSB)
 int BitboardUtils::BitscanForward(Bitboard b) {
-    if(b)
-        return std::countr_zero(b);
-    return -1;
+    if(b == 0) return -1;
+    return std::countr_zero(b);
 }
 
 //Gives the index of the last '1' bit (MSB)
@@ -40,10 +39,6 @@ int BitboardUtils::ResetLsb(Bitboard &b) {
 //Returns a bitboard with the LSB only
 Bitboard BitboardUtils::IsolateLsb(Bitboard b) {
 	return b & (~b + 1);
-}
-
-void BitboardUtils::RemoveLsb(Bitboard &b) {
-    b &= (b - 1);
 }
 
 //Moves all bits to a given direction a certain number of times.

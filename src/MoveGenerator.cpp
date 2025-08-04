@@ -2,7 +2,6 @@
 #include "Attacks.h"
 using namespace Attacks;
 #include "BitboardUtils.h"
-using namespace BitboardUtils;
 #include "Board.h"
 #include "Utils.h" //random
 
@@ -156,8 +155,7 @@ void MoveGenerator::GeneratePawnMoves(Board &board) {
     singlePush *= m_generateQuiet;
     doublePush *= m_generateQuiet;
 
-    while(singlePush) {
-        int toSq = ResetLsb(singlePush);
+    for(int toSq : BitboardIterator(singlePush)) {
         Bitboard toBitboard = SquareBB(toSq);
         int fromSq = BitscanForward( RSouth(toBitboard) );
         toBitboard &= m_pinnedPushMask[fromSq];
@@ -166,8 +164,7 @@ void MoveGenerator::GeneratePawnMoves(Board &board) {
             m_moves.push_back(move);
         }
     }
-    while(doublePush) {
-        int toSq = ResetLsb(doublePush);
+    for(int toSq : BitboardIterator(doublePush)) {
         Bitboard toBitboard = SquareBB(toSq);
         int fromSq = BitscanForward( RSouth(toBitboard,2) );
         toBitboard &= m_pinnedPushMask[fromSq];
@@ -176,8 +173,7 @@ void MoveGenerator::GeneratePawnMoves(Board &board) {
             m_moves.push_back(move);
         }
     }
-    while(promotionPush) {
-        int toSq = ResetLsb(promotionPush);
+    for(int toSq : BitboardIterator(promotionPush)) {
         Bitboard toBitboard = SquareBB(toSq);
         int fromSq = BitscanForward( RSouth(toBitboard) );
         toBitboard &= m_pinnedPushMask[fromSq];
@@ -190,22 +186,19 @@ void MoveGenerator::GeneratePawnMoves(Board &board) {
                                   : RWest(RSouth(b));
         };
 
-        while(attack[side]) {
-            int toSq = ResetLsb(attack[side]);
+        for(int toSq : BitboardIterator(attack[side])) {
             Bitboard toBitboard = SquareBB(toSq);
             int fromSq = BitscanForward( FromBitboard(toBitboard) );
             toBitboard &= m_pinnedCaptureMask[fromSq];
             AddMoves(board, piece, fromSq, toBitboard);
         }
-        while(promotionAttack[side]) {
-            int toSq = ResetLsb(promotionAttack[side]);
+        for(int toSq : BitboardIterator(promotionAttack[side])) {
             Bitboard toBitboard = SquareBB(toSq);
             int fromSq = BitscanForward( FromBitboard(toBitboard) );
             toBitboard &= m_pinnedCaptureMask[fromSq];
             AddPromotionMoves(board, fromSq, toBitboard);
         }
-        while(enpassant[side]) {
-            int toSq = ResetLsb(enpassant[side]);
+        for(int toSq : BitboardIterator(enpassant[side])) {
             Bitboard toBitboard = SquareBB(toSq);
             int fromSq = BitscanForward( FromBitboard(toBitboard) );
             Bitboard enemyPawn = RSouth(board.EnPassantSquare());
@@ -228,10 +221,8 @@ void MoveGenerator::GenerateKnightMoves(Board &board) {
     Bitboard theKnights = board.GetPieces(m_color, piece);
     theKnights &= ~m_pinned;
 
-    while(theKnights) {
-        int square = ResetLsb(theKnights);
+    for(int square : BitboardIterator(theKnights)) {
         Bitboard attacks = AttacksKnights(square) & ~m_ownPieces;
-
         AddMoves(board, piece, square, attacks);
     }
 }
@@ -259,12 +250,9 @@ void MoveGenerator::GenerateKingMoves(Board &board) {
 void MoveGenerator::GenerateSlidingMoves(PIECE_TYPE pieceType, Board &board) {
     Bitboard thePieces = board.GetPieces(m_color, pieceType);
 
-    while(thePieces) {
-        //Attacks
-        int fromSq = ResetLsb(thePieces);
+    for(int fromSq : BitboardIterator(thePieces)) {
         Bitboard attacks = AttacksSliding(pieceType, fromSq, m_allPieces) & ~m_ownPieces;
         attacks &= m_pinnedPushMask[fromSq] | m_pinnedCaptureMask[fromSq];
-
         AddMoves(board, pieceType, fromSq, attacks);
     }
 }
@@ -278,8 +266,7 @@ void MoveGenerator::AddMoves(Board &board, PIECE_TYPE piece, int fromSq, Bitboar
         captureMoves &= m_captureMask;
     }
 
-    while(captureMoves) {
-        int toSq = ResetLsb(captureMoves);
+    for(int toSq : BitboardIterator(captureMoves)) {
         PIECE_TYPE capturedPiece = board.GetPieceAtSquare(m_enemyColor, toSq);
         Move move = Move(fromSq, toSq, piece, MOVE_TYPE::CAPTURE);
         move.SetCapturedType(capturedPiece);
@@ -289,16 +276,18 @@ void MoveGenerator::AddMoves(Board &board, PIECE_TYPE piece, int fromSq, Bitboar
     // =================================
     // == Normal moves (non-captures) ==
     // =================================
+    if(!m_generateQuiet) {
+        return;
+    }
+
     Bitboard normalMoves = possibleMoves & ~m_enemyPieces;
     if(piece != KING) {
         normalMoves &= m_pushMask;
     }
-    while(normalMoves && m_generateQuiet) {
-        int toSq = ResetLsb(normalMoves);
+    for(int toSq : BitboardIterator(normalMoves)) {
         Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
         m_moves.push_back(move);
     }
-
 }
 
 void MoveGenerator::AddPromotionMoves(Board &board, int fromSq, Bitboard promotionMoves) {
@@ -308,9 +297,7 @@ void MoveGenerator::AddPromotionMoves(Board &board, int fromSq, Bitboard promoti
     promotionMoves &= isCapture ? m_captureMask
                                 : m_pushMask;
 
-    while(promotionMoves) {
-        int toSq = ResetLsb(promotionMoves);
-
+    for(int toSq : BitboardIterator(promotionMoves)) {
         Move move;
         if(isCapture) { //PROMOTION_CAPTURE
             move = Move(fromSq, toSq, PIECE_TYPE::PAWN, MOVE_TYPE::PROMOTION_CAPTURE);
@@ -330,7 +317,6 @@ void MoveGenerator::AddPromotionMoves(Board &board, int fromSq, Bitboard promoti
                 m_moves.push_back(move);
             }
         }
-
     }
 }
 void MoveGenerator::AddCastlingMoves(Board &board) {
@@ -386,15 +372,14 @@ Bitboard MoveGenerator::GenerateKingDangerAttacks(Board &board) {
     Bitboard blockers = m_allPieces ^ board.Piece(m_color, KING);
     for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
         Bitboard enemyPieces = board.Piece(m_enemyColor, pieceType);
-        while(enemyPieces) {
-            int square = ResetLsb(enemyPieces);
+        for(int square : BitboardIterator(enemyPieces)) {
             switch(pieceType) {
-                case PAWN: attacks |= AttacksPawns(m_enemyColor, square); break;
+                case PAWN:   attacks |= AttacksPawns(m_enemyColor, square); break;
                 case KNIGHT: attacks |= AttacksKnights(square); break;
-                case KING: attacks |= AttacksKing(square); break;
+                case KING:   attacks |= AttacksKing(square); break;
                 case BISHOP: attacks |= AttacksSliding(BISHOP, square, blockers); break;
-                case ROOK: attacks |= AttacksSliding(ROOK, square, blockers); break;
-                case QUEEN: attacks |= AttacksSliding(QUEEN, square, blockers); break;
+                case ROOK:   attacks |= AttacksSliding(ROOK, square, blockers); break;
+                case QUEEN:  attacks |= AttacksSliding(QUEEN, square, blockers); break;
                 default: assert(false);
             };
         }
@@ -411,8 +396,7 @@ Bitboard MoveGenerator::PinnedPieces(Board &board, COLOR color) {
 
     for(PIECE_TYPE pieceType : {BISHOP, ROOK, QUEEN}) {
         Bitboard enemySlidings = board.GetPieces(m_enemyColor, pieceType);
-        while(enemySlidings) {
-            int slidingSquare = ResetLsb(enemySlidings);
+        for(int slidingSquare : BitboardIterator(enemySlidings)) {
             switch(pieceType) {
                 case BISHOP: {
                     pinned |= FillPinned(BISHOP, slidingSquare, kingSquare);
