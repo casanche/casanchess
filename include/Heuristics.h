@@ -2,6 +2,7 @@
 #define HEURISTICS_H
 
 #include "Move.h"
+#include "MoveGenerator.h"
 
 class Board;
 class TT;
@@ -26,10 +27,10 @@ namespace SEE {
 }
 
 namespace Sorting {
-    void SortMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply);
-
-    void SortEvasions(Board &board, MoveList &moveList);
-    void SortTactical(Board &board, MoveList &moveList);
+    void SortMoves(Board &board, MoveBuffer moves, TT& tt, const Heuristics &heuristics, int ply);
+    
+    void SortEvasions(Board &board, MoveBuffer moves);
+    void SortTactical(Board &board, MoveBuffer moves);
 }
 
 class KillerHeuristics {

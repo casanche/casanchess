@@ -1,7 +1,6 @@
 #include "test-Common.h"
 
 #include "Board.h"
-#include "MoveGenerator.h"
 #include "ZobristKeys.h"
 
 #include <gtest/gtest.h>
@@ -12,8 +11,6 @@ protected:
     Board boardCastling;
     u64 initialKey;
     u64 initialKeyCastling;
-    MoveGenerator gen;
-    MoveList moves;
     void SetUp() override {
         board.SetFen("5N2/r3nP2/1P5q/8/k1P2Bp1/4p3/1P4pb/n2K4 w - - 0 1");
         boardCastling.SetFen("r1bqkbr1/3p1p2/p1n1p3/1p5p/3pP1p1/1B1P2B1/PPP1NPPP/R2QK2R w KQq - 0 15");

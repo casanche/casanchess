@@ -10,7 +10,7 @@
 //Unnamed namespace (private functions)
 namespace {
 
-    void RateMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply) {
+    void RateMoves(Board &board, MoveBuffer moves, TT& tt, const Heuristics &heuristics, int ply) {
         Move hashMove;
         TTEntry* ttEntry = tt.ProbeEntry(board.ZKey(), 0); //shallowest
         if(ttEntry) {
@@ -25,7 +25,7 @@ namespace {
             killer4 = heuristics.killer.Secondary(ply-2);
         }
 
-        for(auto &move : moveList) {
+        for(auto &move : moves) {
 
             //Hash move: 255 (max)
             if(move == hashMove) {
@@ -117,11 +117,11 @@ namespace {
         }
     }
 
-    void RateTactical(Board &board, MoveList& moveList) {
+    void RateTactical(Board &board, MoveBuffer moves) {
         const int TACTICAL_PROMOTION_CAPTURE_SCORE = 255;
         const int TACTICAL_PROMOTION_NORMAL_SCORE = 254;
 
-        for(auto &move : moveList) {
+        for(auto &move : moves) {
             if(move.MoveType() == PROMOTION_CAPTURE) {
                 move.SetScore(TACTICAL_PROMOTION_CAPTURE_SCORE);
             } else if(move.MoveType() == PROMOTION) {
@@ -133,9 +133,9 @@ namespace {
         }
     }
 
-    void RateEvasions([[maybe_unused]] Board &board, MoveList& moveList) {
+    void RateEvasions([[maybe_unused]] Board &board, MoveBuffer moves) {
         // Captures > Other moves
-        for(auto &move : moveList) {
+        for(auto &move : moves) {
             if(move.CapturedType())
                 move.SetScore(1);
             else
@@ -194,18 +194,17 @@ u8 SEE::ToScore(int see) {
     return SafeCastU8(score);
 }
 
-void Sorting::SortMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply) {
-    RateMoves(board, moveList, tt, heuristics, ply);
-
-    std::sort(moveList.begin(), moveList.end(), ByScore);
+void Sorting::SortMoves(Board &board, MoveBuffer moves, TT& tt, const Heuristics &heuristics, int ply) {
+    RateMoves(board, moves, tt, heuristics, ply);
+    std::ranges::sort(moves, ByScore);
 }
 
-void Sorting::SortEvasions(Board &board, MoveList &moveList) {
-    RateEvasions(board, moveList);
-    std::sort(moveList.begin(), moveList.end(), ByScore);
+void Sorting::SortEvasions(Board &board, MoveBuffer moves) {
+    RateEvasions(board, moves);
+    std::ranges::sort(moves, ByScore);
 }
 
-void Sorting::SortTactical(Board &board, MoveList &moveList) {
-    RateTactical(board, moveList);
-    std::sort(moveList.begin(), moveList.end(), ByScore);
+void Sorting::SortTactical(Board &board, MoveBuffer moves) {
+    RateTactical(board, moves);
+    std::ranges::sort(moves, ByScore);
 }

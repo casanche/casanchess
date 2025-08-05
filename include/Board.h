@@ -118,7 +118,6 @@ private:
 
     friend class Fen;
     friend class MoveMaker;
-    friend class MoveGenerator;
 };
 
 #endif //BOARD_H
