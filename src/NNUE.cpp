@@ -114,8 +114,7 @@ void NNUE::Inputs_FullUpdate() {
     for(int color = WHITE; color <= BLACK; color++) {
         for(int pieceType = PAWN; pieceType <= QUEEN; pieceType++) {
             Bitboard bitboard = m_pieces[color][pieceType];
-            while(bitboard) {
-                int square = ResetLsb(bitboard);
+            for(int square : BitboardIterator(bitboard)) {
                 Inputs_AddPiece(color, pieceType-1, square);
             }
         }

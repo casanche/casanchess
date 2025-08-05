@@ -97,8 +97,7 @@ void Board::Print(bool bits) const {
     for(COLOR color : {WHITE, BLACK}) {
         for(PIECE_TYPE piece = PAWN; piece <= KING; ++piece) {
             Bitboard thePieces = m_pieces[color][piece];
-            while(thePieces) {
-                int index = ResetLsb(thePieces);
+            for(int index : BitboardIterator(thePieces)) {
                 squareMap[index] = '\0';
                 squareMap[index] += (color == WHITE) ? "\033[1;97m" : "\033[1;31m"; //white or red
                 squareMap[index] += PIECE_NOTATION[color][piece];

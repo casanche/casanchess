@@ -144,8 +144,7 @@ void Evaluation::Init() {
         KING_INNER_RING[square] = Attacks::AttacksKing(square);
         //Outer ring is the sum of the attacks from each square of the inner ring, minus the inner ring and the king square
         Bitboard bb = KING_INNER_RING[square];
-        while(bb) {
-            int innerSquare = ResetLsb(bb);
+        for(int innerSquare : BitboardIterator(bb)) {
             KING_OUTER_RING[square] |= Attacks::AttacksKing(innerSquare);
         }
         KING_OUTER_RING[square] ^= KING_INNER_RING[square] | SquareBB(square);
@@ -369,9 +368,7 @@ TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLOR color) {
     score.eg += doubledPawns * parameters.DOUBLED_PAWN[EG] / 2;
 
     Bitboard bb = thePawns;
-    while(bb) {
-        int square = ResetLsb(bb);
-
+    for(int square : BitboardIterator(bb)) {
         //Psqt
         int index = SQUARE_CONVERSION[color][square];
         score.mg += parameters.PSQT[PAWN][index];
@@ -399,8 +396,7 @@ TaperedScore Evaluation::EvalPawnsCalculation(const Board &board, COLOR color) {
 TaperedScore Evaluation::EvalRookOpen(const Board& board, COLOR color) {
     TaperedScore score;
     Bitboard bb = board.Piece(color, ROOK);
-    while(bb) {
-        int square = ResetLsb(bb);
+    for(int square : BitboardIterator(bb)) {
         //Semi-open files
         if( IsSemiopenFile(board, color, square) ) {
             score.mg += parameters.ROOK_SEMIOPEN[MG];
@@ -434,9 +430,7 @@ int Evaluation::ClassicalEvaluation(const Board& board) {
         for(PIECE_TYPE pieceType = KNIGHT; pieceType <= KING; ++pieceType) {
               
             Bitboard bb = board.Piece(color, pieceType);
-            while(bb) {
-                int square = ResetLsb(bb);
-
+            for(int square : BitboardIterator(bb)) {
                 //Psqt
                 int index = SQUARE_CONVERSION[color][square];
                 score.Add(

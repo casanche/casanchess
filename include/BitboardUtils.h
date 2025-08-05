@@ -3,6 +3,8 @@
 
 #include "Constants.h"
 
+#include <bit>
+
 namespace BitboardUtils {
     //Gives the value of the bit in 'position'
     template <typename T>
@@ -38,7 +40,7 @@ namespace BitboardUtils {
     int ResetLsb(Bitboard &b);
 
     Bitboard IsolateLsb(Bitboard b);
-    void RemoveLsb(Bitboard &b);
+    inline void RemoveLsb(Bitboard &b) { b &= (b - 1); };
 
     Bitboard North(Bitboard bitboard, int times = 1);
     Bitboard South(Bitboard bitboard, int times = 1);
@@ -51,5 +53,32 @@ namespace BitboardUtils {
 }
 
 using namespace BitboardUtils;
+
+class BitboardIterator {
+public:
+    explicit BitboardIterator(Bitboard bitboard) noexcept : m_bitboard(bitboard) {}
+
+    class iterator {
+        Bitboard b;
+    public:
+        explicit iterator(Bitboard bitboard) noexcept : b(bitboard) {}
+
+        int operator*() const noexcept {
+            return BitscanForward(b);
+        }
+        iterator& operator++() noexcept {
+            RemoveLsb(b);
+            return *this;
+        }
+        bool operator!=(const iterator& other) const noexcept {
+            return b != other.b;
+        }
+    };
+
+    iterator begin() const noexcept { return iterator(m_bitboard); }
+    iterator end() const noexcept { return iterator(0); }
+private:
+    Bitboard m_bitboard;
+};
 
 #endif //BITBOARDUTILS_H

@@ -48,8 +48,7 @@ void ZobristKey::SetKey(Board& board) {
         //Pieces
         for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
             Bitboard thePieces = board.GetPieces(color, pieceType);
-            while(thePieces) {
-                int square = ResetLsb(thePieces);
+            for(int square : BitboardIterator(thePieces)) {
                 m_key ^= ZobristKeys::m_zkeyPieces[color][pieceType][square];
             }
         }
@@ -72,8 +71,7 @@ void ZobristKey::SetPawnKey(Board& board) {
 
     for(COLOR color : {WHITE, BLACK}) {
         Bitboard thePawns = board.GetPieces(color, PAWN);
-        while(thePawns) {
-            int square = ResetLsb(thePawns);
+        for(int square : BitboardIterator(thePawns)) {
             m_key ^= ZobristKeys::m_zkeyPieces[color][PAWN][square];
         }
     }
