@@ -10,10 +10,15 @@ using namespace BitboardUtils;
 #include <iostream>
 
 const int MAX_MOVES_RESERVE = 256;
-const int MAX_CAPTURES_RESERVE = 64;
+const int MAX_TACTICAL_MOVES_RESERVE = 64;
+const int MAX_EVASION_MOVES_RESERVE = 64;
 
 //Legal moves
 MoveList MoveGenerator::GenerateMoves(Board &board) {
+    if(board.IsCheck()) {
+        return GenerateEvasionMoves(board);
+    }
+
     Init(board);
     m_moves.reserve(MAX_MOVES_RESERVE);
     m_generateQuiet = true;
@@ -22,18 +27,53 @@ MoveList MoveGenerator::GenerateMoves(Board &board) {
     m_kingDangerSquares = GenerateKingDangerAttacks(board);
     m_pinned = PinnedPieces(board, m_color);
 
-    if(board.IsCheck()) {
-        GenerateEvasionMoves(board);
-    } else {
+    GeneratePseudoMoves(board);
+
+    return m_moves;
+}
+
+MoveList MoveGenerator::GenerateEvasionMoves(Board &board) {
+    Init(board);
+    m_moves.reserve(MAX_EVASION_MOVES_RESERVE);
+    m_generateQuiet = true;
+
+    //Calculations
+    m_kingDangerSquares = GenerateKingDangerAttacks(board);
+    m_pinned = PinnedPieces(board, m_color);
+
+    Bitboard checkers = board.Checkers();
+    int numCheckers = PopCount(checkers);
+
+    if(numCheckers > 1) {
+        GenerateKingMoves(board);
+    }
+    else if(numCheckers == 1) {
+        //Create the capture mask
+        m_captureMask = checkers;
+
+        //Create the push mask (block moves)
+        int checkerSquare = BitscanForward(checkers);
+        PIECE_TYPE checkerType = board.GetPieceAtSquare(m_enemyColor, checkerSquare);
+        switch(checkerType) {
+            case PAWN: case KNIGHT: {
+                m_pushMask = ZERO; //only capture solves the check
+            } break;
+            case BISHOP: case ROOK: case QUEEN: {
+                int kingSquare = BitscanForward( board.Piece(m_color, KING) );
+                m_pushMask = Attacks::Between(checkerSquare, kingSquare);
+            } break;
+            default: assert(false);
+        };
+
         GeneratePseudoMoves(board);
     }
 
     return m_moves;
 }
 
-MoveList MoveGenerator::GenerateCaptures(Board &board) {
+MoveList MoveGenerator::GenerateTacticalMoves(Board &board) {
     Init(board);
-    m_moves.reserve(MAX_CAPTURES_RESERVE);
+    m_moves.reserve(MAX_TACTICAL_MOVES_RESERVE);
     m_generateQuiet = false;
 
     //Calculations
@@ -41,11 +81,19 @@ MoveList MoveGenerator::GenerateCaptures(Board &board) {
     m_pinned = PinnedPieces(board, m_color);
 
     //Don't allow king moves to empty squares
-    m_kingDangerSquares |= ~m_allPieces;
+    m_kingDangerSquares |= ~m_allPieces; // TODO: Pre-optimization not needed.
 
     GeneratePseudoMoves(board);
 
     return m_moves;
+}
+
+Move MoveGenerator::RandomMove(const MoveList& moves) {
+    Utils::PRNG rng;
+    int max_index = static_cast<int>(moves.size()) - 1;
+    uint32_t randomIndex = rng.Random(0, max_index);
+
+    return moves[randomIndex];
 }
 
 void MoveGenerator::Init(const Board& board) {
@@ -73,43 +121,6 @@ void MoveGenerator::GeneratePseudoMoves(Board &board) {
     GenerateSlidingMoves(BISHOP, board);
     GenerateSlidingMoves(ROOK, board);
     GenerateSlidingMoves(QUEEN, board);
-}
-
-void MoveGenerator::GenerateEvasionMoves(Board &board) {
-    Bitboard checkers = board.Checkers();
-    int numCheckers = PopCount(checkers);
-
-    if(numCheckers > 1) {
-        GenerateKingMoves(board);
-    }
-    else if(numCheckers == 1) {
-        //Create the capture mask
-        m_captureMask = checkers;
-
-        //Create the push mask (block moves)
-        int checkerSquare = BitscanForward(checkers);
-        PIECE_TYPE checkerType = board.GetPieceAtSquare(m_enemyColor, checkerSquare);
-        switch(checkerType) {
-            case PAWN: case KNIGHT: {
-                m_pushMask = ZERO; //only capture solves the check
-            } break;
-            case BISHOP: case ROOK: case QUEEN: {
-                int kingSquare = BitscanForward( board.Piece(m_color, KING) );
-                m_pushMask = Attacks::Between(checkerSquare, kingSquare);
-            } break;
-            default: assert(false);
-        };
-
-        GeneratePseudoMoves(board);
-    }
-}
-
-Move MoveGenerator::RandomMove() {
-    Utils::PRNG rng;
-    int max_index = static_cast<int>(m_moves.size()) - 1;
-    uint32_t randomIndex = rng.Random(0, max_index);
-
-    return m_moves[randomIndex];
 }
 
 void MoveGenerator::GeneratePawnMoves(Board &board) {

@@ -1,8 +1,10 @@
 #include "Heuristics.h"
+
 #include "Board.h"
 #include "Evaluation.h"
 #include "Hash.h"
 #include "Search.h"
+
 #include <algorithm>
 
 //Unnamed namespace (private functions)
@@ -115,27 +117,18 @@ namespace {
         }
     }
 
-    void RateQuiescence(Board &board, MoveList& moveList) {
+    void RateTactical(Board &board, MoveList& moveList) {
+        const int TACTICAL_PROMOTION_CAPTURE_SCORE = 255;
+        const int TACTICAL_PROMOTION_NORMAL_SCORE = 254;
+
         for(auto &move : moveList) {
-            if(move.IsPromotion()) {
-                move.SetScore(255);
-                continue;
-            }
-            if(move.IsCapture()) {
+            if(move.MoveType() == PROMOTION_CAPTURE) {
+                move.SetScore(TACTICAL_PROMOTION_CAPTURE_SCORE);
+            } else if(move.MoveType() == PROMOTION) {
+                move.SetScore(TACTICAL_PROMOTION_NORMAL_SCORE);
+            } else if(move.MoveType() == CAPTURE || move.MoveType() == ENPASSANT) { // includes enpassant
                 int see = board.SEE(move);
-
-                if     (see > 1000) see = 1000;
-                else if(see < -1000) see = -1000;
-                see += 1000; //0-2000
-
-                const int maxValue = 2000;
-                const int maxScore = 254;
-                const int minScore = 1;
-                int score = minScore + see * (maxScore-minScore) / (maxValue+1);
-
-                assert(score >= 1 && score <= 254);
-                move.SetScore((u8)score);
-                continue;
+                move.SetScore( SEE::ToScore(see) );
             }
         }
     }
@@ -177,9 +170,33 @@ namespace {
 
 } //unnamed namespace
 
-//Public Interface
-void Sorting::SortQuiescence(Board &board, MoveList &moveList) {
-    RateQuiescence(board, moveList);
+// Converts a 'tactical move' score to a 'see' value
+int SEE::FromScore(u8 score) {
+    assert(score >= MIN_SCORE && score <= MAX_SCORE);
+
+    int score_offset = score - MIN_SCORE;
+    int normalized_see = score_offset * SEE_RANGE / SCORE_RANGE;
+
+    int see = normalized_see - SEE_MAX;
+
+    assert(see >= -SEE_MAX && see <= SEE_MAX);
+    return see;
+}
+
+// Converts a 'see' value from board.SEE() to a 'tactical move' score
+u8 SEE::ToScore(int see) {
+    int normalized_see = std::clamp(see, -SEE_MAX, SEE_MAX);
+    normalized_see += SEE_MAX; // Range: (0, SEE_RANGE)
+
+    int score = MIN_SCORE + normalized_see * SCORE_RANGE / SEE_RANGE;
+
+    assert(score >= MIN_SCORE && score <= MAX_SCORE);
+    return SafeCastU8(score);
+}
+
+void Sorting::SortMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply) {
+    RateMoves(board, moveList, tt, heuristics, ply);
+
     std::sort(moveList.begin(), moveList.end(), ByScore);
 }
 
@@ -188,8 +205,7 @@ void Sorting::SortEvasions(Board &board, MoveList &moveList) {
     std::sort(moveList.begin(), moveList.end(), ByScore);
 }
 
-void Sorting::SortMoves(Board &board, MoveList& moveList, TT& tt, const Heuristics &heuristics, int ply) {
-    RateMoves(board, moveList, tt, heuristics, ply);
-
+void Sorting::SortTactical(Board &board, MoveList &moveList) {
+    RateTactical(board, moveList);
     std::sort(moveList.begin(), moveList.end(), ByScore);
 }

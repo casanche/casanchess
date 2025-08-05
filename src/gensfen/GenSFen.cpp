@@ -321,8 +321,8 @@ bool GenSFen::NoMoves(Board& board) {
 
 Move GenSFen::RandomMove(Board& board) {
     MoveGenerator gen;
-    gen.GenerateMoves(board);
-    return gen.RandomMove();
+    MoveList moves = gen.GenerateMoves(board);
+    return MoveGenerator::RandomMove(moves);
 }
 
 BookPositions GenSFen::ReadBook(const std::string& bookPath) {

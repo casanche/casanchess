@@ -1,9 +1,9 @@
 #include "Interface.h"
 
+#include "MoveGenerator.h"
 #include "Search.h"
 
 #include <iostream>
-#include <string>
 
 const std::string prefix = ">";
 
@@ -52,7 +52,7 @@ void Interface::Start(std::string fenString) {
             MoveList moves = gen.GenerateMoves(m_board);
 
             if(!moves.empty()) {
-                m_board.MakeMove( gen.RandomMove() );
+                m_board.MakeMove( MoveGenerator::RandomMove(moves) );
             } else {
                 if( m_board.IsCheck() ) {
                     P("Checkmate!!!")
