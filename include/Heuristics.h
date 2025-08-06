@@ -27,10 +27,9 @@ namespace SEE {
 }
 
 namespace Sorting {
-    void SortMoves(Board &board, MoveBuffer moves, TT& tt, const Heuristics &heuristics, int ply);
-    
-    void SortEvasions(Board &board, MoveBuffer moves);
-    void SortTactical(Board &board, MoveBuffer moves);
+    void SortMoves(Board &board, MoveList &moves, TT& tt, const Heuristics &heuristics, int ply);
+    void SortEvasions(Board &board, MoveList &moves);
+    void SortTactical(Board &board, MoveList &moves);
 }
 
 class KillerHeuristics {

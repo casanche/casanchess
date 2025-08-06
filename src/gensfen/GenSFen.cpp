@@ -314,15 +314,13 @@ void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
 }
 
 bool GenSFen::NoMoves(Board& board) {
-    MoveList moves;
-    MoveBuffer validMoves = MoveGenerator::GenerateMoves(board, moves);
-    return (validMoves.size() == 0);
+    MoveList moves = MoveGenerator::GenerateMoves(board);
+    return moves.empty();
 }
 
 Move GenSFen::RandomMove(Board& board) {
-    MoveList moves;
-    MoveBuffer validMoves = MoveGenerator::GenerateMoves(board, moves);
-    return MoveGenerator::RandomMove(validMoves);
+    MoveList moves = MoveGenerator::GenerateMoves(board);
+    return MoveGenerator::RandomMove(moves);
 }
 
 BookPositions GenSFen::ReadBook(const std::string& bookPath) {

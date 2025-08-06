@@ -1,4 +1,5 @@
 #include "MoveGenerator.h"
+
 #include "Attacks.h"
 using namespace Attacks;
 #include "BitboardUtils.h"
@@ -9,10 +10,7 @@ using namespace Attacks;
 #include <iostream>
 
 namespace {
-    // const int MAX_TACTICAL_MOVES_RESERVE = 64;
-    // const int MAX_EVASION_MOVES_RESERVE = 64;
-
-    enum GENERATION_TYPE {LEGAL, EVASION, TACTICAL};
+    enum class GENERATION_TYPE {Legal, Evasion, Tactical};
 
     // ========================================
     // === Internal state (context) methods ===
@@ -20,8 +18,7 @@ namespace {
 
     // Contains the context for a single move generation operation
     struct Context {
-        size_t moveCount;
-        MoveBuffer moveBuffer;
+        MoveList* moves;
     
         COLOR color;
         COLOR enemyColor;
@@ -47,6 +44,10 @@ namespace {
         Bitboard pinnedPushMask[64];
 
         bool generateQuiet;
+
+        void AddMove(const Move& move) {
+            moves->add(move);
+        }
     };
 
     // Empty squares attacked by the enemy pieces, so our king cannot move there
@@ -113,9 +114,8 @@ namespace {
 
     }
 
-    void InitContext(Context &context, const Board& board, MoveBuffer moveBuffer) {
-        context.moveCount = 0;
-        context.moveBuffer = moveBuffer;
+    void InitContext(Context &context, const Board& board) {
+        context.moves = nullptr;
 
         context.color = board.ActivePlayer();
         context.enemyColor = board.InactivePlayer();
@@ -147,12 +147,6 @@ namespace {
     // === Move generation methods ===
     // ===============================
 
-    void AddMove(Context &context, const Move &move) {
-        assert(context.moveCount < context.moveBuffer.size());
-
-        context.moveBuffer[ context.moveCount++ ] = move;
-    }
-
     void AddMoves(Context &context, Board &board, PIECE_TYPE piece, int fromSq, Bitboard possibleMoves) {
         // ===================
         // == Capture moves ==
@@ -166,7 +160,7 @@ namespace {
             PIECE_TYPE capturedPiece = board.GetPieceAtSquare(context.enemyColor, toSq);
             Move move = Move(fromSq, toSq, piece, MOVE_TYPE::CAPTURE);
             move.SetCapturedType(capturedPiece);
-            AddMove(context, move);
+            context.AddMove(move);
         }
 
         // =================================
@@ -182,7 +176,7 @@ namespace {
         }
         for(int toSq : BitboardIterator(normalMoves)) {
             Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
-            AddMove(context, move);
+            context.AddMove(move);
         }
     }
 
@@ -205,12 +199,12 @@ namespace {
             }
 
             move.SetPromotionFlag(PROMOTION_QUEEN);
-            AddMove(context, move);
+            context.AddMove(move);
 
             if(context.generateQuiet) {
                 for(int p = PROMOTION_KNIGHT; p <= PROMOTION_BISHOP; p++) {
                     move.SetPromotionFlag((PROMOTION_TYPE)p);
-                    AddMove(context, move);
+                    context.AddMove(move);
                 }
             }
         }
@@ -227,7 +221,7 @@ namespace {
                 && !board.IsAttacked(context.color, G1)
             ) {
                 Move move = Move(E1, G1, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
-                AddMove(context, move);
+                context.AddMove(move);
             }
             //WHITE CASTLING QUEEN
             if(castlingRights & CASTLING_Q 
@@ -237,7 +231,7 @@ namespace {
                 && !board.IsAttacked(context.color, C1)
             ) {
                 Move move = Move(E1, C1, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
-                AddMove(context, move);
+                context.AddMove(move);
             }
         } else {
             //BLACK CASTLING KING
@@ -248,7 +242,7 @@ namespace {
                 && !board.IsAttacked(context.color, G8)
             ) {
                 Move move = Move(E8, G8, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
-                AddMove(context, move);
+                context.AddMove(move);
             }
             //BLACK CASTLING QUEEN
             if(castlingRights & CASTLING_q 
@@ -258,7 +252,7 @@ namespace {
                 && !board.IsAttacked(context.color, C8)
             ) {
                 Move move = Move(E8, C8, PIECE_TYPE::KING, MOVE_TYPE::CASTLING);
-                AddMove(context, move);
+                context.AddMove(move);
             }
         }
     }
@@ -312,7 +306,7 @@ namespace {
             toBitboard &= context.pinnedPushMask[fromSq];
             if(toBitboard) {
                 Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::NORMAL);
-                AddMove(context, move);
+                context.AddMove(move);
             }
         }
         for(int toSq : BitboardIterator(doublePush)) {
@@ -321,7 +315,7 @@ namespace {
             toBitboard &= context.pinnedPushMask[fromSq];
             if(toBitboard) {
                 Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::DOUBLE_PUSH);
-                AddMove(context, move);
+                context.AddMove(move);
             }
         }
         for(int toSq : BitboardIterator(promotionPush)) {
@@ -362,7 +356,7 @@ namespace {
 
                 if(toBitboard) {
                     Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::ENPASSANT);
-                    AddMove(context, move);
+                    context.AddMove(move);
                 }
             }
         }
@@ -418,21 +412,28 @@ namespace {
         GenerateSlidingMoves(QUEEN, context, board);
     }
 
-    MoveBuffer Generate(Board& board, GENERATION_TYPE type, MoveBuffer moveBuffer) {
+    MoveList Generate(Board& board, GENERATION_TYPE type) {
+        MoveList moves; // Assuming RVO/NRVO optimization by the compiler to avoid the return copy
+
         Context context;
-        InitContext(context, board, moveBuffer);
+        InitContext(context, board);
+
+        context.moves = &moves;
 
         switch(type) {
-            case LEGAL: break;
-            case TACTICAL: context.generateQuiet = false; break;
-            case EVASION: {
+            case GENERATION_TYPE::Legal:
+                break;
+            case GENERATION_TYPE::Tactical:
+                context.generateQuiet = false;
+                break;
+            case GENERATION_TYPE::Evasion: {
                 Bitboard checkers = board.Checkers();
                 int numCheckers = PopCount(checkers);
 
                 if(numCheckers > 1) {
                     // Double-check, only king moves allowed
                     GenerateKingMoves(context, board);
-                    return MoveBuffer{context.moveBuffer.data(), context.moveCount};
+                    return moves;
                 }
                 else if(numCheckers == 1) {
                     context.captureMask = checkers;
@@ -450,31 +451,31 @@ namespace {
         }
 
         GeneratePseudoMoves(context, board);
-        return MoveBuffer{context.moveBuffer.data(), context.moveCount};
+        return moves;
     }
 
 } // namespace
 
-MoveBuffer MoveGenerator::GenerateMoves(Board &board, MoveBuffer moveBuffer) {
-    if(board.IsCheck()) {
-        return GenerateEvasionMoves(board, moveBuffer);
-    }
-
-    return Generate(board, LEGAL, moveBuffer);
+MoveList MoveGenerator::GenerateMoves(Board &board) {
+    if(board.IsCheck())
+        return GenerateEvasionMoves(board);
+    return Generate(board, GENERATION_TYPE::Legal);
 }
 
-MoveBuffer MoveGenerator::GenerateEvasionMoves(Board &board, MoveBuffer moveBuffer) {
-    return Generate(board, EVASION, moveBuffer);
+MoveList MoveGenerator::GenerateEvasionMoves(Board &board) {
+    return Generate(board, GENERATION_TYPE::Evasion);
 }
 
-MoveBuffer MoveGenerator::GenerateTacticalMoves(Board &board, MoveBuffer moveBuffer) {
-    return Generate(board, TACTICAL, moveBuffer);
+MoveList MoveGenerator::GenerateTacticalMoves(Board &board) {
+    return Generate(board, GENERATION_TYPE::Tactical);
 }
 
-Move MoveGenerator::RandomMove(MoveBuffer moveBuffer) {
+Move MoveGenerator::RandomMove(const MoveList& moves) {
+    assert( !moves.empty() );
+
     Utils::PRNG rng;
-    int max_index = static_cast<int>(moveBuffer.size()) - 1;
+    int max_index = static_cast<int>( moves.size() ) - 1;
     uint32_t randomIndex = rng.Random(0, max_index);
 
-    return moveBuffer[randomIndex];
+    return moves[randomIndex];
 }

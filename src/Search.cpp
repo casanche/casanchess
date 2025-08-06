@@ -271,15 +271,14 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
     int alphaOriginal = alpha; // Save the original alpha for TT logic
 
-    MoveList moves;
-    MoveBuffer validMoves = MoveGenerator::GenerateMoves(board, moves);
+    MoveList moves = MoveGenerator::GenerateMoves(board);
 
-    D( if(depth == 1) P("Number of moves in root position: " << validMoves.size()) );
+    D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
-    SortMoves(board, validMoves, Hash::tt, m_heuristics, m_ply);
+    SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
 
     int moveNumber = 0;
-    for(auto move : validMoves) {
+    for(auto move : moves) {
         moveNumber++;
 
         if(DEBUG_SEARCH_TREE)
@@ -472,13 +471,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     m_nullmoveAllowed = true;
 
     // --------- Move generation -----------
-    MoveList moves;
-    MoveBuffer validMoves = MoveGenerator::GenerateMoves(board, moves);
+    MoveList moves = MoveGenerator::GenerateMoves(board);
 
     D( m_debug.Increment("NegaMax: _: GenerateMoves") );
 
     // --------- Check for checkmate and stalemate -----------
-    if( validMoves.size() == 0 ) {
+    if( moves.empty() ) {
         if(inCheck) {
             D( m_debug.Increment("NegaMax: EmptyMoves: Checkmate") );
             return -MATESCORE + m_ply; // Checkmate
@@ -490,14 +488,14 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     //----- One-reply extension -------
-    if(validMoves.size() == 1) {
+    if( moves.size() == 1 ) {
         D( m_debug.Increment("NegaMax: Extension: One-reply") );
         extension++;
     }
 
     // --------- Move ordering -----------
     // Order moves to maximize search efficiency (hash move, captures, killers, history...)
-    SortMoves(board, validMoves, Hash::tt, m_heuristics, m_ply);
+    SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
 
     // ------- Futility pruning (preparation) --------
     // Prune moves later in the loop, if static evaluation is too low (eval << alpha)
@@ -513,7 +511,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     int moveNumber = 0;
-    for(auto move : validMoves) {
+    for(auto move : moves) {
         assert(move.MoveType());
 
         moveNumber++;
@@ -690,29 +688,28 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // Generate captures.
     // If in check, generate check evasions.
     D( m_debug.Increment("Quiescence: GenerateMoves") );
-    MoveList moves;
-    MoveBuffer validMoves = inCheck ? MoveGenerator::GenerateEvasionMoves(board, moves)
-                                    : MoveGenerator::GenerateTacticalMoves(board, moves);
+    MoveList moves = inCheck ? MoveGenerator::GenerateEvasionMoves(board)
+                             : MoveGenerator::GenerateTacticalMoves(board);
 
     // Checkmate or stalemate
-    if( validMoves.size() == 0 ) {
+    if( moves.empty() ) {
         if(inCheck) {
             D( m_debug.Increment("Quiescence: EmptyMoves: Checkmate") );
             return -MATESCORE + m_ply; // Checkmate
         }
         // Generate all the moves to verify stalemate
-        else if( MoveGenerator::GenerateMoves(board, moves).size() == 0 ) {
+        else if( MoveGenerator::GenerateMoves(board).size() == 0 ) {
             D( m_debug.Increment("Quiescence: EmptyMoves: Stalemate") );
             return DRAW_SCORE(m_ply); // Stalemate
         }
     }
 
     // Different move ordering for efficiency
-    inCheck ? SortEvasions(board, validMoves)
-            : SortTactical(board, validMoves);
+    inCheck ? SortEvasions(board, moves)
+            : SortTactical(board, moves);
 
-    for(auto move : validMoves) {
-        
+    for(auto move : moves) {
+
         if(!inCheck && move.MoveType() == CAPTURE) {
             const int seeValue = SEE::FromScore(move.Score());
 

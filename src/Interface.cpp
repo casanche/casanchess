@@ -48,11 +48,10 @@ void Interface::Start(std::string fenString) {
 
         //Random move
         else if(input == "random") {
-            MoveList moves;
-            MoveBuffer validMoves = MoveGenerator::GenerateMoves(m_board, moves);
+            MoveList moves = MoveGenerator::GenerateMoves(m_board);
 
-            if(validMoves.size() > 0) {
-                m_board.MakeMove( MoveGenerator::RandomMove(validMoves) );
+            if( !moves.empty() ) {
+                m_board.MakeMove( MoveGenerator::RandomMove(moves) );
             } else {
                 if( m_board.IsCheck() ) {
                     P("Checkmate!!!")
