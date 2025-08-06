@@ -65,7 +65,42 @@ TEST_F(ZobristKeyTest, Castling) {
     EXPECT_EQ(initialKeyCastling, boardCastling.ZKey());
 }
 
-TEST_F(ZobristKeyTest, ZobristAfterPerft) {
+TEST_F(ZobristKeyTest, EnPassant_Fen) {
+    board.SetFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+    u64 keyNo = board.ZKey();
+
+    board.SetFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+    u64 keyYes = board.ZKey();
+
+    EXPECT_NE(keyNo, keyYes);
+}
+
+TEST_F(ZobristKeyTest, EnPassant_MakeMove) {
+    Board newBoard; //initial position
+    u64 keyBefore = newBoard.ZKey();
+
+    newBoard.MakeMove("e2e4");
+    newBoard.TakeMove();
+
+    u64 keyAfter = newBoard.ZKey();
+
+    EXPECT_EQ(keyBefore, keyAfter);
+}
+
+TEST_F(ZobristKeyTest, SetFen_vs_MakeMove) {
+    // Position after 1. e4 from FEN
+    board.SetFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+    u64 zkey_fromFen = board.ZKey();
+
+    // Same position after MakeMove
+    Board newBoard;
+    newBoard.MakeMove("e2e4");
+    u64 zkey_fromMakeMove = newBoard.ZKey();
+
+    EXPECT_EQ(zkey_fromFen, zkey_fromMakeMove);
+}
+
+TEST_F(ZobristKeyTest, AfterPerft) {
     board.Perft(3);
     EXPECT_EQ(initialKey, board.ZKey());
 
@@ -77,13 +112,13 @@ TEST_F(ZobristKeyTest, HashConsistency) {
     Board board1;
     board1.SetFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     
-    uint64_t hash1 = board1.ZKey();
+    u64 zkey1 = board1.ZKey();
     
     // Run the same position multiple times
     for (int i = 0; i < 10; i++) {
         Board board2;
         board2.SetFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        uint64_t hash2 = board2.ZKey();
-        EXPECT_EQ(hash1, hash2) << "Hash inconsistent at iteration " << i;
+        u64 zkey2 = board2.ZKey();
+        EXPECT_EQ(zkey1, zkey2) << "Hash inconsistent at iteration " << i;
     }
 }
