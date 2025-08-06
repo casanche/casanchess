@@ -61,8 +61,8 @@ public:
 private:
     // Internal search algorithms
     int RootMax(Board &board, int depth, int alpha, int beta);
-    int NegaMax(Board  &board, int depth, int alpha, int beta);
-    int QuiescenceSearch(Board &board, int alpha, int beta);
+    int NegaMax(Board  &board, int depth, int alpha, int beta, bool isPV);
+    int QuiescenceSearch(Board &board, int alpha, int beta, bool isPV);
 
     // IterativeDeepening methods
     void UciOutput(std::string PV);

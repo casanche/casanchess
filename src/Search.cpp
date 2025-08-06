@@ -280,6 +280,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     int moveNumber = 0;
     for(auto move : moves) {
         moveNumber++;
+        bool childPV = (moveNumber == 1);
 
         if(DEBUG_SEARCH_TREE)
             P( "RootMax: " << move.Notation() );
@@ -296,7 +297,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         board.MakeMove(move);
         m_ply++; m_nodes++;
 
-        score = -NegaMax(board, depth-1, -beta, -alpha);
+        score = -NegaMax(board, depth-1, -beta, -alpha, childPV);
 
         board.TakeMove(move);
         m_ply--;
@@ -334,11 +335,9 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
 // Negamax search: core recursive alpha-beta search.
 // Implements most of the engine's search logic.
-int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
+int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
     assert(m_ply <= MAX_PLY);
-
-    bool isPV = (beta - alpha) != 1; // PV node if wide window
 
     D( m_debug.Increment("NegaMax: _: Entering function") );
 
@@ -382,7 +381,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // Activated at leaf nodes
     // TODO: verify the condition !inCheck
     if(depth <= 0 && !inCheck) {
-        return QuiescenceSearch(board, alpha, beta);
+        return QuiescenceSearch(board, alpha, beta, isPV);
     }
 
     D( m_debug.Increment("NegaMax: _: Hits") );
@@ -452,7 +451,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         int R = NULLMOVE_REDUCTION_FACTOR + (depth / 4);
         int nullDepth = std::max(0, depth - R);
-        int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1);
+        int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1, false);
 
         board.TakeNull();
         m_ply--;
@@ -515,6 +514,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         assert(move.MoveType());
 
         moveNumber++;
+        bool childPV = (moveNumber == 1);
+
         int score, reduction = 0;
         int localExtension = 0;
 
@@ -571,18 +572,18 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // PV move: full window, full depth
         // Other moves: zero window, reduced depth
-        if(isPV && moveNumber == 1)
-            score = -NegaMax(board, fullDepth, -beta, -alpha);
+        if(isPV && childPV)
+            score = -NegaMax(board, fullDepth, -beta, -alpha, true);
         else {
-            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha);
+            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha, false);
 
             // Reduced search failed high: re-search with full depth
             if(reduction && score > alpha) {
-                score = -NegaMax(board, fullDepth, -alpha-1, -alpha);
+                score = -NegaMax(board, fullDepth, -alpha-1, -alpha, false);
             }
             // Score within window: new PV found! Re-search with full window and depth
             if(score > alpha && score < beta) { // 'score < beta' needed in fail-soft schemes
-                score = -NegaMax(board, fullDepth, -beta, -alpha);
+                score = -NegaMax(board, fullDepth, -beta, -alpha, true);
             }
         }
 
@@ -631,7 +632,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
 // Quiescence search: extends the search at the leaf nodes to avoid the horizon effect
 // in tactical sequences (captures and checks).
-int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
+int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
     assert(m_ply <= MAX_PLY);
 
@@ -644,7 +645,6 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         return Evaluation::Evaluate(board);
     }
 
-    bool isPV = (beta - alpha) != 1;
     int bestScore = -INFINITE_SCORE;
     bool inCheck = board.IsCheck();
 
@@ -748,7 +748,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         m_ply++; m_plyqs++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
         D( m_debug.Increment("Quiescence: MakeMove (QPly > 0)") );
 
-        int score = -QuiescenceSearch(board, -beta, -alpha);
+        int score = -QuiescenceSearch(board, -beta, -alpha, false);
         
         board.TakeMove(move);
         m_ply--; m_plyqs--;
