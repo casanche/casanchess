@@ -314,14 +314,12 @@ void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
 }
 
 bool GenSFen::NoMoves(Board& board) {
-    MoveGenerator gen;
-    MoveList moves = gen.GenerateMoves(board);
-    return (moves.size() == 0);
+    MoveList moves = MoveGenerator::GenerateMoves(board);
+    return moves.empty();
 }
 
 Move GenSFen::RandomMove(Board& board) {
-    MoveGenerator gen;
-    MoveList moves = gen.GenerateMoves(board);
+    MoveList moves = MoveGenerator::GenerateMoves(board);
     return MoveGenerator::RandomMove(moves);
 }
 

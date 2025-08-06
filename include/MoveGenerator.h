@@ -4,61 +4,54 @@
 #include "Constants.h"
 #include "Move.h"
 
-class Board;
+#include <array>
+#include <span>
 
-class MoveGenerator {
+class Board;
+struct MoveGenContext;
+
+const int MAX_MOVES_RESERVE = 256;
+
+class MoveList {
+private:
+    std::array<Move, MAX_MOVES_RESERVE> m_moves;
+    size_t m_count = 0;
+
 public:
+    using iterator = Move*;
+    using const_iterator = const Move*;
+
+    iterator begin() { return m_moves.data(); }
+    iterator end()   { return m_moves.data() + m_count; }
+
+    const_iterator begin() const { return m_moves.data(); }
+    const_iterator end()   const { return m_moves.data() + m_count; }
+
+    void add(const Move& move) {
+        assert(m_count < MAX_MOVES_RESERVE);
+        m_moves[m_count++] = move;
+    }
+    void clear() { m_count = 0; }
+    bool empty()  const { return m_count == 0; }
+    size_t size() const { return m_count; }
+
+    const Move& operator[](size_t index) const {
+        assert(index < m_count);
+        return m_moves[index];
+    }
+};
+
+namespace MoveGenerator {
     // Generate all legal moves
     MoveList GenerateMoves(Board &board);
-
+    
     // Generate check evasions when in check
     MoveList GenerateEvasionMoves(Board &board);
     // Generate tactical moves (captures and promotions)
     MoveList GenerateTacticalMoves(Board &board);
-
+    
     // Pick a random move from the move list
-    static Move RandomMove(const MoveList& moves);
-
-private:
-    enum GENERATION_TYPE {LEGAL, EVASION, TACTICAL};
-
-    void Init(const Board &board);
-
-    void Generate(Board &board, GENERATION_TYPE type);
-
-    void GeneratePseudoMoves(Board &board);
-
-    void GeneratePawnMoves(Board &board);
-    void GenerateKnightMoves(Board &board);
-    void GenerateKingMoves(Board &board);
-    void GenerateSlidingMoves(PIECE_TYPE pieceType, Board &board);
-
-    void AddMoves(Board &board, PIECE_TYPE piece, int fromSq, Bitboard possibleMoves);
-    void AddPromotionMoves(Board &board, int fromSq, Bitboard promotionMoves);
-    void AddCastlingMoves(Board &board);
-
-    Bitboard GenerateKingDangerAttacks(Board &board);
-    Bitboard PinnedPieces(Board &board, COLOR color);
-    Bitboard FillPinned(PIECE_TYPE slidingType, int square, int kingSquare);
-
-    COLOR m_color;
-    COLOR m_enemyColor;
-    bool m_generateQuiet;
-
-    Bitboard m_ownPieces;
-    Bitboard m_enemyPieces;
-    Bitboard m_allPieces;
-
-    Bitboard m_kingDangerSquares;
-
-    Bitboard m_captureMask; // Squares where capture is allowed. In case of check, the piece giving check
-    Bitboard m_pushMask; // Squares where push is allowed. In case of check, squares that block a check
-
-    Bitboard m_pinned;
-    Bitboard m_pinnedCaptureMask[64];
-    Bitboard m_pinnedPushMask[64];
-
-    MoveList m_moves;
-};
+    Move RandomMove(const MoveList& moveList);
+}
 
 #endif //MOVEGENERATOR_H

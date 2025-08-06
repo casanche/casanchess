@@ -271,8 +271,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
     int alphaOriginal = alpha; // Save the original alpha for TT logic
 
-    MoveGenerator gen;
-    MoveList moves = gen.GenerateMoves(board);
+    MoveList moves = MoveGenerator::GenerateMoves(board);
 
     D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
@@ -472,16 +471,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     m_nullmoveAllowed = true;
 
     // --------- Move generation -----------
-    MoveGenerator gen;
-    MoveList moves = gen.GenerateMoves(board);
+    MoveList moves = MoveGenerator::GenerateMoves(board);
 
     D( m_debug.Increment("NegaMax: _: GenerateMoves") );
-
-    //----- One-reply extension -------
-    if(moves.size() == 1) {
-        D( m_debug.Increment("NegaMax: Extension: One-reply") );
-        extension++;
-    }
 
     // --------- Check for checkmate and stalemate -----------
     if( moves.empty() ) {
@@ -493,6 +485,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("NegaMax: EmptyMoves: Stalemate") );
             return DRAW_SCORE(m_ply); // Stalemate
         }
+    }
+
+    //----- One-reply extension -------
+    if( moves.size() == 1 ) {
+        D( m_debug.Increment("NegaMax: Extension: One-reply") );
+        extension++;
     }
 
     // --------- Move ordering -----------
@@ -690,9 +688,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // Generate captures.
     // If in check, generate check evasions.
     D( m_debug.Increment("Quiescence: GenerateMoves") );
-    MoveGenerator gen;
-    MoveList moves = inCheck ? gen.GenerateEvasionMoves(board)
-                             : gen.GenerateTacticalMoves(board);
+    MoveList moves = inCheck ? MoveGenerator::GenerateEvasionMoves(board)
+                             : MoveGenerator::GenerateTacticalMoves(board);
 
     // Checkmate or stalemate
     if( moves.empty() ) {
@@ -701,7 +698,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             return -MATESCORE + m_ply; // Checkmate
         }
         // Generate all the moves to verify stalemate
-        else if( gen.GenerateMoves(board).empty() ) {
+        else if( MoveGenerator::GenerateMoves(board).size() == 0 ) {
             D( m_debug.Increment("Quiescence: EmptyMoves: Stalemate") );
             return DRAW_SCORE(m_ply); // Stalemate
         }
@@ -712,7 +709,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             : SortTactical(board, moves);
 
     for(auto move : moves) {
-        
+
         if(!inCheck && move.MoveType() == CAPTURE) {
             const int seeValue = SEE::FromScore(move.Score());
 

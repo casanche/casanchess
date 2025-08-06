@@ -89,6 +89,4 @@ struct MoveData {
     PIECE_TYPE capturedType;
 };
 
-typedef std::vector<Move> MoveList;
-
 #endif //MOVE_H

@@ -42,13 +42,12 @@ void Board::Init() {
 u64 Board::Perft(int depth) {
     u64 nodes = 0;
 
-    MoveGenerator generator;
-    MoveList moves = generator.GenerateMoves(*this);
+    MoveList moves = MoveGenerator::GenerateMoves(*this);
 
     if(depth == 0) return 1;
     if(depth == 1) return moves.size();
 
-    for(auto &move : moves) {
+    for(auto move : moves) {
         
         //Integrity check: before
         D( BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(*this); );
@@ -69,10 +68,9 @@ u64 Board::Perft(int depth) {
 void Board::Divide(int depth) {
     u64 nodesTotal = 0;
 
-    MoveGenerator generator;
-    MoveList moves = generator.GenerateMoves(*this);
+    MoveList moves = MoveGenerator::GenerateMoves(*this);
 
-    for(auto &move : moves) {
+    for(auto move : moves) {
         MakeMove(move);
         u64 nodes = Perft(depth-1);
         P( move.Notation() << " \t" << nodes );
@@ -120,8 +118,7 @@ void Board::Print(bool bits) const {
 }
 
 void Board::ShowHashMoves() {
-    MoveGenerator gen;
-    MoveList moves = gen.GenerateMoves(*this);
+    MoveList moves = MoveGenerator::GenerateMoves(*this);
 
     for(auto move : moves)  {
         MakeMove(move);
@@ -140,11 +137,9 @@ void Board::ShowHistory() {
 }
 
 void Board::ShowMoves() {
-    MoveGenerator moveGenerator;
-    MoveList moves = moveGenerator.GenerateMoves(*this);
-    for(auto move : moves ) {
+    MoveList moves = MoveGenerator::GenerateMoves(*this);
+    for(auto move : moves)
         move.Print();
-    }
     P("size: " << moves.size());
 }
 

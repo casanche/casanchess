@@ -48,10 +48,9 @@ void Interface::Start(std::string fenString) {
 
         //Random move
         else if(input == "random") {
-            MoveGenerator gen;
-            MoveList moves = gen.GenerateMoves(m_board);
+            MoveList moves = MoveGenerator::GenerateMoves(m_board);
 
-            if(!moves.empty()) {
+            if( !moves.empty() ) {
                 m_board.MakeMove( MoveGenerator::RandomMove(moves) );
             } else {
                 if( m_board.IsCheck() ) {

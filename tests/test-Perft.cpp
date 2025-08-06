@@ -16,11 +16,8 @@ int main(int argc, char** argv) {
 //MoveGenerator
 TEST(MoveGenerator, StartingPosition) {
     Board board;
-
-    MoveGenerator generator;
-    MoveList moves = generator.GenerateMoves(board);
-
-    EXPECT_EQ(moves.size(), (size_t)20);
+    MoveList moves = MoveGenerator::GenerateMoves(board);
+    EXPECT_EQ(moves.size(), 20);
 }
 
 //https://www.chessprogramming.org/Perft_Results
