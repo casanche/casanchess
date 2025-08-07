@@ -23,7 +23,7 @@ TEST(MoveGenerator, StartingPosition) {
 //https://www.chessprogramming.org/Perft_Results
 TEST(Perft, StartingPosition) {
     Board board;
-    // board.SetFen(STARTFEN);
+    // board.SetFen(INITIAL_POSITION_FEN);
     EXPECT_EQ(board.Perft(1), (u64)20);
     EXPECT_EQ(board.Perft(2), (u64)400);
     EXPECT_EQ(board.Perft(3), (u64)8902);

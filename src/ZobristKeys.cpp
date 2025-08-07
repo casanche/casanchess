@@ -62,8 +62,10 @@ void ZobristKey::SetKey(Board& board) {
 
     //Enpassant
     Bitboard epSquare = board.EnPassantSquare();
-    int file = File( BitscanForward(epSquare) );
-    m_key ^= ZobristKeys::m_zkeyEnpassant[file];
+    if(epSquare) {
+        int file = File( BitscanForward(epSquare) );
+        m_key ^= ZobristKeys::m_zkeyEnpassant[file];
+    }
 }
 
 void ZobristKey::SetPawnKey(Board& board) {
@@ -93,6 +95,8 @@ void ZobristKey::UpdateCastling(CASTLING_TYPE castlingType) {
     };
 }
 void ZobristKey::UpdateEnpassant(Bitboard enpassant) {
+    assert(enpassant);
+    
     int file = File( BitscanForward(enpassant) );
     m_key ^= ZobristKeys::m_zkeyEnpassant[file];
 }

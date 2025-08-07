@@ -15,8 +15,6 @@ using namespace BitboardUtils;
 #include <sstream>
 #include <string>
 
-const std::string STARTFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
 const char PIECE_NOTATION[2][8] = { {' ', 'P', 'N', 'B', 'R', 'Q', 'K', '-',},
                                     {' ', 'p', 'n', 'b', 'r', 'q', 'k', '-'} }; //[COLOR][PIECE]
 
@@ -36,7 +34,7 @@ Board::Board() {
 }
 
 void Board::Init() {
-    SetFen(STARTFEN);
+    SetFen(INITIAL_POSITION_FEN);
 }
 
 u64 Board::Perft(int depth) {
