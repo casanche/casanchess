@@ -1,5 +1,4 @@
-#ifndef HASH_H
-#define HASH_H
+#pragma once
 
 #include "Constants.h"
 #include "Move.h"
@@ -117,5 +116,3 @@ namespace Hash {
     extern EvalCache evalCache;
     extern PawnHash pawnHash;
 }
-
-#endif //HASH_H

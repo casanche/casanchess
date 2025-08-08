@@ -1,5 +1,4 @@
-#ifndef SEARCH_H
-#define SEARCH_H
+#pragma once
 
 #include "Board.h"
 #include "Constants.h"
@@ -115,5 +114,3 @@ private:
     bool m_debugMode; // UCI debug mode
     SearchDebug m_debug;
 };
-
-#endif //SEARCH_H

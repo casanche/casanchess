@@ -1,5 +1,4 @@
-#ifndef ZOBRIST_KEYS_H
-#define ZOBRIST_KEYS_H
+#pragma once
 
 #include "Constants.h"
 #include "Move.h"
@@ -32,5 +31,3 @@ public:
 private:
     u64 m_key;
 };
-
-#endif //ZOBRIST_KEYS_H
