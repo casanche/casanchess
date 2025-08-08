@@ -1,5 +1,4 @@
-#ifndef MOVEGENERATOR_H
-#define MOVEGENERATOR_H
+#pragma once
 
 #include "Constants.h"
 #include "Move.h"
@@ -53,5 +52,3 @@ namespace MoveGenerator {
     // Pick a random move from the move list
     Move RandomMove(const MoveList& moveList);
 }
-
-#endif //MOVEGENERATOR_H

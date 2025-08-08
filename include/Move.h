@@ -1,5 +1,4 @@
-#ifndef MOVE_H
-#define MOVE_H
+#pragma once
 
 #include "Constants.h"
 #include "BitboardUtils.h"
@@ -88,5 +87,3 @@ struct MoveData {
     MOVE_TYPE moveType;
     PIECE_TYPE capturedType;
 };
-
-#endif //MOVE_H

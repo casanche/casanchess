@@ -1,5 +1,4 @@
-#ifndef NNUE_H
-#define NNUE_H
+#pragma once
 
 #include "Constants.h"
 
@@ -85,5 +84,3 @@ struct NetworkStorage {
 
 inline Network m_network;
 inline NNUE nnue;
-
-#endif //NNUE_H

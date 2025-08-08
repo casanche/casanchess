@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #include <chrono>
 #include <random>
@@ -39,5 +38,3 @@ namespace Utils {
     };
 
 } //namespace Utils
-
-#endif //UTILS_H

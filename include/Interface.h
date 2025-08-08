@@ -1,5 +1,4 @@
-#ifndef INTERFACE_H
-#define INTERFACE_H
+#pragma once
 
 #include "Board.h"
 
@@ -15,5 +14,3 @@ private:
     void PrintWelcome();
     Board m_board;
 };
-
-#endif //INTERFACE_H

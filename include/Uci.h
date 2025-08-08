@@ -1,5 +1,4 @@
-#ifndef UCI_H
-#define UCI_H
+#pragma once
 
 #include "Board.h"
 #include "Search.h"
@@ -25,5 +24,3 @@ private:
     Board m_board;
     Search m_search;
 };
-
-#endif //UCI_H

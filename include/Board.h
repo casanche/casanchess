@@ -1,5 +1,4 @@
-#ifndef BOARD_H
-#define BOARD_H
+#pragma once
 
 #include "Constants.h"
 #include "ZobristKeys.h"
@@ -119,5 +118,3 @@ private:
     friend class Fen;
     friend class MoveMaker;
 };
-
-#endif //BOARD_H

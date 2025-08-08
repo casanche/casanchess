@@ -1,5 +1,4 @@
-#ifndef DEBUG_H
-#define DEBUG_H
+#pragma once
 
 #include "Constants.h"
 class Board;
@@ -56,5 +55,3 @@ public:
 private:
     std::map<std::string, int> debugVariables;
 };
-
-#endif //DEBUG_H

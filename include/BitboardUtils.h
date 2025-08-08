@@ -1,5 +1,4 @@
-#ifndef BITBOARDUTILS_H
-#define BITBOARDUTILS_H
+#pragma once
 
 #include "Constants.h"
 
@@ -80,5 +79,3 @@ public:
 private:
     Bitboard m_bitboard;
 };
-
-#endif //BITBOARDUTILS_H

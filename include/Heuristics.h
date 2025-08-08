@@ -1,5 +1,4 @@
-#ifndef HEURISTICS_H
-#define HEURISTICS_H
+#pragma once
 
 #include "Move.h"
 #include "MoveGenerator.h"
@@ -112,5 +111,3 @@ struct Heuristics {
     KillerHeuristics killer;
     HistoryHeuristics history;
 };
-
-#endif //HEURISTICS_H

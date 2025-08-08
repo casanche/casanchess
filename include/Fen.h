@@ -1,5 +1,4 @@
-#ifndef FEN_H
-#define FEN_H
+#pragma once
 
 #include <map>
 #include <string>
@@ -19,5 +18,3 @@ public:
 
     static EPDLine ReadEPDLine(const std::string& line);
 };
-
-#endif //FEN_H

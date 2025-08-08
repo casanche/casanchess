@@ -1,5 +1,4 @@
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#pragma once
 
 #include <array>
 #include <cassert>
@@ -183,5 +182,3 @@ inline int RelativeRank(COLOR color, int square) {
 inline Bitboard RelativeMaskRank(COLOR color, RANKS rank) {
     return color == WHITE ? MaskRank[rank] : MaskRank[RANK8-rank];
 }
-
-#endif //CONSTANTS_H

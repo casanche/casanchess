@@ -1,5 +1,4 @@
-#ifndef EVALUATION_H
-#define EVALUATION_H
+#pragma once
 
 #include "Constants.h"
 #include "Hash.h"
@@ -241,5 +240,3 @@ namespace Evaluation {
     } calculations;
 
 } //namespace Evaluation
-
-#endif //EVALUATION_H

@@ -1,5 +1,4 @@
-#ifndef MOVEMAKER_H
-#define MOVEMAKER_H
+#pragma once
 
 #include "Move.h"
 #include <string>
@@ -34,5 +33,3 @@ private:
     static Move StringToMove(const Board& board, std::string input);
     static Move DescriptiveToMove(const Board& board, SQUARES fromSq, SQUARES toSq, char promLet);
 };
-
-#endif //MOVEMAKER_H
