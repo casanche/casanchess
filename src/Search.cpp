@@ -280,7 +280,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     int moveNumber = 0;
     for(auto move : moves) {
         moveNumber++;
-        bool childPV = (moveNumber == 1);
+        bool isPV = (moveNumber == 1);
 
         if(DEBUG_SEARCH_TREE)
             P( "RootMax: " << move.Notation() );
@@ -297,7 +297,19 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         board.MakeMove(move);
         m_ply++; m_nodes++;
 
-        score = -NegaMax(board, depth-1, -beta, -alpha, childPV);
+        // -------- Principal Variation Search (PVS) -----------
+        // PV move: full window
+        // Other moves: zero window
+        if(isPV)
+            score = -NegaMax(board, depth-1, -beta, -alpha, true);
+        else {
+            score = -NegaMax(board, depth-1, -alpha-1, -alpha, false);
+
+            // Score within window: new PV found! Re-search with full window
+            if(score > alpha && score < beta) {
+                score = -NegaMax(board, depth-1, -beta, -alpha, true);
+            }
+        }
 
         board.TakeMove(move);
         m_ply--;
