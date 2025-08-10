@@ -504,23 +504,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         extension++;
     }
 
-    // --------- Move ordering -----------
+    // --------- Move ordering ---------
     // Order moves to maximize search efficiency (hash move, captures, killers, history...)
     SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
 
-    // ------- Futility pruning (preparation) --------
-    // Prune moves later in the loop, if static evaluation is too low (eval << alpha)
-    bool doFutility = false;
-    int futilityMargin = 0;
-    if (!TURNOFF_FUTILITY && depth <= 4 && !isPV && !inCheck && !IsMateValue(alpha) && !IsMateValue(beta)) {
-        futilityMargin = 150 + depth * 150;
-        if(eval + futilityMargin < alpha) {
-            D( m_debug.Increment("NegaMax: Pruning: Futility preparation") );
-            D( m_debug.Increment("NegaMax: Pruning: Futility preparation - Depth " + std::to_string(depth)) );
-            doFutility = true;
-        }
-    }
-
+    // --------- Move loop ---------
     int moveNumber = 0;
     for(auto move : moves) {
         assert(move.MoveType());
@@ -534,17 +522,20 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         if(DEBUG_SEARCH_TREE)
             P("  NegamaxLoop, ply " << m_ply << " move: " << move.Notation());
 
-        // ------- Futility pruning --------
-        // Prune moves if evaluation is too low (eval << alpha)
-        // Only quiet and bad captures are pruned
-        const int SEE_ZERO = 240;
-        if(!TURNOFF_FUTILITY && doFutility && move.Score() <= SEE_ZERO) {
-            D( m_debug.Increment("NegaMax: Pruning: Futility - FutileMove") );
-            D( m_debug.Increment("NegaMax: Pruning: Futility - FutileMove - " + std::to_string(depth)) );
+        // ------- Futility pruning -------
+        // Prune bad captures if evaluation is too low (eval << alpha)
+        const int futilityMargin = 50 + depth * 75;
+        if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsMateValue(alpha)
+            && depth <= 4
+            && eval + futilityMargin <= alpha
+            && ( move.Score() < 120 || (move.Score() >= 181 && move.Score() <= 188) )
+        ) {
+            D( m_debug.Increment("NegaMax: Pruning: Futility") );
+            D( m_debug.Increment("NegaMax: Pruning: Futility - Depth " + std::to_string(depth)) );
             if(eval + futilityMargin > bestScore) {
                 bestScore = eval + futilityMargin;
             }
-            break;
+            continue;
         }
 
         // ---- Pawn to 7th/8th extension -----
