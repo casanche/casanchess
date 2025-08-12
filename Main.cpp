@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
     std::span<char*> args(argv, argc);
     for (size_t i = 1; i < args.size(); ++i) {
         std::string_view arg = args[i];
-        
+
         if (arg == "-i") {
             Interface interface;
             interface.Start();
@@ -39,6 +39,18 @@ int main(int argc, char** argv) {
             // Path to .nnue file
             nnue.Load(args[i + 1]);
             ++i; // Skip next argument as it's the path
+        }
+        else if (arg == "bench") {
+            int depth = 8;
+            if (i + 1 < args.size()) {
+                try {
+                    depth = std::stoi(args[i + 1]);
+                    ++i;
+                } catch (...) {}
+            }
+            Uci uci;
+            uci.Bench(depth, false);
+            return 0;
         }
     }
 
