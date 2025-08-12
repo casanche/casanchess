@@ -47,11 +47,12 @@ void Uci::Launch() {
             std::cout << "id author " << AUTHOR << std::endl;
 
             //Options
-            std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
-            std::cout << "option name Ponder type check default false" << std::endl;
-            std::cout << "option name ClearHash type button" << std::endl;
             std::cout << "option name ClassicalEval type check default false" << std::endl;
+            std::cout << "option name ClearHash type button" << std::endl;
+            std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
             std::cout << "option name NNUE_Path type string default " << nnue.GetPath() << std::endl;
+            std::cout << "option name Ponder type check default false" << std::endl;
+            std::cout << "option name Threads type spin default 1 min 1 max 1" << std::endl;
 
             std::cout << "uciok" << std::endl;
         }
