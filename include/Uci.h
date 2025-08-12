@@ -12,10 +12,10 @@ extern bool UCI_CLASSICAL_EVAL;
 class Uci {
 public:
     Uci();
+    void Bench(int depth, bool verbose);
     void Launch();
 
 private:
-    void Bench(int depth);
     void Go(std::istringstream &stream);
     void Position(std::istringstream &stream);
     void SetOption(std::istringstream &stream);

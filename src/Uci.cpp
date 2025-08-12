@@ -110,7 +110,7 @@ void Uci::Launch() {
             if(stream >> depth) {
                 std::cout << "Depth provided by user" << std::endl;
             }
-            Bench(depth);
+            Bench(depth, true);
         }
         else if(token == "hashmoves") {
             m_board.ShowHashMoves();
@@ -142,8 +142,9 @@ void Uci::Launch() {
 
 }
 
-void Uci::Bench(int depth) {
-    std::cout << "Running benchmark at depth " << depth << "..." << std::endl;
+void Uci::Bench(int depth, bool verbose) {
+    if(verbose)
+        std::cout << "Running benchmark at depth " << depth << "..." << std::endl;
 
     // Standard test positions for chess engine benchmarking
     std::vector<std::string> testPositions = {
@@ -170,8 +171,10 @@ void Uci::Bench(int depth) {
     UCI_OUTPUT = false;
 
     for(size_t i = 0; i < testPositions.size(); i++) {
-        std::cout << "Position " << (i + 1) << "/" << testPositions.size() << ":" << std::endl;
-        std::cout << testPositions[i] << std::endl;
+        if (verbose) {
+            std::cout << "Position " << (i + 1) << "/" << testPositions.size() << ":" << std::endl;
+            std::cout << testPositions[i] << std::endl;
+        }
 
         // Set position
         m_board.SetFen(testPositions[i]);
@@ -195,12 +198,14 @@ void Uci::Bench(int depth) {
         totalNps += nps;
         positionCount++;
 
-        std::cout << "  Nodes: " << nodes << std::endl;
-        std::cout << "  Time: " << elapsed << " ms" << std::endl;
-        std::cout << "  Speed: " << std::fixed << std::setprecision(2) << (nps / 1000.0) << " kN/s" << std::endl;
-        std::cout << "  Best move: " << m_search.BestMove().Notation() << std::endl;
-        std::cout << "  Score: " << m_search.BestScore() << std::endl;
-        std::cout << std::endl;
+        if (verbose) {
+            std::cout << "  Nodes: " << nodes << std::endl;
+            std::cout << "  Time: " << elapsed << " ms" << std::endl;
+            std::cout << "  Speed: " << std::fixed << std::setprecision(2) << (nps / 1000.0) << " kN/s" << std::endl;
+            std::cout << "  Best move: " << m_search.BestMove().Notation() << std::endl;
+            std::cout << "  Score: " << m_search.BestScore() << std::endl;
+            std::cout << std::endl;
+        }
     }
 
     // Restore UCI output
@@ -208,11 +213,15 @@ void Uci::Bench(int depth) {
 
     // Overall results
     double avgNps = positionCount > 0 ? (totalNps / (double)positionCount) : 0;
-    std::cout << "=== BENCHMARK RESULTS ===" << std::endl;
-    std::cout << "Total nodes: " << totalNodes << std::endl;
-    std::cout << "Total time: " << totalTime << " ms" << std::endl;
-    std::cout << "Average speed: " << std::fixed << std::setprecision(2) << (avgNps / 1000.0) << " kN/s" << std::endl;
-    std::cout << "========================" << std::endl;
+    if(verbose) {
+        std::cout << "=== BENCHMARK RESULTS ===" << std::endl;
+        std::cout << "Total nodes: " << totalNodes << std::endl;
+        std::cout << "Total time: " << totalTime << " ms" << std::endl;
+        std::cout << "Average speed: " << std::fixed << std::setprecision(2) << (avgNps / 1000.0) << " kN/s" << std::endl;
+        std::cout << "========================" << std::endl;
+    } else {
+        std::cout << totalNodes << " nodes " << static_cast<int>(avgNps) << " nps" << std::endl;
+    }
 }
 
 void Uci::Go(std::istringstream &stream) {
