@@ -447,6 +447,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
     // --------- Null-move pruning -----------
     // Skip a move (null move) to quickly detect beta cutoffs
     if(!TURNOFF_NULLMOVE_PRUNING
+        && !isPV
         && !inCheck
         && m_nullmoveAllowed
         && eval >= beta  //very good score
