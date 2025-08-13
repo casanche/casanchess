@@ -325,11 +325,11 @@ void Evaluation::EvalPawns(const Board &board, Score& score) {
                         << ", hit " << test_hit \
                         << ", miss " << test_miss \
                         << ", rate " << 100 * (float)test_hit / test_total << "%" \
-                        << ", fill " << 100 * Hash::pawnHash.Occupancy() << "%");
+                        << ", fill " << 100 * Hash::pawnHash.Occupancy() / Hash::pawnHash.Size() << "%");
         }
     );
 
-    PawnEntry* pawnEntry = Hash::pawnHash.ProbeEntry( board.PawnKey() );
+    PawnEntry* pawnEntry = Hash::pawnHash.Probe( board.PawnKey() );
     if(pawnEntry) {
         D(test_hit++);
 
@@ -345,7 +345,7 @@ void Evaluation::EvalPawns(const Board &board, Score& score) {
         int scoreEg = whiteEval.eg - blackEval.eg;
 
         //Store in hash
-        Hash::pawnHash.AddEntry(board.PawnKey(), scoreMg, scoreEg);
+        Hash::pawnHash.Store(board.PawnKey(), scoreMg, scoreEg);
 
         score.Add(scoreMg, scoreEg);
     }

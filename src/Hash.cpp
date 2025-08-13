@@ -2,11 +2,6 @@
 
 #include "Debug.h"
 
-// Extern declarations
-TT Hash::tt;
-EvalCache Hash::evalCache;
-PawnHash Hash::pawnHash;
-
 // =========================
 // == Transposition table ==
 // =========================
@@ -29,76 +24,38 @@ TT::~TT() {
     delete [] m_entries;
 }
 
-void TT::Clear() {
-    for(u64 i=0; i < m_size; ++i) {
-        m_entries[i].Clear();
-    }
-}
-
-//Store mates in hash as relative from the search position (POS)
-//ROOT ---- (Mate in X+ply) ---- POS ---- (Mate in X) ---- MATE
-int TT::ScoreToHash(int score, int ply) {
-    if(IsMateValue(score)) {
-        if(score > 0)   return score + ply;
-        else            return score - ply;
-    }
-    return score;
-}
-
-//Translate mate scores as relative from the root (ROOT')
-//ROOT' ---- (Mate in X+ply') ---- POS ---- (Mate in X) ---- MATE
-int TT::ScoreFromHash(int score, int ply) {
-    if(IsMateValue(score)) {
-        if(score > 0)   return score - ply;
-        else            return score + ply;
-    }
-    return score;
-}
-
-void TT::AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age) {
+void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age) {
     assert(abs(score) <= MATESCORE);
     assert(depth <= MAX_DEPTH);
 
     u64 index = zkey % m_size;
+    TTEntry* entry = &m_entries[index];
 
     //Replacement scheme
-    if(age != m_entries[index].age || depth >= m_entries[index].depth) {
-        TTEntry entry;
-        entry.zkey = zkey;
-        entry.score = SafeCastInt16(ScoreToHash(score, ply));
-        entry.depth = SafeCastU8(depth);
-        entry.type = type;
-        entry.age = age;
-        entry.bestMove = bestMove;
-
-        m_entries[index] = entry;
+    if(age != entry->age || depth >= entry->depth) {
+        entry->zkey = zkey;
+        entry->score = SafeCastInt16(ScoreToHash(score, ply));
+        entry->depth = SafeCastU8(depth);
+        entry->type = type;
+        entry->age = age;
+        entry->bestMove = bestMove;
     }
 }
 
-TTEntry* TT::ProbeEntry(u64 zkey, int depth) {
+TTEntry* TT::Probe(u64 zkey, int depth) {
     u64 index = zkey % m_size;
-    TTEntry entry = m_entries[index];
-    if(entry.zkey == zkey && entry.depth >= depth) {
-        return &m_entries[index];
+    TTEntry* entry = &m_entries[index];
+    if(entry->zkey == zkey && entry->depth >= depth) {
+        return entry;
     } else {
         return nullptr;
     }
 }
 
-int TT::OccupancyPerMil() {
-    int count = 0;
-    for(int i = 0; i < 1000; i++) {
-        count += (m_entries[i].zkey != 0);
+void TT::Clear() {
+    for(u64 i=0; i < m_size; ++i) {
+        m_entries[i].Clear();
     }
-    return count;
-}
-
-u64 TT::NumEntries() {
-    u64 count = 0;
-    for(u64 i = 0; i < m_size; ++i) {
-        count += (m_entries[i].zkey != 0);
-    }
-    return count;
 }
 
 void TT::SetSize(int size) {  // size in MB
@@ -110,25 +67,42 @@ void TT::SetSize(int size) {  // size in MB
     Clear();
 }
 
+u64 TT::Occupancy(u64 sampleSize) const {
+    u64 count = 0;
+    for(u64 i = 0; i < sampleSize; ++i) {
+        count += (m_entries[i].zkey != 0);
+    }
+    return count;
+}
+
+//Translate mate scores as relative from the root (ROOT')
+//ROOT' <---- (Mate in X+ply') <---- POS <---- (Mate in X)
+int TT::ScoreFromHash(int score, int ply) {
+    if(IsMateValue(score)) {
+        if(score > 0) return score - ply;
+        else          return score + ply;
+    }
+    return score;
+}
+
+//Store mates in hash as relative from the search position (POS)
+//ROOT ----> (Mate in X+ply) ----> POS ----> (Mate in X)
+int TT::ScoreToHash(int score, int ply) {
+    if(IsMateValue(score)) {
+        if(score > 0) return score + ply;
+        else          return score - ply;
+    }
+    return score;
+}
+
 // ================
 // == Eval cache ==
 // ================
-
-void EvalEntry::Clear() {
-    zkey32 = 0;
-    eval = 0;
-}
 
 EvalCache::EvalCache() {
     m_size = EVALCACHE_ENTRIES;
     m_mask = m_size - 1;
     Clear();
-}
-
-void EvalCache::Clear() {
-    for(u64 i = 0; i < m_size; ++i) {
-        m_evalEntries[i].Clear();
-    }
 }
 
 void EvalCache::Store(u64 zkey, int eval) {
@@ -152,9 +126,15 @@ bool EvalCache::Probe(u64 zkey, int& eval) {
     return false;
 }
 
-int EvalCache::OccupancyPerMil() {
-    int count = 0;
-    for(int i = 0; i < 1000; i++) {
+void EvalCache::Clear() {
+    for(auto& entry : m_evalEntries) {
+        entry = {};
+    }
+}
+
+u64 EvalCache::Occupancy(u64 sampleSize) const {
+    u64 count = 0;
+    for(u64 i = 0; i < sampleSize; ++i) {
         count += (m_evalEntries[i].zkey32 != 0);
     }
     return count;
@@ -163,12 +143,6 @@ int EvalCache::OccupancyPerMil() {
 // ===============
 // == Pawn-hash ==
 // ===============
-
-void PawnEntry::Clear() {
-    zkey = 0;
-    evalMg = 0;
-    evalEg = 0;
-}
 
 PawnHash::PawnHash() {
     m_pawnEntries = new PawnEntry[PAWN_HASH_SIZE];
@@ -181,11 +155,11 @@ PawnHash::~PawnHash() {
 
 void PawnHash::Clear() {
     for(u64 i=0; i < PAWN_HASH_SIZE; ++i) {
-        m_pawnEntries[i].Clear();
+        m_pawnEntries[i] = {};
     }
 }
 
-void PawnHash::AddEntry(u64 zkey, int evalMg, int evalEg) {
+void PawnHash::Store(u64 zkey, int evalMg, int evalEg) {
     u64 index = zkey % PAWN_HASH_SIZE;
 
     PawnEntry pawnEntry;
@@ -196,15 +170,7 @@ void PawnHash::AddEntry(u64 zkey, int evalMg, int evalEg) {
     m_pawnEntries[index] = pawnEntry;
 }
 
-float PawnHash::Occupancy() {
-    int count = 0;
-    for(int i = 0; i < PAWN_HASH_SIZE; ++i) {
-        count += (m_pawnEntries[i].zkey != 0);
-    }
-    return (float)count / PAWN_HASH_SIZE;
-}
-
-PawnEntry* PawnHash::ProbeEntry(u64 zkey) {
+PawnEntry* PawnHash::Probe(u64 zkey) {
     u64 index = zkey % PAWN_HASH_SIZE;
     PawnEntry entry = m_pawnEntries[index];
     if(entry.zkey == zkey) {
@@ -212,4 +178,12 @@ PawnEntry* PawnHash::ProbeEntry(u64 zkey) {
     } else {
         return nullptr;
     }
+}
+
+u64 PawnHash::Occupancy() const {
+    u64 count = 0;
+    for(u64 i = 0; i < PAWN_HASH_SIZE; ++i) {
+        count += (m_pawnEntries[i].zkey != 0);
+    }
+    return count;
 }
