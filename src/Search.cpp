@@ -524,8 +524,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
             P("  NegamaxLoop, ply " << m_ply << " move: " << move.Notation());
 
         // ------- Futility pruning -------
-        // Prune bad captures if evaluation is too low (eval << alpha)
-        const int futilityMargin = 50 + depth * 75;
+        // Prune quiet moves and bad captures if unlikely to raise alpha
+        const int futilityMargin = 0 + depth * 25;
         if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsMateValue(alpha)
             && depth <= 4
             && eval + futilityMargin <= alpha
