@@ -559,13 +559,13 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
 
         // -------- Late Move Reductions ----------
         // Reduce depth of less-promising moves
-        if( !TURNOFF_LMR
-              && moveNumber > 1     // Never reduce the first move
-              && depth >= 2         // Avoid negative depths
-              && !inCheck           // Not in check
-        ) {
-            reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, isPV);
-        }
+        // if( !TURNOFF_LMR
+        //       && moveNumber > 1     // Never reduce the first move
+        //       && depth >= 2         // Avoid negative depths
+        //       && !inCheck           // Not in check
+        // ) {
+        //     reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, isPV);
+        // }
 
         board.MakeMove(move);
         m_ply++; m_nodes++;
