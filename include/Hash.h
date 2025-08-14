@@ -3,9 +3,9 @@
 #include "Constants.h"
 #include "Move.h"
 
-const int MAX_DEPTH = 128;
-const uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
-const int PAWN_HASH_SIZE = 8192; //In number of entries
+constexpr int MAX_DEPTH = 128;
+constexpr uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
+constexpr int PAWN_HASH_SIZE = 8192; //In number of entries
 
 // 2 MB / 64 bits per entry = 2^18 entries
 constexpr uint EVALCACHE_ENTRIES = 1 << 18;
@@ -16,14 +16,15 @@ constexpr uint EVALCACHE_ENTRIES = 1 << 18;
 
 // Alpha node: the true eval is at most equal to the score (true <= score) UPPER_BOUND
 // Beta node: the true eval is at least equal to the score (true >= score) LOWER_BOUND
-enum TTENTRY_TYPE { NONE, EXACT, LOWER_BOUND, UPPER_BOUND };
+enum class TTENTRY_TYPE : u8 { NONE, EXACT, LOWER_BOUND, UPPER_BOUND };
 
 // 64(zkey) + 32(move) + 16(score) + 8(depth) + 2(type) + 6(age) = 128 bits per entry
 struct TTEntry {
     u64 zkey;
     i16 score;
     u8 depth;
-    u8 type: 2, age: 6;
+    TTENTRY_TYPE type : 2;
+    u8 age : 6;
     Move bestMove;
 
     void Clear();
@@ -33,16 +34,15 @@ class TT {
 public:
     TT();
     ~TT();
+
+    void Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age);
+    TTEntry* Probe(u64 zkey, int depth);
+
     void Clear();
     void SetSize(int size);
 
-    void AddEntry(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age); // TODO: rename
-    TTEntry* ProbeEntry(u64 zkey, int depth); // TODO: rename
-
-    int OccupancyPerMil();
-    u64 NumEntries(); // TODO: rename
     u64 Size() { return m_size; };
-
+    u64 Occupancy(u64 sampleSize = 1000) const;
     int ScoreFromHash(int score, int ply);
 
 private:
@@ -60,21 +60,19 @@ private:
 struct EvalEntry {
     u32 zkey32;
     i16 eval;
-
-    void Clear();
 };
 
 class EvalCache {
 public:
     EvalCache();
-    void Clear();
 
     void Store(u64 zkey, int eval);
     bool Probe(u64 zkey, int& eval);
 
-    int OccupancyPerMil();
+    void Clear();
 
     u64 Size() { return m_size; };
+    u64 Occupancy(u64 sampleSize = 1000) const;
 
 private:
     EvalEntry m_evalEntries[EVALCACHE_ENTRIES];
@@ -91,18 +89,21 @@ struct PawnEntry {
     u64 zkey;
     i16 evalMg;
     i16 evalEg;
-
-    void Clear();
 };
 
 class PawnHash {
 public:
     PawnHash();
     ~PawnHash();
+
+    void Store(u64 zkey, int evalMg, int evalEg);
+    PawnEntry* Probe(u64 zkey);
+
     void Clear();
-    void AddEntry(u64 zkey, int evalMg, int evalEg);
-    float Occupancy();
-    PawnEntry* ProbeEntry(u64 zkey);
+
+    int Size() { return PAWN_HASH_SIZE; };
+    u64 Occupancy() const;
+
 private:
     PawnEntry* m_pawnEntries;
 };
@@ -112,7 +113,7 @@ private:
 // ======================
 
 namespace Hash {
-    extern TT tt;
-    extern EvalCache evalCache;
-    extern PawnHash pawnHash;
+    inline TT tt;
+    inline EvalCache evalCache;
+    inline PawnHash pawnHash;
 }

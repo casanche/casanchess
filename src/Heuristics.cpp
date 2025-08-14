@@ -12,7 +12,7 @@ namespace {
 
     void RateMoves(Board &board, MoveList &moves, TT& tt, const Heuristics &heuristics, int ply) {
         Move hashMove;
-        TTEntry* ttEntry = tt.ProbeEntry(board.ZKey(), 0); //shallowest
+        TTEntry* ttEntry = tt.Probe(board.ZKey(), 0); //shallowest
         if(ttEntry) {
             hashMove = ttEntry->bestMove;
         }

@@ -120,9 +120,9 @@ void Board::ShowHashMoves() {
 
     for(auto move : moves)  {
         MakeMove(move);
-        TTEntry* ttEntry = Hash::tt.ProbeEntry(ZKey(), 0);
+        TTEntry* ttEntry = Hash::tt.Probe(ZKey(), 0);
         if(ttEntry) {
-            P(move.Notation() << " " << ttEntry->type << "\t" << ttEntry->score);
+            P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
         }
         TakeMove(move);
     }
