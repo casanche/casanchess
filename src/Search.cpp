@@ -887,17 +887,9 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     const int MULT_FACTOR = 100; 
 
     // History moves
-    if(moveScore <= Scorer::HISTORY_MAX) {
-        lmr_value = -50 - 200*(isPV)
-            + (
-                - (20 * logScore)
-                + (200 * logDepth)
-                + (30 * logMoveNumber)
-            ) / LOG_TABLE_SCALE
-            + (
-                - (30 * logScore * logDepth)
-                + (15 * logScore * logMoveNumber)
-            ) / (LOG_TABLE_SCALE * LOG_TABLE_SCALE);
+    if(moveScore <= Scorer::HISTORY_MAX && !isPV) {
+        lmr_value = 50 + (75 * logDepth * logMoveNumber) / (LOG_TABLE_SCALE * LOG_TABLE_SCALE);
+        lmr_value += -50 * logScore / LOG_TABLE_SCALE;
     }
 
     // SEE << 0: very bad captures
