@@ -859,8 +859,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
 
     // History moves
     if(moveScore < 180 && !isPV) {
-        lmr_value = 50 + (75 * logDepth * logMoveNumber) / (LOG_TABLE_SCALE * LOG_TABLE_SCALE);
-        lmr_value += -50 * logScore / LOG_TABLE_SCALE;
+        lmr_value = 50 + (150 * logDepth + 30 * logMoveNumber - 50 * logScore) / (LOG_TABLE_SCALE);
     }
 
     // SEE << 0: very bad captures
