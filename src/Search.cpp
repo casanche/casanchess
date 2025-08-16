@@ -886,7 +886,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     // Coefficients are scaled by this amount to perform integer calculations
     const int MULT_FACTOR = 100;
 
-    if(moveScore <= 193) {
+    if(moveScore <= 194) {
         // Common terms
         int directTerms = 50;
         int logTerms = 160*logDepth + 30*logMoveNumber;
@@ -902,7 +902,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
             directTerms += 40 - 30*isPV -35*badCaptureTier;
         }
         // Killers: 2,3,4: less-promising killer moves
-        else if(moveScore >= 191 && moveScore <= 193) {
+        else if(moveScore >= 191 && moveScore <= 194) {
             const int killerTier = moveScore - 191;
             directTerms += -120 -200*isPV -50*killerTier;
         }
