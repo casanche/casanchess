@@ -855,11 +855,11 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     int logMoveNumber = LogTable[moveNumber];
 
     // Coefficients are scaled by this amount to perform integer calculations
-    const int MULT_FACTOR = 100; 
+    const int MULT_FACTOR = 100;
 
     // History moves
     if(moveScore < 180) {
-        lmr_value = 50 + (150 * logDepth + 30 * logMoveNumber - 50 * logScore) / (LOG_TABLE_SCALE);
+        lmr_value = 50 + (160 * logDepth + 30 * logMoveNumber - 40 * logScore) / (LOG_TABLE_SCALE);
         lmr_value += -200 * isPV;
     }
 
