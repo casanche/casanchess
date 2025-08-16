@@ -827,17 +827,17 @@ void Search::AllocateLimits(Board &board, Limits limits) {
 
 // Late Move Reductions: reduce the search depth for less-promising moves.
 int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV) {
-    assert(moveScore  >= 0 && moveScore  <= LOG_TABLE_SIZE - 1);
-    assert(depth      >= 0 && depth      <= LOG_TABLE_SIZE - 1);
-    assert(moveNumber >= 0 && moveNumber <= LOG_TABLE_SIZE - 1);
+    assert(moveScore  >= 0 && moveScore + 1  <= LOG_TABLE_SIZE - 1);
+    assert(depth      >= 0 && depth          <= LOG_TABLE_SIZE - 1);
+    assert(moveNumber >= 0 && moveNumber     <= LOG_TABLE_SIZE - 1);
 
     int reduction = 0;
     int lmr_value = 0;
 
     // Logarithmic scaling for smooth reductions
-    int logScore = LogTable[moveScore + 1];
-    int logDepth = LogTable[depth];
-    int logMoveNumber = LogTable[moveNumber];
+    const int logScore = LogTable[moveScore + 1];
+    const int logDepth = LogTable[depth];
+    const int logMoveNumber = LogTable[moveNumber];
 
     // Coefficients are scaled by this amount to perform integer calculations
     const int MULT_FACTOR = 100;
