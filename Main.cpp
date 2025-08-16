@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
             ++i; // Skip next argument as it's the path
         }
         else if (arg == "bench") {
-            int depth = 8;
+            int depth = 9;
             if (i + 1 < args.size()) {
                 try {
                     depth = std::stoi(args[i + 1]);
