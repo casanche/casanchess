@@ -106,7 +106,7 @@ void Uci::Launch() {
             std::cout << "[" << token << " " << depth << "] " << clock.Elapsed() << " ms" << std::endl;
         }
         else if(token == "bench") {
-            int depth = 8; // Default depth
+            int depth = 9; // Default depth
             if(stream >> depth) {
                 std::cout << "Depth provided by user" << std::endl;
             }
