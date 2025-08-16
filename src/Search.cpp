@@ -857,7 +857,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     // Coefficients are scaled by this amount to perform integer calculations
     const int MULT_FACTOR = 100;
 
-    if(moveScore <= 189) {
+    if(moveScore <= 193) {
         // Common terms
         int directTerms = 50;
         int logTerms = 160*logDepth + 30*logMoveNumber;
@@ -872,14 +872,19 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
             const int badCaptureTier = moveScore - 181;
             directTerms += 40 - 30*isPV -35*badCaptureTier;
         }
+        // Killers: 2,3,4: less-promising killer moves
+        else if(moveScore >= 191 && moveScore <= 193) {
+            const int killerTier = moveScore - 191;
+            directTerms += -120 -200*isPV -50*killerTier;
+        }
 
         lmr_value = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
     }
 
     // Killers 2,3,4: less-promising killer moves in non-PV nodes
-    if(moveScore >= 191 && moveScore <= 193 && !isPV) {
-        lmr_value = -185 + ( (50*logDepth) + (165*logMoveNumber) ) / LOG_TABLE_SCALE;
-    }
+    // if(moveScore >= 191 && moveScore <= 193 && !isPV) {
+    //     lmr_value = -185 + ( (50*logDepth) + (165*logMoveNumber) ) / LOG_TABLE_SCALE;
+    // }
 
     reduction = lmr_value / MULT_FACTOR;
     reduction = std::clamp(reduction, 0, 4);
