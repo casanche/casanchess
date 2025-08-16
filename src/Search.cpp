@@ -881,11 +881,6 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
         lmr_value = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
     }
 
-    // Killers 2,3,4: less-promising killer moves in non-PV nodes
-    // if(moveScore >= 191 && moveScore <= 193 && !isPV) {
-    //     lmr_value = -185 + ( (50*logDepth) + (165*logMoveNumber) ) / LOG_TABLE_SCALE;
-    // }
-
     reduction = lmr_value / MULT_FACTOR;
     reduction = std::clamp(reduction, 0, 4);
     return reduction;
