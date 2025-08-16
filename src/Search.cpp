@@ -848,15 +848,23 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
         lmr_value += -200 * isPV;
     }
 
-    // SEE << 0: very bad captures
-    else if(moveScore >= 181 && moveScore <= 184) {
-        lmr_value = 50 - 40*(isPV) + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
+    if(moveScore >= 181 && moveScore <= 189) {
+        const int badCaptureTier = moveScore - 181;
+        lmr_value = 50 + (160 * logDepth + 30 * logMoveNumber) / (LOG_TABLE_SCALE); // common reduction
+        lmr_value += 40; // fixed offset for bad captures
+        lmr_value += -35 * badCaptureTier; // penalty depending on SEE value
+        lmr_value += -30*(isPV);
     }
 
+    // SEE << 0: very bad captures
+    // else if(moveScore >= 181 && moveScore <= 184) {
+    //     lmr_value = 50 - 40*(isPV) + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
+    // }
+
     // SEE < 0: bad captures
-    else if(moveScore >= 185 && moveScore <= 189) {
-        lmr_value = -85 + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
-    }
+    // else if(moveScore >= 185 && moveScore <= 189) {
+    //     lmr_value = -85 + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
+    // }
 
     // Killers 2,3,4: less-promising killer moves in non-PV nodes
     else if(moveScore >= 191 && moveScore <= 193 && !isPV) {
