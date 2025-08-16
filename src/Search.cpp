@@ -886,32 +886,27 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     // Coefficients are scaled by this amount to perform integer calculations
     const int MULT_FACTOR = 100;
 
-    // History moves
-    if(moveScore <= Scorer::HISTORY_MAX) {
-        lmr_value = 50 + (160 * logDepth + 30 * logMoveNumber - 40 * logScore) / (LOG_TABLE_SCALE);
-        lmr_value += -200 * isPV;
+    if(moveScore <= 189) {
+        // Common terms
+        int directTerms = 50;
+        int logTerms = 160*logDepth + 30*logMoveNumber;
+ 
+        // History moves
+        if(moveScore <= Scorer::HISTORY_MAX) {
+            directTerms += -200*isPV;
+            logTerms += -40*logScore;
+        }
+        // Bad captures
+        else if(moveScore >= 181 && moveScore <= 189) {
+            const int badCaptureTier = moveScore - 181;
+            directTerms += 40 - 30*isPV -35*badCaptureTier;
+        }
+
+        lmr_value = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
     }
-
-    if(moveScore >= 181 && moveScore <= 189) {
-        const int badCaptureTier = moveScore - 181;
-        lmr_value = 50 + (160 * logDepth + 30 * logMoveNumber) / (LOG_TABLE_SCALE); // common reduction
-        lmr_value += 40; // fixed offset for bad captures
-        lmr_value += -35 * badCaptureTier; // penalty depending on SEE value
-        lmr_value += -30*(isPV);
-    }
-
-    // SEE << 0: very bad captures
-    // else if(moveScore >= 181 && moveScore <= 184) {
-    //     lmr_value = 50 - 40*(isPV) + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
-    // }
-
-    // SEE < 0: bad captures
-    // else if(moveScore >= 185 && moveScore <= 189) {
-    //     lmr_value = -85 + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
-    // }
 
     // Killers 2,3,4: less-promising killer moves in non-PV nodes
-    else if(moveScore >= 191 && moveScore <= 193 && !isPV) {
+    if(moveScore >= 191 && moveScore <= 193 && !isPV) {
         lmr_value = -185 + ( (50*logDepth) + (165*logMoveNumber) ) / LOG_TABLE_SCALE;
     }
 
