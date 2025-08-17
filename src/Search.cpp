@@ -893,7 +893,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
  
         // History moves
         if(moveScore <= Scorer::HISTORY_MAX) {
-            directTerms += -200*isPV;
+            directTerms += -100*isPV;
             logTerms += -40*logScore;
         }
         // Bad captures
