@@ -571,8 +571,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         m_ply++; m_nodes++;
 
         bool givesCheck = board.IsCheck();
-        if(givesCheck) {
-            reduction = 0;
+        if(givesCheck && reduction) {
+            reduction -= 1;
         }
 
         // -------- Principal Variation Search (PVS) -----------
