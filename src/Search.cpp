@@ -859,7 +859,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
         // Killers
         else if(moveScore >= 191 && moveScore <= 194) {
             const int killerTier = moveScore - 191;
-            directTerms += -120 -50*killerTier;
+            directTerms += -120 -40*killerTier;
         }
 
         lmr_value = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
