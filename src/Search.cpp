@@ -570,6 +570,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         board.MakeMove(move);
         m_ply++; m_nodes++;
 
+        bool givesCheck = board.IsCheck();
+        if(givesCheck) {
+            reduction = 0;
+        }
+
         // -------- Principal Variation Search (PVS) -----------
         int fullDepth = depth - 1 + extension + localExtension;
         int reducedDepth = std::max(0, fullDepth - reduction);
