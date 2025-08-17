@@ -870,7 +870,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
         // Bad captures
         else if(moveScore >= 181 && moveScore <= 189) {
             const int badCaptureTier = moveScore - 181;
-            directTerms += 20 - 30*isPV -35*badCaptureTier;
+            directTerms += 20 -100*isPV -35*badCaptureTier;
         }
         // Killers: 2,3,4: less-promising killer moves
         else if(moveScore >= 191 && moveScore <= 194) {
