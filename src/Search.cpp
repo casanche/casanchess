@@ -894,12 +894,12 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
         // Bad captures
         else if(moveScore >= 181 && moveScore <= 189) {
             const int badCaptureTier = moveScore - 181;
-            directTerms += 20 -35*badCaptureTier;
+            directTerms += 20 -35*badCaptureTier; // Probar -35 --> -30 (ya que direct 20 y 60 son equivalentes) {20,-30}, {60,-40}
         }
         // Killers
         else if(moveScore >= 191 && moveScore <= 194) {
             const int killerTier = moveScore - 191;
-            directTerms += -120 -50*killerTier;
+            directTerms += -120 -50*killerTier; // Probar amarillo: -120 --> -110, añadiendo quizá -60* / {-150,-40}, {-100,-60}
         }
 
         lmr_value = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
