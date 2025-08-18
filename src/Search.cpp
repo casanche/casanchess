@@ -849,7 +849,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     constexpr int LMR_LOGTERM_MOVENUMBER = 30;
     constexpr int LMR_LOGTERM_HISTORY_SCORE = -40;
     constexpr int LMR_BADCAPTURES = 20;
-    constexpr int LMR_BADCAPTURE_TIER = -35;
+    constexpr int LMR_BADCAPTURE_TIER = -30;
     constexpr int LMR_KILLERS = -120;
     constexpr int LMR_KILLER_TIER = -50;
 
