@@ -29,7 +29,9 @@ namespace {
 Uci::Uci() :
     m_board(Board()),
     m_search(Search())
-{}
+{
+    Tuner::Initialize();
+}
 
 void Uci::Launch() {
 
@@ -55,8 +57,7 @@ void Uci::Launch() {
             std::cout << "option name Ponder type check default false" << std::endl;
             std::cout << "option name Threads type spin default 1 min 1 max 1" << std::endl;
 
-            // Tuning options (only in SPSA_TUNING builds)
-            Tuner::RegisterTuningOptions();
+            Tuner::RegisterUciOptions();
 
             std::cout << "uciok" << std::endl;
         }
@@ -138,6 +139,9 @@ void Uci::Launch() {
             P("ZKey: " << m_board.ZKey());
             P("Static evaluation: " << Evaluation::Evaluate(m_board));
             std::cout << "Move history: "; m_board.ShowHistory(); std::cout << std::endl;
+        }
+        else if(token == "print_spsa") {
+            Tuner::PrintSPSAInputs();
         }
         else {
             std::cout << "Command not valid: " << line << std::endl;
@@ -341,20 +345,20 @@ void Uci::SetOption(std::istringstream &stream) {
 
             nnue.Load(token);
         }
-        // Try to handle tuning parameters
-        else if(token.starts_with("LMR_")) {
-            std::string optionName = token; // Save the option name
+        // Assuming everything else is tuning parameters
+        else {
+            std::string optionName = token;
             stream >> token; //should be 'value'
             if(token != "value")
                 return;
-            stream >> token; // the actual value
+            stream >> token; //the actual value
             
-            Tuner::SetTuningOption(optionName, token);
+            Tuner::SetOption(optionName, token);
         }
-        else {
-            std::cout << "Unknown option: " << token << std::endl;
-            return;
-        }
+        // else {
+        //     std::cout << "Unknown option: " << token << std::endl;
+        //     return;
+        // }
     }
 }
 
