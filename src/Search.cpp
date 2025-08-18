@@ -875,8 +875,10 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     assert(depth      >= 0 && depth          <= LOG_TABLE_SIZE - 1);
     assert(moveNumber >= 0 && moveNumber     <= LOG_TABLE_SIZE - 1);
 
+    if(moveScore >= 195)
+        return 0;
+
     int reduction = 0;
-    int lmr_value = 0;
 
     // Logarithmic scaling for smooth reductions
     const int logScore = LogTable[moveScore + 1];
@@ -886,30 +888,28 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     // Coefficients are scaled by this amount to perform integer calculations
     const int MULT_FACTOR = 100;
 
-    if(moveScore <= 194) {
-        // Common terms
-        int directTerms = 50 - 100*isPV;
-        int logTerms = 160*logDepth + 30*logMoveNumber;
- 
-        // History moves
-        if(moveScore <= Scorer::HISTORY_MAX) {
-            logTerms += -40*logScore;
-        }
-        // Bad captures
-        else if(moveScore >= 181 && moveScore <= 189) {
-            const int badCaptureTier = moveScore - 181;
-            directTerms += 20 -35*badCaptureTier; // Probar -35 --> -30 (ya que direct 20 y 60 son equivalentes) {20,-30}, {60,-40}
-        }
-        // Killers
-        else if(moveScore >= 191 && moveScore <= 194) {
-            const int killerTier = moveScore - 191;
-            directTerms += -120 -50*killerTier; // Probar amarillo: -120 --> -110, añadiendo quizá -60* / {-150,-40}, {-100,-60}
-        }
+    // Common terms
+    int directTerms = 50 - 100*isPV;
+    int logTerms = 160*logDepth + 30*logMoveNumber;
 
-        lmr_value = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
+    // History moves
+    if(moveScore <= Scorer::HISTORY_MAX) {
+        logTerms += -40*logScore;
+    }
+    // Bad captures
+    else if(moveScore >= 181 && moveScore <= 189) {
+        const int badCaptureTier = moveScore - 181;
+        directTerms += 20 -35*badCaptureTier; // Probar -35 --> -30 (ya que direct 20 y 60 son equivalentes) {20,-30}, {60,-40}
+    }
+    // Killers
+    else if(moveScore >= 191 && moveScore <= 194) {
+        const int killerTier = moveScore - 191;
+        directTerms += -120 -50*killerTier; // Probar amarillo: -120 --> -110, añadiendo quizá -60* / {-150,-40}, {-100,-60}
     }
 
-    reduction = lmr_value / MULT_FACTOR;
+    reduction = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
+    reduction /= MULT_FACTOR;
+    
     reduction = std::clamp(reduction, 0, 3 + depth / 5);
     return reduction;
 }
