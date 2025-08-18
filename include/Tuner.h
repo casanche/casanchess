@@ -10,7 +10,7 @@ namespace Tuner {
     #define TUNABLE_PARAM(type, name, ...) \
         extern type name;
 
-    #include "TunerParams.tune"
+    #include "TunerParams.def"
 
     #undef TUNABLE_PARAM
 
@@ -28,7 +28,7 @@ namespace Tuner {
     #define TUNABLE_PARAM(type, name, value, ...) \
         constexpr type name = value;
 
-    #include "TunerParams.tune"
+    #include "TunerParams.def"
 
     #undef TUNABLE_PARAM
 

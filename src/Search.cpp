@@ -576,9 +576,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         // -------- Late Move Reductions ----------
         // Reduce depth of less-promising moves
         if( !TURNOFF_LMR
-              && moveNumber > 1     // Never reduce the first move
-              && depth >= 2         // Avoid negative depths
-              && !inCheck           // Not in check
+              && moveNumber > 1               // Never reduce the first move
+              && depth >= Tuner::LMR_MINDEPTH // Avoid negative depths
+              && !inCheck                     // Not in check
         ) {
             reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, isPV);
         }
@@ -891,6 +891,6 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     int reduction = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
     reduction /= MULT_FACTOR;
     
-    reduction = std::clamp(reduction, 0, 3 + depth / 5);
-    return reduction;
+    int max_reduction = Tuner::LMR_MAXREDUCTION_FIXED + depth / Tuner::LMR_MAXREDUCTION_DEPTH_DIVISOR;
+    return std::clamp(reduction, 0, max_reduction);
 }

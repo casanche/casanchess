@@ -11,7 +11,7 @@ namespace Tuner {
     #define TUNABLE_PARAM(type, name, value, ...) \
         type name = value;
 
-    #include "TunerParams.tune"
+    #include "TunerParams.def"
 
     #undef TUNABLE_PARAM
 
@@ -21,8 +21,8 @@ namespace Tuner {
         int value;
         int min;
         int max;
-        int step;
-        double learningRate = 0.01;
+        double step;
+        double learningRate = 0.004;
 
         int Get() const { return value; }
         void Set(int newValue) { value = newValue; }
@@ -34,7 +34,7 @@ namespace Tuner {
         #define TUNABLE_PARAM(type, name, value, min, max, step) \
             tunableParams[#name] = { #type, #name, value, min, max, step };
 
-        #include "TunerParams.tune"
+        #include "TunerParams.def"
 
         #undef TUNABLE_PARAM
     }
