@@ -866,6 +866,6 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     }
 
     reduction = lmr_value / MULT_FACTOR;
-    reduction = std::clamp(reduction, 0, 3 + depth / 5);
+    reduction = std::clamp(reduction, 0, 2 + depth / 5);
     return reduction;
 }
