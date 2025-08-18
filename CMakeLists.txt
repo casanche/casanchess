@@ -19,6 +19,7 @@ endif()
 # =============================================================================
 # Project Options
 # =============================================================================
+option(SPSA_TUNING "Enable SPSA tuning parameters" ON)
 option(BUILD_TESTS "Build standard tests" OFF)
 option(BUILD_TESTS_EXTRA "Build extra tests (Perft and Searcht)" OFF)
 option(BUILD_EXECUTABLES_EXTRA "Build extra executables (GenSFen and NNUE_Convert)" OFF)
@@ -28,6 +29,15 @@ option(ENABLE_STATIC "Enable static compilation" ON)
 # Set Release as default build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# =============================================================================
+# Global Compile Definitions
+# =============================================================================
+# This will apply to all targets below
+if(SPSA_TUNING)
+    add_compile_definitions(SPSA_TUNING)
+    message(STATUS "SPSA_TUNING definition enabled")
 endif()
 
 # =============================================================================
@@ -120,6 +130,7 @@ set(ENGINE_SOURCES
     src/MoveMaker.cpp
     src/NNUE.cpp
     src/Search.cpp
+    src/Tuner.cpp
     src/Uci.cpp
     src/Utils.cpp
     src/ZobristKeys.cpp

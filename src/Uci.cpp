@@ -4,6 +4,7 @@
 #include "Evaluation.h"
 #include "Hash.h"
 #include "NNUE.h"
+#include "Tuner.h"
 
 #include <iostream>
 #include <string>
@@ -53,6 +54,9 @@ void Uci::Launch() {
             std::cout << "option name NNUE_Path type string default " << nnue.GetPath() << std::endl;
             std::cout << "option name Ponder type check default false" << std::endl;
             std::cout << "option name Threads type spin default 1 min 1 max 1" << std::endl;
+
+            // Tuning options (only in SPSA_TUNING builds)
+            Tuner::RegisterTuningOptions();
 
             std::cout << "uciok" << std::endl;
         }
@@ -336,6 +340,16 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
 
             nnue.Load(token);
+        }
+        // Try to handle tuning parameters
+        else if(token.starts_with("LMR_")) {
+            std::string optionName = token; // Save the option name
+            stream >> token; //should be 'value'
+            if(token != "value")
+                return;
+            stream >> token; // the actual value
+            
+            Tuner::SetTuningOption(optionName, token);
         }
         else {
             std::cout << "Unknown option: " << token << std::endl;

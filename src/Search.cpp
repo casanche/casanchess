@@ -38,6 +38,7 @@
 #include "Evaluation.h"
 #include "MoveGenerator.h"
 #include "NNUE.h" //JUST FOR THE PV
+#include "Tuner.h"
 #include "Uci.h"
 using namespace Sorting;
 
@@ -869,22 +870,22 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     constexpr int LMR_KILLER_TIER = -50;
 
     // Common terms
-    int directTerms = LMR_BASE + LMR_ISPV * isPV;
-    int logTerms = LMR_LOGTERM_DEPTH * logDepth + LMR_LOGTERM_MOVENUMBER * logMoveNumber;
+    int directTerms = Tuner::LMR_BASE + Tuner::LMR_ISPV * isPV;
+    int logTerms = Tuner::LMR_LOGTERM_DEPTH * logDepth + Tuner::LMR_LOGTERM_MOVENUMBER * logMoveNumber;
 
     // History moves
     if(moveScore < 180) {
-        logTerms += LMR_LOGTERM_HISTORY_SCORE * logScore;
+        logTerms += Tuner::LMR_LOGTERM_HISTORY_SCORE * logScore;
     }
     // Bad captures
     else if(moveScore >= 181 && moveScore <= 189) {
         const int badCaptureTier = moveScore - 181; // [0,8]
-        directTerms += LMR_BADCAPTURE_BASE + LMR_BADCAPTURE_TIER * (badCaptureTier - 4);
+        directTerms += Tuner::LMR_BADCAPTURE_BASE + Tuner::LMR_BADCAPTURE_TIER * (badCaptureTier - 4);
     }
     // Killers
     else if(moveScore >= 191 && moveScore <= 194) {
         const int killerTier = moveScore - 191; // [0,3]
-        directTerms += LMR_KILLER_BASE + LMR_KILLER_TIER * (killerTier - 2); // Probar amarillo: -120 --> -110, añadiendo quizá -60* / {-150,-40}, {-100,-60}
+        directTerms += Tuner::LMR_KILLER_BASE + Tuner::LMR_KILLER_TIER * (killerTier - 2); // Probar amarillo: -120 --> -110, añadiendo quizá -60* / {-150,-40}, {-100,-60}
     }
 
     int reduction = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
