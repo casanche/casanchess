@@ -23,6 +23,7 @@ namespace Tuner {
         int max;
         double step;
         double learningRate = 0.004;
+        bool activated;
 
         int Get() const { return value; }
         void Set(int newValue) { value = newValue; }
@@ -31,8 +32,8 @@ namespace Tuner {
     std::map<std::string, Tunable> tunableParams;
 
     void Initialize() {
-        #define TUNABLE_PARAM(type, name, value, min, max, step) \
-            tunableParams[#name] = { #type, #name, value, min, max, step };
+        #define TUNABLE_PARAM(type, name, value, min, max, step, activated) \
+            tunableParams[#name] = { #type, #name, value, min, max, step, activated };
 
         #include "TunerParams.def"
 
@@ -54,9 +55,11 @@ namespace Tuner {
 
     void PrintSPSAInputs() {
         for(const auto& [name, param] : tunableParams) {
-            std::cout << name << ", " << param.type << ", " << param.value << ", "
-                << param.min << ", " << param.max << ", "
-                << param.step << ", " << param.learningRate << std::endl;
+            if(param.activated) {
+                std::cout << name << ", " << param.type << ", " << param.value << ", "
+                    << param.min << ", " << param.max << ", "
+                    << param.step << ", " << param.learningRate << std::endl;
+            }
         }
     }
 
