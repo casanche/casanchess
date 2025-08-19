@@ -147,6 +147,44 @@ namespace {
         );
     }
 
+    bool IsCheckingMove(Context &context, const Board& board, PIECE_TYPE movingPiece, int fromSq, int toSq) {
+        Bitboard enemyKing = board.Piece(context.enemyColor, KING);
+
+        // --- Direct checks ---
+        Bitboard attacksAfterMove = ZERO;
+        switch(movingPiece) {
+            case PAWN:
+                attacksAfterMove = AttacksPawns(context.color, toSq);
+                break;
+            case KNIGHT:
+                attacksAfterMove = AttacksKnights(toSq);
+                break;
+            case BISHOP:
+            case ROOK:
+            case QUEEN: {
+                Bitboard blockers = (context.allPieces ^ SquareBB(fromSq)) | SquareBB(toSq);
+                attacksAfterMove = AttacksSliding(movingPiece, toSq, blockers);
+            } break;
+            case KING: break;
+            default: assert(false);
+        }
+        if(enemyKing & attacksAfterMove)
+            return true;
+
+        // --- Discovered check ---
+        // Bitboard blockersAfterMove = context.allPieces ^ SquareBB(fromSq);
+        // Bitboard enemyKingAttackers = board.AttackersTo(context.enemyColor, context.enemyKingSquare, blockersAfterMove);
+        // if(movingPiece != KING && enemyKingAttackers)
+        //     return true;
+
+        // --- Special cases: promotion, enpassant ---
+        // - Castling
+        // - La lógica anterior cubre enpassant
+        // - La promoción que da jaque también se cubre con la lógica de jaque directo. Pero solo si el movingPiece es QUEEN (revisar).
+
+        return false;
+    }
+
     // ===============================
     // === Move generation methods ===
     // ===============================
@@ -182,18 +220,11 @@ namespace {
                 context.AddMove(move);
             }
             else if(context.generateTacticalChecks) {
-                if(piece == KNIGHT) {
-                    if(AttacksKnights(toSq) & context.enemyKing) {
-                        Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
-                        const int seeValue = board.SEE(move);
-                        if(seeValue >= 0) {
-                            context.AddMove(move);
-                        }
-                    }
+                const bool isCheckingMove = IsCheckingMove(context, board, piece, fromSq, toSq);
+                if(isCheckingMove) {
+                    Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
+                    context.AddMove(move);
                 }
-            }
-            else {
-                std::cout << "Error: No move type selected" << std::endl;
             }
         }
 

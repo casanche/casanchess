@@ -130,7 +130,15 @@ namespace {
                 int see = board.SEE(move);
                 move.SetScore( SEE::ToScore(see) );
             } else if(move.MoveType() == NORMAL) { //Checks
-                move.SetScore( SEE::ToScore(0) );
+                switch(move.PieceType()) {
+                    case PAWN: move.SetScore( SEE::ToScore(-4) ); break;
+                    case KNIGHT: move.SetScore( SEE::ToScore(-2) ); break;
+                    case BISHOP: move.SetScore( SEE::ToScore(-3) ); break;
+                    case ROOK: move.SetScore( SEE::ToScore(-1) ); break;
+                    case QUEEN: move.SetScore( SEE::ToScore(0) ); break;
+                    case KING: assert(false);
+                    default: assert(false);
+                }
             }
         }
     }
