@@ -23,7 +23,7 @@ TEST_F(PositionMisc, QuiescenceExplosion) {
     board.SetFen("1QqQqQq1/r6Q/Q6q/q6Q/B2q4/q6Q/k6K/1qQ1QqRb w - -");
     search.FixDepth(1);
     search.IterativeDeepening(board, true);
-    EXPECT_EQ(search.BestScore(), MATESCORE-1);
+    EXPECT_EQ(search.BestScore(), MATESCORE_MAX - 1);
 }
 
 //Mate tests
