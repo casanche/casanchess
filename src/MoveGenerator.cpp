@@ -44,6 +44,7 @@ namespace {
         Bitboard pinnedPushMask[64];
 
         bool generateQuiet;
+        bool generateTacticalChecks;
 
         void AddMove(const Move& move) {
             moves->add(move);
@@ -133,6 +134,7 @@ namespace {
         context.pushMask = ALL;
 
         context.generateQuiet = true;
+        context.generateTacticalChecks = false;
 
         // Depend on previous variables
         context.kingDangerSquares = GenerateKingDangerSquares(context, board);
@@ -166,17 +168,33 @@ namespace {
         // =================================
         // == Normal moves (non-captures) ==
         // =================================
-        if(!context.generateQuiet) {
-            return;
-        }
+        // if(!context.generateQuiet) {
+        //     return;
+        // }
 
         Bitboard normalMoves = possibleMoves & ~context.enemyPieces;
         if(piece != KING) {
             normalMoves &= context.pushMask;
         }
         for(int toSq : BitboardIterator(normalMoves)) {
-            Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
-            context.AddMove(move);
+            if(context.generateQuiet) {
+                Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
+                context.AddMove(move);
+            }
+            else if(context.generateTacticalChecks) {
+                if(piece == KNIGHT) {
+                    if(AttacksKnights(toSq) & context.enemyKing) {
+                        Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
+                        const int seeValue = board.SEE(move);
+                        if(seeValue >= 0) {
+                            context.AddMove(move);
+                        }
+                    }
+                }
+            }
+            else {
+                std::cout << "Error: No move type selected" << std::endl;
+            }
         }
     }
 
@@ -425,6 +443,7 @@ namespace {
                 break;
             case GENERATION_TYPE::Tactical:
                 context.generateQuiet = false;
+                context.generateTacticalChecks = true;
                 break;
             case GENERATION_TYPE::Evasion: {
                 Bitboard checkers = board.Checkers();

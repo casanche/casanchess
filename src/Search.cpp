@@ -714,6 +714,10 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
 
     for(auto move : moves) {
 
+        if(!inCheck && move.MoveType() == NORMAL && m_plyqs >= 1) {
+            continue;
+        }
+
         if(!inCheck && move.MoveType() == CAPTURE) {
             const int seeValue = SEE::FromScore(move.Score());
 
