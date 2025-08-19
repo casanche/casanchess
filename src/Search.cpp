@@ -47,10 +47,10 @@ using namespace Sorting;
 #include <format>
 
 // Search parameters
-const int MAX_QS_PLIES = 128;  // Maximum depth limit for quiescence search 
+const int MAX_QS_PLIES = 128;  // Maximum depth limit for quiescence search
 
 // Aspiration window parameters - used to narrow alpha-beta bounds around expected score
-const bool TURNOFF_ASPIRATION_WINDOW = false;
+const bool TURNON_ASPIRATION_WINDOW = true;
 const int ASPIRATION_WINDOW_DEPTH = 4;         // Minimum depth to enable aspiration window
 const int ASPIRATION_WINDOW = 25;              // Initial half-window size in centipawns
 
@@ -147,28 +147,8 @@ void Search::IterativeDeepening(Board &board, bool fullSearchClearFlag) {
         assert(m_nullmoveAllowed);
 
         m_selPly = 0;
-        int alpha, beta, score;
 
-        // Aspiration window to narrow alpha-beta bounds around expected score
-        bool aspiration = !TURNOFF_ASPIRATION_WINDOW && m_depth >= ASPIRATION_WINDOW_DEPTH;
-        if(aspiration) {
-            alpha = m_bestScore - ASPIRATION_WINDOW;
-            beta  = m_bestScore + ASPIRATION_WINDOW;
-        } else {
-            alpha = -INFINITE_SCORE;
-            beta  =  INFINITE_SCORE;
-        }
-
-        score = RootMax(board, m_depth, alpha, beta);
-        
-        // Out of aspiration bounds. Repeat search with a wider window
-        while(score <= alpha || score >= beta) {
-            D( m_debug.Increment("IterativeDeepening: AspirationWindow: Out of bounds") );
-
-            alpha = -INFINITE_SCORE;
-            beta  =  INFINITE_SCORE;
-            score = RootMax(board, m_depth, alpha, beta);
-        }
+        AspirationWindow(board, m_depth, m_bestScore);
 
         // Stop search if limits are reached within the loop
         if(m_stop)
@@ -226,8 +206,8 @@ void Search::UciOutput(std::string PV) {
     std::cout << "info depth " << m_depth;
     std::cout << " seldepth " << m_selPly;
     if(IsMateValue(m_bestScore)) {
-        int mateScore = (m_bestScore > 0) ?  MATESCORE - m_bestScore + 1
-                                          : -MATESCORE - m_bestScore - 1;
+        int mateScore = (m_bestScore > 0) ?  MATESCORE_MAX - m_bestScore + 1
+                                          : -MATESCORE_MAX - m_bestScore - 1;
         std::cout << " score mate " << mateScore / 2; //return mate in moves, not in plies
     } else {
         std::cout << " score cp " << m_bestScore;
@@ -256,6 +236,41 @@ void Search::FixNodes(int nodes) {
 }
 void Search::Infinite() {
     m_allocatedTime = INFINITE;
+}
+
+// Narrow alpha-beta bounds around expected score
+int Search::AspirationWindow(Board& board, const int depth, const int bestScore) {
+    const bool aspiration = TURNON_ASPIRATION_WINDOW && depth >= ASPIRATION_WINDOW_DEPTH && !IsMateValue(bestScore);
+    if(!aspiration)
+        return RootMax(board, depth, -INFINITE_SCORE, INFINITE_SCORE);
+
+    int window = ASPIRATION_WINDOW;
+    int alpha = bestScore - window;
+    int beta  = bestScore + window;
+
+    int score = RootMax(board, depth, alpha, beta);
+
+    for(int researches = 1; (score <= alpha || score >= beta); researches++) {
+        D( m_debug.Increment("AspirationWindow: Out of bounds: Researches: " + std::to_string(researches) ); );
+
+        // Asymmetrical incremental aspiration
+        const int ASPIRATION_WINDOW_MULTIPLIER = 2;
+        window = window * ASPIRATION_WINDOW_MULTIPLIER;
+        if(score <= alpha) {
+            alpha = score - window;
+        } else if(score >= beta) {
+            beta = score + window;
+        }
+
+        if(researches == 4 || IsMateValue(score)) {
+            alpha = -INFINITE_SCORE;
+            beta = INFINITE_SCORE;
+        }
+
+        score = RootMax(board, depth, alpha, beta);
+    }
+
+    return score;
 }
 
 // Root search. Handle special root-level logic.
@@ -373,8 +388,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
     //---------- Mate distance pruning -------------
     // Prevents the search from reporting mates that are too far away
     // TODO: should be different for PV nodes?
-    alpha = std::max(alpha, -MATESCORE + m_ply);
-    beta = std::min(beta, +MATESCORE - m_ply - 1);
+    alpha = std::max(alpha, -MATESCORE_MAX + m_ply);
+    beta = std::min(beta, +MATESCORE_MAX - m_ply - 1);
     if(alpha >= beta) {
         D( m_debug.Increment("NegaMax: Pruning: MateDistance") );
         return alpha;
@@ -491,7 +506,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
     if( moves.empty() ) {
         if(inCheck) {
             D( m_debug.Increment("NegaMax: EmptyMoves: Checkmate") );
-            return -MATESCORE + m_ply; // Checkmate
+            return -MATESCORE_MAX + m_ply; // Checkmate
         }
         else {
             D( m_debug.Increment("NegaMax: EmptyMoves: Stalemate") );
@@ -699,7 +714,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
     if( moves.empty() ) {
         if(inCheck) {
             D( m_debug.Increment("Quiescence: EmptyMoves: Checkmate") );
-            return -MATESCORE + m_ply; // Checkmate
+            return -MATESCORE_MAX + m_ply; // Checkmate
         }
         // Generate all the moves to verify stalemate
         else if( MoveGenerator::GenerateMoves(board).size() == 0 ) {

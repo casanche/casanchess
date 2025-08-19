@@ -25,7 +25,7 @@ TT::~TT() {
 }
 
 void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age) {
-    assert(abs(score) <= MATESCORE);
+    assert(abs(score) <= MATESCORE_MAX);
     assert(depth <= MAX_DEPTH);
 
     u64 index = zkey % m_size;
@@ -106,7 +106,7 @@ EvalCache::EvalCache() {
 }
 
 void EvalCache::Store(u64 zkey, int eval) {
-    assert(abs(eval) < MATESCORE);
+    assert(abs(eval) < MATESCORE_MAX);
 
     EvalEntry& entry = m_evalEntries[zkey & m_mask];
 
