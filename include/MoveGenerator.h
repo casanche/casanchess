@@ -47,7 +47,7 @@ namespace MoveGenerator {
     // Generate check evasions when in check
     MoveList GenerateEvasionMoves(Board &board);
     // Generate tactical moves (captures and promotions)
-    MoveList GenerateTacticalMoves(Board &board);
+    MoveList GenerateTacticalMoves(Board &board, bool generateChecks);
     
     // Pick a random move from the move list
     Move RandomMove(const MoveList& moveList);

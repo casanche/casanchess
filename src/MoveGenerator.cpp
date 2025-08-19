@@ -10,7 +10,7 @@ using namespace Attacks;
 #include <iostream>
 
 namespace {
-    enum class GENERATION_TYPE {Legal, Evasion, Tactical};
+    enum class GENERATION_TYPE {Legal, Evasion, Captures, CapturesAndChecks};
 
     // ========================================
     // === Internal state (context) methods ===
@@ -43,6 +43,7 @@ namespace {
         Bitboard pinnedCaptureMask[64];
         Bitboard pinnedPushMask[64];
 
+        GENERATION_TYPE generation_type;
         bool generateQuiet;
         bool generateTacticalChecks;
 
@@ -115,7 +116,7 @@ namespace {
 
     }
 
-    void InitContext(Context &context, const Board& board) {
+    void InitContext(Context &context, const Board& board, GENERATION_TYPE generation_type) {
         context.moves = nullptr;
 
         context.color = board.ActivePlayer();
@@ -133,6 +134,7 @@ namespace {
         context.captureMask = ALL;
         context.pushMask = ALL;
 
+        context.generation_type = generation_type;
         context.generateQuiet = true;
         context.generateTacticalChecks = false;
 
@@ -154,9 +156,8 @@ namespace {
         // == Capture moves ==
         // ===================
         Bitboard captureMoves = possibleMoves & context.enemyPieces;
-        if(piece != KING) {
+        if(piece != KING)
             captureMoves &= context.captureMask;
-        }
 
         for(int toSq : BitboardIterator(captureMoves)) {
             PIECE_TYPE capturedPiece = board.GetPieceAtSquare(context.enemyColor, toSq);
@@ -165,17 +166,16 @@ namespace {
             context.AddMove(move);
         }
 
+        if(context.generation_type == GENERATION_TYPE::Captures)
+            return;
+
         // =================================
         // == Normal moves (non-captures) ==
         // =================================
-        // if(!context.generateQuiet) {
-        //     return;
-        // }
-
         Bitboard normalMoves = possibleMoves & ~context.enemyPieces;
-        if(piece != KING) {
+        if(piece != KING)
             normalMoves &= context.pushMask;
-        }
+
         for(int toSq : BitboardIterator(normalMoves)) {
             if(context.generateQuiet) {
                 Move move = Move(fromSq, toSq, piece, MOVE_TYPE::NORMAL);
@@ -196,6 +196,7 @@ namespace {
                 std::cout << "Error: No move type selected" << std::endl;
             }
         }
+
     }
 
     void AddPromotionMoves(Context &context, Board &board, int fromSq, Bitboard promotionMoves) {
@@ -430,20 +431,16 @@ namespace {
         GenerateSlidingMoves(QUEEN, context, board);
     }
 
-    MoveList Generate(Board& board, GENERATION_TYPE type) {
+    MoveList Generate(Board& board, GENERATION_TYPE generation_type) {
         MoveList moves; // Assuming RVO/NRVO optimization by the compiler to avoid the return copy
 
         Context context;
-        InitContext(context, board);
+        InitContext(context, board, generation_type);
 
         context.moves = &moves;
 
-        switch(type) {
+        switch(generation_type) {
             case GENERATION_TYPE::Legal:
-                break;
-            case GENERATION_TYPE::Tactical:
-                context.generateQuiet = false;
-                context.generateTacticalChecks = true;
                 break;
             case GENERATION_TYPE::Evasion: {
                 Bitboard checkers = board.Checkers();
@@ -467,6 +464,14 @@ namespace {
                     }
                 }
             } break;
+            case GENERATION_TYPE::Captures: {
+                context.generateQuiet = false;
+                context.generateTacticalChecks = false;
+            } break;
+            case GENERATION_TYPE::CapturesAndChecks: {
+                context.generateQuiet = false;
+                context.generateTacticalChecks = true;
+            } break;
         }
 
         GeneratePseudoMoves(context, board);
@@ -485,8 +490,12 @@ MoveList MoveGenerator::GenerateEvasionMoves(Board &board) {
     return Generate(board, GENERATION_TYPE::Evasion);
 }
 
-MoveList MoveGenerator::GenerateTacticalMoves(Board &board) {
-    return Generate(board, GENERATION_TYPE::Tactical);
+MoveList MoveGenerator::GenerateTacticalMoves(Board &board, bool generateChecks) {
+    if(generateChecks) {
+        return Generate(board, GENERATION_TYPE::CapturesAndChecks);
+    } else {
+        return Generate(board, GENERATION_TYPE::Captures);
+    }
 }
 
 Move MoveGenerator::RandomMove(const MoveList& moves) {

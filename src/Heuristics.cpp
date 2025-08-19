@@ -129,6 +129,8 @@ namespace {
             } else if(move.MoveType() == CAPTURE || move.MoveType() == ENPASSANT) { // includes enpassant
                 int see = board.SEE(move);
                 move.SetScore( SEE::ToScore(see) );
+            } else if(move.MoveType() == NORMAL) { //Checks
+                move.SetScore( SEE::ToScore(0) );
             }
         }
     }

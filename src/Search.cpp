@@ -692,8 +692,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
     // Generate captures.
     // If in check, generate check evasions.
     D( m_debug.Increment("Quiescence: GenerateMoves") );
+    bool generateChecks = m_plyqs == 0 ? true : false;
     MoveList moves = inCheck ? MoveGenerator::GenerateEvasionMoves(board)
-                             : MoveGenerator::GenerateTacticalMoves(board);
+                             : MoveGenerator::GenerateTacticalMoves(board, generateChecks);
 
     // Checkmate or stalemate
     if( moves.empty() ) {
