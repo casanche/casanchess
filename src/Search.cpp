@@ -715,6 +715,16 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
 
     for(auto move : moves) {
 
+        if(!inCheck && move.MoveType() == NORMAL && m_plyqs == 0) {
+            const int CHECK_BONUS = 200;
+            const int estimatedScore = standPat + CHECK_BONUS;
+            if(estimatedScore < alpha) {
+                if(estimatedScore > bestScore)
+                    bestScore = estimatedScore;
+                continue;
+            }
+        }
+
         if(!inCheck && move.MoveType() == NORMAL && m_plyqs >= 1) {
             continue;
         }
