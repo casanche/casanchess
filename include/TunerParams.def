@@ -1,3 +1,11 @@
+// RFP
+TUNABLE_PARAM(int, RFP_MARGIN,                   100,   25, 200,  10, 1)
+// FUT
+TUNABLE_PARAM(int, FUT_HISTORY_BASE,               0, 0, 50, 8, 1)
+TUNABLE_PARAM(int, FUT_HISTORY_MULT,              25, 0, 100, 8, 1)
+TUNABLE_PARAM(int, FUT_HISTORY_SCORE_THRESHOLD,  120, 0, 180, 5, 1)
+TUNABLE_PARAM(int, FUT_BADCAPTURES_BASE,           0, 0, 50, 12, 1)
+TUNABLE_PARAM(int, FUT_BADCAPTURES_MULT,          25, 0, 100, 12, 1)
 // LMR
 TUNABLE_PARAM(int, LMR_BASE,                      30,  -50, 100,  10, 1)
 TUNABLE_PARAM(int, LMR_ISPV,                    -125, -200, -50,  15, 1)

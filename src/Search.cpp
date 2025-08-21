@@ -441,9 +441,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
 
     // --- Reverse Futility Pruning ---
     // Prune if static evaluation is too good (eval >> beta)
-    const int staticMargin = 100;
     if(depth <= 4 && !isPV && !inCheck) {
-        int staticEval = eval - depth * staticMargin;
+        int staticEval = eval - depth * Tuner::RFP_MARGIN;
         if(staticEval >= beta) {
             D( m_debug.Increment("NegaMax: Pruning: Reverse Futility") );
             D( m_debug.Increment("NegaMax: Pruning: Reverse Futility - Depth " + std::to_string(depth)) );
@@ -541,16 +540,30 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
 
         // ------- Futility pruning -------
         // Prune quiet moves and bad captures if unlikely to raise alpha
-        const int futilityMargin = 0 + depth * 25;
+        const int futilityHistoryMargin = Tuner::FUT_HISTORY_BASE + depth * Tuner::FUT_HISTORY_MULT;
         if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsMateValue(alpha)
             && depth <= 4
-            && eval + futilityMargin <= alpha
-            && ( move.Score() < 120 || (move.Score() >= 181 && move.Score() <= 188) )
+            && eval + futilityHistoryMargin <= alpha
+            && ( move.Score() < Tuner::FUT_HISTORY_SCORE_THRESHOLD )
         ) {
-            D( m_debug.Increment("NegaMax: Pruning: Futility") );
-            D( m_debug.Increment("NegaMax: Pruning: Futility - Depth " + std::to_string(depth)) );
-            if(eval + futilityMargin > bestScore) {
-                bestScore = eval + futilityMargin;
+            D( m_debug.Increment("NegaMax: Pruning: Futility History") );
+            D( m_debug.Increment("NegaMax: Pruning: Futility History - Depth " + std::to_string(depth)) );
+            if(eval + futilityHistoryMargin > bestScore) {
+                bestScore = eval + futilityHistoryMargin;
+            }
+            continue;
+        }
+
+        const int futilityBadcapturesMargin = Tuner::FUT_BADCAPTURES_BASE + depth * Tuner::FUT_BADCAPTURES_MULT;
+        if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsMateValue(alpha)
+            && depth <= 4
+            && eval + futilityBadcapturesMargin <= alpha
+            && ( (move.Score() >= 181 && move.Score() <= 188) )
+        ) {
+            D( m_debug.Increment("NegaMax: Pruning: Futility Badcaptures") );
+            D( m_debug.Increment("NegaMax: Pruning: Futility Badcaptures - Depth " + std::to_string(depth)) );
+            if(eval + futilityBadcapturesMargin > bestScore) {
+                bestScore = eval + futilityBadcapturesMargin;
             }
             continue;
         }
@@ -857,17 +870,6 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
 
     // Coefficients are scaled by this amount to perform integer calculations
     constexpr int MULT_FACTOR = 100;
-
-    // Coefficients
-    constexpr int LMR_BASE = 30;
-    constexpr int LMR_ISPV = -125;
-    constexpr int LMR_LOGTERM_DEPTH = 150;
-    constexpr int LMR_LOGTERM_MOVENUMBER = 35;
-    constexpr int LMR_LOGTERM_HISTORY_SCORE = -50;
-    constexpr int LMR_BADCAPTURE_BASE = -160;
-    constexpr int LMR_BADCAPTURE_TIER = -35;
-    constexpr int LMR_KILLER_BASE = -210;
-    constexpr int LMR_KILLER_TIER = -50;
 
     // Common terms
     int directTerms = Tuner::LMR_BASE + Tuner::LMR_ISPV * isPV;
