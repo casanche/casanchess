@@ -858,18 +858,18 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     constexpr int MULT_FACTOR = 100;
 
     // Coefficients
-    constexpr int LMR_COMMON = 30;
+    constexpr int LMR_BASE = 30;
     constexpr int LMR_ISPV = -125;
     constexpr int LMR_LOGTERM_DEPTH = 150;
     constexpr int LMR_LOGTERM_MOVENUMBER = 35;
     constexpr int LMR_LOGTERM_HISTORY_SCORE = -50;
-    constexpr int LMR_BADCAPTURES = -20;
+    constexpr int LMR_BADCAPTURE_BASE = -160;
     constexpr int LMR_BADCAPTURE_TIER = -35;
-    constexpr int LMR_KILLERS = -110;
+    constexpr int LMR_KILLER_BASE = -210;
     constexpr int LMR_KILLER_TIER = -50;
 
     // Common terms
-    int directTerms = LMR_COMMON + LMR_ISPV * isPV;
+    int directTerms = LMR_BASE + LMR_ISPV * isPV;
     int logTerms = LMR_LOGTERM_DEPTH * logDepth + LMR_LOGTERM_MOVENUMBER * logMoveNumber;
 
     // History moves
@@ -878,13 +878,13 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     }
     // Bad captures
     else if(moveScore >= 181 && moveScore <= 189) {
-        const int badCaptureTier = moveScore - 181;
-        directTerms += LMR_BADCAPTURES + LMR_BADCAPTURE_TIER * badCaptureTier; // Probar -35 --> -30 (ya que direct 20 y 60 son equivalentes) {20,-30}, {60,-40}
+        const int badCaptureTier = moveScore - 181; // [0,8]
+        directTerms += LMR_BADCAPTURE_BASE + LMR_BADCAPTURE_TIER * (badCaptureTier - 4);
     }
     // Killers
     else if(moveScore >= 191 && moveScore <= 194) {
-        const int killerTier = moveScore - 191;
-        directTerms += LMR_KILLERS + LMR_KILLER_TIER * killerTier; // Probar amarillo: -120 --> -110, añadiendo quizá -60* / {-150,-40}, {-100,-60}
+        const int killerTier = moveScore - 191; // [0,3]
+        directTerms += LMR_KILLER_BASE + LMR_KILLER_TIER * (killerTier - 2); // Probar amarillo: -120 --> -110, añadiendo quizá -60* / {-150,-40}, {-100,-60}
     }
 
     int reduction = directTerms + (logTerms / LOG_TABLE_SCALE); // Log table was scaled by this amount for integer computation
