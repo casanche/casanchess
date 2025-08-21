@@ -748,8 +748,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
 
             // --- Static SEE Pruning ---
             // Quick filter to discard tactically hopeless captures
-            const int SEE_PRUNING_THRESHOLD = -250;
-            if(seeValue < SEE_PRUNING_THRESHOLD) {
+            if(seeValue < Tuner::SEE_PRUNING_THRESHOLD) {
                 D( m_debug.Increment("Quiescence: Pruning: SEE << 0") );
                 continue;
             }
@@ -760,11 +759,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
             //  - For sacrifices    (SEE  < 0): a realistic estimate using the material cost to determine if the sacrifice is affordable.
             int estimatedScore;
             if(seeValue >= 0) {
-                const int DELTA_MARGIN_SAFE = 90;
-                estimatedScore = standPat + DELTA_MARGIN_SAFE + SEE::MATERIAL_VALUES[move.CapturedType()];
+                estimatedScore = standPat + Tuner::DELTA_MARGIN_SAFE + SEE::MATERIAL_VALUES[move.CapturedType()];
             } else {
-                const int DELTA_MARGIN_RISKY = 0;
-                estimatedScore = standPat + DELTA_MARGIN_RISKY + seeValue;
+                estimatedScore = standPat + Tuner::DELTA_MARGIN_RISKY + seeValue;
             }
 
             if(estimatedScore < alpha) {
