@@ -29,24 +29,26 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     assert(depth <= MAX_DEPTH);
 
     u64 index = zkey % m_size;
-    TTEntry* entry = &m_entries[index];
 
     //Replacement scheme
-    if(age != entry->age || depth >= entry->depth) {
-        entry->zkey = zkey;
-        entry->score = SafeCastInt16(ScoreToHash(score, ply));
-        entry->depth = SafeCastU8(depth);
-        entry->type = type;
-        entry->age = age;
-        entry->bestMove = bestMove;
+    if(age != m_entries[index].age || depth >= m_entries[index].depth) {
+        TTEntry entry = m_entries[index];
+        entry.zkey = zkey;
+        entry.score = SafeCastInt16(ScoreToHash(score, ply));
+        entry.depth = SafeCastU8(depth);
+        entry.type = type;
+        entry.age = age;
+        entry.bestMove = bestMove;
+
+        m_entries[index] = entry;
     }
 }
 
 TTEntry* TT::Probe(u64 zkey, int depth) {
     u64 index = zkey % m_size;
-    TTEntry* entry = &m_entries[index];
-    if(entry->zkey == zkey && entry->depth >= depth) {
-        return entry;
+    TTEntry entry = m_entries[index];
+    if(entry.zkey == zkey && entry.depth >= depth) {
+        return &m_entries[index];
     } else {
         return nullptr;
     }
