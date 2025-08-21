@@ -22,8 +22,8 @@ namespace Tuner {
         int min;
         int max;
         double step;
-        double learningRate = 0.004;
-        bool activated;
+        int activated;
+        double learningRate = 0.002;
 
         int Get() const { return value; }
         void Set(int newValue) { value = newValue; }
