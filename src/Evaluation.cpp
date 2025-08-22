@@ -329,7 +329,7 @@ void Evaluation::EvalPawns(const Board &board, Score& score) {
         }
     );
 
-    PawnEntry* pawnEntry = Hash::pawnHash.Probe( board.PawnKey() );
+    Hash::PawnEntry* pawnEntry = Hash::pawnHash.Probe( board.PawnKey() );
     if(pawnEntry) {
         D(test_hit++);
 

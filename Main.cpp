@@ -2,6 +2,7 @@
 #include "Evaluation.h"
 #include "Interface.h"
 #include "NNUE.h"
+#include "Syzygy.h"
 #include "Uci.h"
 #include "Utils.h"
 #include "ZobristKeys.h"
@@ -16,6 +17,7 @@ int main(int argc, char** argv) {
 
     Attacks::Init();
     Evaluation::Init(); //after Attacks
+    Syzygy::Init(Syzygy::DEFAULT_PATH);
     ZobristKeys::Init();
     nnue.Load();
 
@@ -59,6 +61,8 @@ int main(int argc, char** argv) {
 
     int64_t elapsed = clock.Elapsed();
     std::cout << "[TIME] " << elapsed << " ms" << std::endl;
+
+    Syzygy::Free();
 
     return 0;
 }

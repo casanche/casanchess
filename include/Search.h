@@ -89,6 +89,7 @@ private:
     // Nodes
     u64 m_nodes; // Number of nodes searched
     int m_nps; // Nodes per second
+    uint m_tbHits; // Number of endgame table hits
     // Depth
     int m_depth; // Current search depth, in plies, for this iteration
     int m_ply; // Distance from root

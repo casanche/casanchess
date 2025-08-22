@@ -1,0 +1,17 @@
+build*
+testing/
+versions/
+
+syzygy/
+data/syzygy/
+
+# OS-generated files
+.DS_Store
+.vscode
+
+# Packages
+*.7z
+*.gz
+*.rar
+*.tar
+*.zip

@@ -171,7 +171,7 @@ int Board::SEE(Move move) {
         if(!activeAttackers) break;
 
         //get the Least Valuable Attacker
-        PIECE_TYPE pieceType;
+        PIECE_TYPE pieceType = NO_PIECE;
         Bitboard LVA = LeastValuableAttacker(activeAttackers, color, pieceType);
         attackers ^= LVA;
 

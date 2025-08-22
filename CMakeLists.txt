@@ -102,9 +102,28 @@ if(BUILD_TESTS)
     set_property(TARGET gtest_main PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 endif()
 
+# Fathom
+add_library(fathom external/fathom/src/tbprobe.c)
+set_source_files_properties(
+    external/fathom/src/tbprobe.c
+    PROPERTIES LANGUAGE CXX
+)
+target_include_directories(fathom PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/fathom/src>
+)
+
+# List of external libraries for linking
+set(EXTERNAL_LIBRARIES Threads::Threads fathom)
+
 # =============================================================================
 # Engine Library
 # =============================================================================
+# OBJECT
+set(INCLUDE_PATHS
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external>
+)
+
 set(ENGINE_SOURCES
     src/Attacks.cpp
     src/BitboardUtils.cpp
@@ -120,36 +139,33 @@ set(ENGINE_SOURCES
     src/MoveMaker.cpp
     src/NNUE.cpp
     src/Search.cpp
+    src/Syzygy.cpp
     src/Uci.cpp
     src/Utils.cpp
     src/ZobristKeys.cpp
 )
 
 # Create OBJECT library for main executable (single file distribution)
-add_library(engine OBJECT ${ENGINE_SOURCES})
+add_library(engine_obj OBJECT ${ENGINE_SOURCES})
+target_include_directories(engine_obj PUBLIC ${INCLUDE_PATHS})
+target_compile_options(engine_obj PUBLIC ${COMPILER_OPTIONS})
+target_link_libraries(engine_obj PUBLIC ${EXTERNAL_LIBRARIES})
+
+# INTERFACE
+add_library(engine INTERFACE)
+target_link_libraries(engine INTERFACE engine_obj)
+
+# STATIC
 # Create STATIC library for tests and tools (faster compilation)
-add_library(engine_static STATIC ${ENGINE_SOURCES})
-
-# Set include directories for both libraries
-target_include_directories(engine        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_include_directories(engine_static PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-
-# Apply compiler configuration to both libraries
-target_compile_options(engine        PRIVATE ${COMPILER_OPTIONS})
-target_compile_options(engine_static PRIVATE ${COMPILER_OPTIONS})
-
-# Link dependencies
-target_link_libraries(engine        PUBLIC Threads::Threads)
-target_link_libraries(engine_static PUBLIC Threads::Threads)
+add_library(engine_static STATIC $<TARGET_OBJECTS:engine_obj>)
+target_link_libraries(engine_static PUBLIC engine)
 
 # =============================================================================
 # Casanchess Executable
 # =============================================================================
 add_executable(casanchess Main.cpp)
-target_include_directories(casanchess PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_compile_options(casanchess PRIVATE ${COMPILER_OPTIONS})
-target_link_libraries(casanchess PRIVATE $<TARGET_OBJECTS:engine>)
+target_link_libraries(casanchess PRIVATE $<TARGET_OBJECTS:engine_obj> engine)
 target_link_options(casanchess PRIVATE ${LINK_FLAGS})
 
 # =============================================================================

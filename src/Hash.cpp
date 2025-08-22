@@ -34,7 +34,7 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     //Replacement scheme
     if(age != entry->age || depth >= entry->depth) {
         entry->zkey = zkey;
-        entry->score = SafeCastInt16(ScoreToHash(score, ply));
+        entry->score = SafeCastInt16( ScoreToHash(score, ply) );
         entry->depth = SafeCastU8(depth);
         entry->type = type;
         entry->age = age;
@@ -78,7 +78,8 @@ u64 TT::Occupancy(u64 sampleSize) const {
 //Translate mate scores as relative from the root (ROOT')
 //ROOT' <---- (Mate in X+ply') <---- POS <---- (Mate in X)
 int TT::ScoreFromHash(int score, int ply) {
-    if(IsMateValue(score)) {
+    assert(abs(score) <= MATESCORE_MAX);
+    if(IsWinValue(score)) {
         if(score > 0) return score - ply;
         else          return score + ply;
     }
@@ -88,7 +89,8 @@ int TT::ScoreFromHash(int score, int ply) {
 //Store mates in hash as relative from the search position (POS)
 //ROOT ----> (Mate in X+ply) ----> POS ----> (Mate in X)
 int TT::ScoreToHash(int score, int ply) {
-    if(IsMateValue(score)) {
+    assert(abs(score) <= MATESCORE_MAX);
+    if(IsWinValue(score)) {
         if(score > 0) return score + ply;
         else          return score - ply;
     }
@@ -144,46 +146,50 @@ u64 EvalCache::Occupancy(u64 sampleSize) const {
 // == Pawn-hash ==
 // ===============
 
-PawnHash::PawnHash() {
-    m_pawnEntries = new PawnEntry[PAWN_HASH_SIZE];
-    Clear();
-}
+namespace Hash {
 
-PawnHash::~PawnHash() {
-    delete [] m_pawnEntries;
-}
-
-void PawnHash::Clear() {
-    for(u64 i=0; i < PAWN_HASH_SIZE; ++i) {
-        m_pawnEntries[i] = {};
+    PawnHash::PawnHash() {
+        m_pawnEntries = new PawnEntry[PAWN_HASH_SIZE];
+        Clear();
     }
-}
-
-void PawnHash::Store(u64 zkey, int evalMg, int evalEg) {
-    u64 index = zkey % PAWN_HASH_SIZE;
-
-    PawnEntry pawnEntry;
-    pawnEntry.zkey = zkey;
-    pawnEntry.evalMg = SafeCastInt16(evalMg);
-    pawnEntry.evalEg = SafeCastInt16(evalEg);
-
-    m_pawnEntries[index] = pawnEntry;
-}
-
-PawnEntry* PawnHash::Probe(u64 zkey) {
-    u64 index = zkey % PAWN_HASH_SIZE;
-    PawnEntry entry = m_pawnEntries[index];
-    if(entry.zkey == zkey) {
-        return &m_pawnEntries[index];
-    } else {
-        return nullptr;
+    
+    PawnHash::~PawnHash() {
+        delete [] m_pawnEntries;
     }
-}
-
-u64 PawnHash::Occupancy() const {
-    u64 count = 0;
-    for(u64 i = 0; i < PAWN_HASH_SIZE; ++i) {
-        count += (m_pawnEntries[i].zkey != 0);
+    
+    void PawnHash::Clear() {
+        for(u64 i=0; i < PAWN_HASH_SIZE; ++i) {
+            m_pawnEntries[i] = {};
+        }
     }
-    return count;
+    
+    void PawnHash::Store(u64 zkey, int evalMg, int evalEg) {
+        u64 index = zkey % PAWN_HASH_SIZE;
+    
+        PawnEntry pawnEntry;
+        pawnEntry.zkey = zkey;
+        pawnEntry.evalMg = SafeCastInt16(evalMg);
+        pawnEntry.evalEg = SafeCastInt16(evalEg);
+    
+        m_pawnEntries[index] = pawnEntry;
+    }
+    
+    PawnEntry* PawnHash::Probe(u64 zkey) {
+        u64 index = zkey % PAWN_HASH_SIZE;
+        PawnEntry entry = m_pawnEntries[index];
+        if(entry.zkey == zkey) {
+            return &m_pawnEntries[index];
+        } else {
+            return nullptr;
+        }
+    }
+    
+    u64 PawnHash::Occupancy() const {
+        u64 count = 0;
+        for(u64 i = 0; i < PAWN_HASH_SIZE; ++i) {
+            count += (m_pawnEntries[i].zkey != 0);
+        }
+        return count;
+    }
+
 }
