@@ -5,9 +5,11 @@
 
 #include <sstream>
 
-extern bool UCI_PONDER;
-extern bool UCI_OUTPUT;
-extern bool UCI_CLASSICAL_EVAL;
+inline bool UCI_PONDER = false;
+inline bool UCI_CLASSICAL_EVAL = false;
+inline uint UCI_SYZYGY_PROBE_LIMIT = 7;
+
+inline bool UCI_OUTPUT = true;
 
 class Uci {
 public:

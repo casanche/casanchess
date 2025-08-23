@@ -1,0 +1,3 @@
+[submodule "external/fathom"]
+	path = external/fathom
+	url = https://github.com/jdart1/Fathom.git

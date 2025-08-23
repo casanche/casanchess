@@ -4,16 +4,13 @@
 #include "Evaluation.h"
 #include "Hash.h"
 #include "NNUE.h"
+#include "Syzygy.h"
 
 #include <iostream>
 #include <string>
 #include <thread>
 #include <vector>
 #include <iomanip>
-
-bool UCI_PONDER = false;
-bool UCI_OUTPUT = true;
-bool UCI_CLASSICAL_EVAL = false;
 
 ////https://ucichessengine.wordpress.com/2011/03/16/description-of-uci-protocol/
 
@@ -52,6 +49,8 @@ void Uci::Launch() {
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
             std::cout << "option name NNUE_Path type string default " << nnue.GetPath() << std::endl;
             std::cout << "option name Ponder type check default false" << std::endl;
+            std::cout << "option name SyzygyPath type string default " << Syzygy::DEFAULT_PATH << std::endl;
+            std::cout << "option name SyzygyProbeLimit type spin default " << UCI_SYZYGY_PROBE_LIMIT << " min 0 max 7" << std::endl;
             std::cout << "option name Threads type spin default 1 min 1 max 1" << std::endl;
 
             std::cout << "uciok" << std::endl;
@@ -146,7 +145,7 @@ void Uci::Bench(int depth, bool verbose) {
     if(verbose)
         std::cout << "Running benchmark at depth " << depth << "..." << std::endl;
 
-    // Standard test positions for chess engine benchmarking
+    // Varied test positions for benchmarking
     std::vector<std::string> testPositions = {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Starting position
         "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", // Kiwipete
@@ -167,8 +166,12 @@ void Uci::Bench(int depth, bool verbose) {
     int positionCount = 0;
 
     // Disable UCI output during benchmark
-    bool originalUciOutput = UCI_OUTPUT;
+    bool original_UciOutput = UCI_OUTPUT;
     UCI_OUTPUT = false;
+
+    // Disable Syzygy tables
+    bool original_SyzygyProbeLimit = UCI_SYZYGY_PROBE_LIMIT;
+    UCI_SYZYGY_PROBE_LIMIT = 0;
 
     for(size_t i = 0; i < testPositions.size(); i++) {
         if (verbose) {
@@ -208,8 +211,9 @@ void Uci::Bench(int depth, bool verbose) {
         }
     }
 
-    // Restore UCI output
-    UCI_OUTPUT = originalUciOutput;
+    // Restore UCI parameters
+    UCI_OUTPUT = original_UciOutput;
+    UCI_SYZYGY_PROBE_LIMIT = original_SyzygyProbeLimit;
 
     // Overall results
     double avgNps = positionCount > 0 ? (totalNps / (double)positionCount) : 0;
@@ -287,7 +291,6 @@ void Uci::Position(std::istringstream &stream) {
 
 void Uci::SetOption(std::istringstream &stream) {
     std::string token;
-
     stream >> token; //should be 'name'
     if(token != "name")
         return;
@@ -336,6 +339,25 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
 
             nnue.Load(token);
+        }
+        else if (token == "SyzygyPath") {
+            stream >> token;
+            if(token != "value")
+                return;
+            stream >> token;
+
+            std::string path = token;
+            Syzygy::Init(path);
+        }
+        else if (token == "SyzygyProbeLimit") {
+            stream >> token;
+            if(token != "value")
+                return;
+            stream >> token;
+
+            int limit = std::stoi(token);
+            UCI_SYZYGY_PROBE_LIMIT = limit;
+            std::cout << "info string SyzygyProbeLimit set to: " << limit << std::endl;
         }
         else {
             std::cout << "Unknown option: " << token << std::endl;

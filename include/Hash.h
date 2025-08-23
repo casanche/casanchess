@@ -85,28 +85,32 @@ private:
 // == Pawn-hash entry ==
 // =====================
 
-struct PawnEntry {
-    u64 zkey;
-    i16 evalMg;
-    i16 evalEg;
-};
+namespace Hash{
 
-class PawnHash {
-public:
-    PawnHash();
-    ~PawnHash();
+    struct PawnEntry {
+        u64 zkey;
+        i16 evalMg;
+        i16 evalEg;
+    };
+    
+    class PawnHash {
+    public:
+        PawnHash();
+        ~PawnHash();
+    
+        void Store(u64 zkey, int evalMg, int evalEg);
+        PawnEntry* Probe(u64 zkey);
+    
+        void Clear();
+    
+        int Size() { return PAWN_HASH_SIZE; };
+        u64 Occupancy() const;
+    
+    private:
+        PawnEntry* m_pawnEntries;
+    };
 
-    void Store(u64 zkey, int evalMg, int evalEg);
-    PawnEntry* Probe(u64 zkey);
-
-    void Clear();
-
-    int Size() { return PAWN_HASH_SIZE; };
-    u64 Occupancy() const;
-
-private:
-    PawnEntry* m_pawnEntries;
-};
+}
 
 // ======================
 // == Global variables ==

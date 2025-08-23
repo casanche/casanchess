@@ -28,6 +28,8 @@ typedef uint64_t Bitboard;
 const int INFINITE_SCORE = INFINITE_I16 - 1024;
 const int MATESCORE_MAX = INFINITE_SCORE - 1024;
 const int MATESCORE_MIN = MATESCORE_MAX - 1024;
+const int TBWIN = MATESCORE_MIN - 1;
+const int WINSCORE = TBWIN - 1024;
 
 const int MAX_PLY = 2560;
 
@@ -176,6 +178,9 @@ inline bool IsValidPieceType(PIECE_TYPE piece) {
 }
 inline bool IsMateValue(const int score) {
     return (abs(score) >= MATESCORE_MIN) && (abs(score) <= MATESCORE_MAX);
+}
+inline bool IsWinValue(const int score) {
+    return abs(score) >= WINSCORE;
 }
 inline int RelativeRank(COLOR color, int square) {
     return color == WHITE ? Rank(square) : 7 ^ Rank(square);

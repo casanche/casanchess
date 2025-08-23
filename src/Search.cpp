@@ -38,6 +38,7 @@
 #include "Evaluation.h"
 #include "MoveGenerator.h"
 #include "NNUE.h" //JUST FOR THE PV
+#include "Syzygy.h"
 #include "Uci.h"
 using namespace Sorting;
 
@@ -97,6 +98,7 @@ void Search::ClearSearch(bool fullSearchClearFlag) {
     // Node counters
     m_nodes = 0;
     m_nps = 0;
+    m_tbHits = 0;
 
     // Time management
     m_elapsedTime = 0;
@@ -241,7 +243,7 @@ void Search::Infinite() {
 
 // Narrow alpha-beta bounds around expected score
 int Search::AspirationWindow(Board& board, const int depth, const int bestScore) {
-    const bool aspiration = TURNON_ASPIRATION_WINDOW && depth >= ASPIRATION_WINDOW_DEPTH && !IsMateValue(bestScore);
+    const bool aspiration = TURNON_ASPIRATION_WINDOW && depth >= ASPIRATION_WINDOW_DEPTH && !IsWinValue(bestScore);
     if(!aspiration)
         return RootMax(board, depth, -INFINITE_SCORE, INFINITE_SCORE);
 
@@ -262,7 +264,7 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
             beta = bestScore + window;
         }
 
-        if(researches == 4 || IsMateValue(score)) {
+        if(researches == 4 || IsWinValue(score)) {
             alpha = -INFINITE_SCORE;
             beta = INFINITE_SCORE;
         }
@@ -431,6 +433,42 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         }
     }
 
+    // --------- Syzygy endgame probe ---------
+    Syzygy::TB_RESULT tb_result;
+    if( Syzygy::Probe_WDL(board, tb_result) ) {
+        m_tbHits++;
+
+        int score;
+        TTENTRY_TYPE bound;
+
+        if(tb_result == Syzygy::TB_RESULT::WIN) {
+            score = TBWIN - m_ply;
+            bound = TTENTRY_TYPE::LOWER_BOUND;
+        } else if(tb_result == Syzygy::TB_RESULT::LOSS) {
+            score = -TBWIN + m_ply;
+            bound = TTENTRY_TYPE::UPPER_BOUND;
+        } else {
+            score = DRAW_SCORE(m_ply);
+            bound = TTENTRY_TYPE::EXACT;
+        }
+
+        // Check if score is a cut-off
+        if( (score >= beta  && bound != TTENTRY_TYPE::UPPER_BOUND)
+         || (score <= alpha && bound != TTENTRY_TYPE::LOWER_BOUND) )
+        {
+            Hash::tt.Store(board.ZKey(), score, bound, Move(), MAX_DEPTH, m_ply, m_searchCount);
+            return score;
+        }
+
+        // If not, update variables
+        if(bound != TTENTRY_TYPE::UPPER_BOUND) {
+            if(score > bestScore)
+                bestScore = score;
+            if(score > alpha)
+                alpha = score;
+        }
+    }
+
     // Calculate static evaluation once, used for pruning heuristics
     int eval = 0;
     if(!inCheck) {
@@ -488,7 +526,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         if(nullScore >= beta) {
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff") );
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff - Depth " + std::to_string(depth)) );
-            if(IsMateValue(nullScore))
+            if(IsWinValue(nullScore))
                 nullScore = beta;  // Avoid reporting false mates in zugzwang
             Hash::tt.Store(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount);
             return nullScore;
@@ -541,7 +579,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         // ------- Futility pruning -------
         // Prune quiet moves and bad captures if unlikely to raise alpha
         const int futilityMargin = 0 + depth * 25;
-        if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsMateValue(alpha)
+        if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinValue(alpha)
             && depth <= 4
             && eval + futilityMargin <= alpha
             && ( move.Score() < 120 || (move.Score() >= 181 && move.Score() <= 188) )
