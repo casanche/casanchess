@@ -15,7 +15,7 @@ public:
     Move();
     Move(u32 from, u32 to, PIECE_TYPE piece, MOVE_TYPE moveType);
 
-    std::string Notation();
+    std::string Notation() const;
     void Print();
 
     inline u32            MoveAsNumber()  const { return                                       m_move; };
@@ -63,9 +63,9 @@ public:
     };
 
 private:
-    std::string IndexToNotation(int index);
-    std::string PieceTypeToNotation(PIECE_TYPE pieceType);
-    std::string DescriptiveNotation();
+    std::string IndexToNotation(int index) const;
+    std::string PieceTypeToNotation(PIECE_TYPE pieceType) const;
+    std::string DescriptiveNotation() const;
 
     void PrintBits32(u32 word, int startBit, int endBit) const;
 

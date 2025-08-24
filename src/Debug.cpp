@@ -70,7 +70,7 @@ bool BoardIntegrityChecker::CheckIntegrity(const Board& board) {
         PopCount( board.Piece(WHITE, PAWN) ) <= 8 &&
         PopCount( board.Piece(BLACK, PAWN) ) <= 8 &&
         PopCount( board.EnPassantSquare() ) <= 1 &&
-        board.Ply() <= MAX_PLY &&
+        board.Ply() < MAX_PLY_HISTORY &&
         board.ActivePlayer() != NO_COLOR;
 }
 

@@ -168,7 +168,7 @@ std::string Fen::SetRandomPosition(Board& board) {
 }
 
 //Fen with only the piece positions (without side-to-move, castling rights...)
-std::string Fen::GetSimplifiedFen(Board& board) {
+std::string Fen::GetSimplifiedFen(const Board& board) {
     std::string buffer = ""; //buffer to fill the fen
     int empties = 0; //number of successive empty squares
 

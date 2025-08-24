@@ -3,7 +3,6 @@
 #include "Constants.h"
 #include "Move.h"
 
-constexpr int MAX_DEPTH = 128;
 constexpr uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
 constexpr int PAWN_HASH_SIZE = 8192; //In number of entries
 
