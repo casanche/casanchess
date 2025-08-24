@@ -883,15 +883,15 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     constexpr int MULT_FACTOR = 100;
 
     // Coefficients
-    constexpr int LMR_BASE = 30;
-    constexpr int LMR_ISPV = -125;
-    constexpr int LMR_LOGTERM_DEPTH = 150;
-    constexpr int LMR_LOGTERM_MOVENUMBER = 35;
-    constexpr int LMR_LOGTERM_HISTORY_SCORE = -50;
-    constexpr int LMR_BADCAPTURE_BASE = -160;
-    constexpr int LMR_BADCAPTURE_TIER = -35;
-    constexpr int LMR_KILLER_BASE = -210;
-    constexpr int LMR_KILLER_TIER = -50;
+    constexpr int LMR_BASE = 22;
+    constexpr int LMR_ISPV = -117;
+    constexpr int LMR_LOGTERM_DEPTH = 144;
+    constexpr int LMR_LOGTERM_MOVENUMBER = 36;
+    constexpr int LMR_LOGTERM_HISTORY_SCORE = -49;
+    constexpr int LMR_BADCAPTURE_BASE = -146;
+    constexpr int LMR_BADCAPTURE_TIER = -36;
+    constexpr int LMR_KILLER_BASE = -212;
+    constexpr int LMR_KILLER_TIER = -53;
 
     // Common terms
     int directTerms = LMR_BASE + LMR_ISPV * isPV;
