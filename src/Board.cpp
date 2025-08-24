@@ -113,6 +113,8 @@ void Board::Print(bool bits) const {
         }
         square++;
     }
+
+    std::cout << "FEN (simplified): " << GetSimplifiedFen() << std::endl;
 }
 
 void Board::ShowHashMoves() {
@@ -406,7 +408,7 @@ void Board::ClearBits() {
         }
     }
 
-    for(int i = 0; i < MAX_PLY; ++i) {
+    for(int i = 0; i < MAX_PLY_HISTORY; ++i) {
         m_history[i].Clear();
     }
 

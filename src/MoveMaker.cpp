@@ -21,15 +21,14 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
         nnue.SavePosition(board.m_ply);
 
     //Increase ply
-    ++board.m_ply;
-    if(color == BLACK) {
-        ++board.m_moveNumber;
-    }
+    board.m_ply++;
+    if(color == BLACK)
+        board.m_moveNumber++;
     //Fifty-rule
     if(pieceType == PAWN || moveType == CAPTURE) {
         board.m_fiftyrule = 0;
     } else {
-        ++board.m_fiftyrule;
+        board.m_fiftyrule++;
     }
 
     //Reset en-passant square
@@ -75,7 +74,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     board.m_zobristKey.UpdateColor();
 
     //Store irreversible information (to help a later TakeMove)
-    assert(board.m_ply <= MAX_PLY);
+    assert(board.m_ply < MAX_PLY_HISTORY);
     board.m_history[board.m_ply].fiftyrule = board.m_fiftyrule;
     board.m_history[board.m_ply].castling = board.m_castlingRights;
     board.m_history[board.m_ply].zkey = board.ZKey();
@@ -193,7 +192,7 @@ void MoveMaker::MakeNull(Board& board) {
     Move move = Move();
 
     board.m_ply++;
-    assert(board.m_ply <= MAX_PLY);
+    assert(board.m_ply < MAX_PLY_HISTORY);
 
     //Reset en-passant square
     if(board.m_enPassantSquare) {

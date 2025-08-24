@@ -40,7 +40,7 @@ public:
     // Fen
     void SetFen(std::string fenString) { Fen::SetPosition(*this, fenString); }
     std::string SetFenRandom() { return Fen::SetRandomPosition(*this); }
-    std::string GetSimplifiedFen() { return Fen::GetSimplifiedFen(*this); }
+    std::string GetSimplifiedFen() const { return Fen::GetSimplifiedFen(*this); }
 
     // MoveMaker
     void MakeMove(Move move, bool update_nnue = true) { MoveMaker::MakeMove(*this, move, update_nnue); }
@@ -97,8 +97,8 @@ private:
     COLOR m_activePlayer;
     u8 m_castlingRights; //[0-4] bits: the castling rights
     u8 m_fiftyrule;
-    unsigned int m_moveNumber;
-    unsigned int m_ply; //a ply is half a move
+    uint m_moveNumber;
+    uint m_ply; //a ply is half a move
     Bitboard m_enPassantSquare;
     ZobristKey m_zobristKey;
     ZobristKey m_pawnKey;
@@ -112,8 +112,8 @@ private:
     bool m_checkCalculated;
 
     //History
-    unsigned int m_initialPly;
-    BoardHistory m_history[MAX_PLY];
+    uint m_initialPly;
+    BoardHistory m_history[MAX_PLY_HISTORY];
 
     friend class Fen;
     friend class MoveMaker;

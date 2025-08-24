@@ -37,7 +37,7 @@ private:
     Bitboard* m_pieces[2];
     float     m_accumulator[2][NNUE_SIZE];
     //Backups
-    float     m_backupAccumulator[MAX_PLY][2][NNUE_SIZE];
+    float     m_backupAccumulator[MAX_PLY_HISTORY][2][NNUE_SIZE];
 
     bool m_isLoaded;
     std::string m_filepath;

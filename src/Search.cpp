@@ -349,7 +349,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 // Implements most of the engine's search logic.
 int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
-    assert(m_ply <= MAX_PLY);
+    assert(m_ply < MAX_PLY);
 
     D( m_debug.Increment("NegaMax: _: Entering function") );
 
@@ -678,7 +678,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
 // in tactical sequences (captures and checks).
 int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
-    assert(m_ply <= MAX_PLY);
+    assert(m_ply < MAX_PLY);
 
     D( m_debug.Increment("Quiescence: _: Hits"); );
     D( if(m_plyqs <= 2 || m_plyqs % 5 == 0) m_debug.Increment("Quiescence: QPly " + std::format("{:03}", m_plyqs)) );

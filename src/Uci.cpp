@@ -120,16 +120,18 @@ void Uci::Launch() {
         else if(token == "print") {
             m_board.Print();
             std::string activePlayer = (m_board.ActivePlayer() == WHITE) ? "WHITE" : "BLACK";
+            P("Active player: " << activePlayer);
+            P("Ply: " << m_board.Ply());
+            P("Fifty-move rule: " << m_board.FiftyRule());
             std::string castlingRights;
             if(m_board.CastlingRights() & 0b0001) castlingRights += "K"; else castlingRights += "-";
             if(m_board.CastlingRights() & 0b0010) castlingRights += "Q"; else castlingRights += "-";
             if(m_board.CastlingRights() & 0b0100) castlingRights += "k"; else castlingRights += "-";
             if(m_board.CastlingRights() & 0b1000) castlingRights += "q"; else castlingRights += "-";
-            P("Active player: " << activePlayer);
-            P("Ply: " << m_board.Ply());
-            P("Fifty-move rule: " << m_board.FiftyRule());
             P("Castling rights: " << castlingRights);
-            P("Enpassant square: " << BitscanForward(m_board.EnPassantSquare()));
+            Bitboard enpassant = m_board.EnPassantSquare();
+            int epSquare = enpassant ? BitscanForward(enpassant) : -1;
+            P("Enpassant square: " << epSquare);
             P("ZKey: " << m_board.ZKey());
             P("Static evaluation: " << Evaluation::Evaluate(m_board));
             std::cout << "Move history: "; m_board.ShowHistory(); std::cout << std::endl;
