@@ -31,7 +31,8 @@ const int MATESCORE_MIN = MATESCORE_MAX - 1024;
 const int TBWIN = MATESCORE_MIN - 1;
 const int WINSCORE = TBWIN - 1024;
 
-const int MAX_PLY = 2560;
+constexpr int MAX_DEPTH = 128;
+const int MAX_PLY = 256;
 
 enum COLOR { WHITE, BLACK, NO_COLOR };
 enum FILES { FILEA, FILEB, FILEC, FILED, FILEE, FILEF, FILEG, FILEH };

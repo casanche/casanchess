@@ -94,7 +94,7 @@ Search::Search() {
 
 // Reset state for a new position search.
 // Called at the beginning of each iteration in Iterative Deepening.
-void Search::ClearSearch(bool fullSearchClearFlag) {
+void Search::ClearSearch(bool fullClear) {
     // Node counters
     m_nodes = 0;
     m_nps = 0;
@@ -106,6 +106,7 @@ void Search::ClearSearch(bool fullSearchClearFlag) {
     m_nodesTimeCheck = 0;
 
     // Search state
+    m_pv.ClearTable();
     m_bestScore = -INFINITE_SCORE;
     m_bestMove = Move();
 
@@ -125,7 +126,7 @@ void Search::ClearSearch(bool fullSearchClearFlag) {
     m_debug.Clear();
 
     // Completely clear TT and history heuristics for a reproducible search
-    if(fullSearchClearFlag) {
+    if(fullClear) {
         Hash::tt.Clear();
         Hash::evalCache.Clear();
         Hash::pawnHash.Clear();
@@ -136,10 +137,10 @@ void Search::ClearSearch(bool fullSearchClearFlag) {
 
 // Main loop: increase depth one by one and call the root search.
 // Manage time, aspiration window, and UCI output.
-void Search::IterativeDeepening(Board &board, bool fullSearchClearFlag) {
+void Search::IterativeDeepening(Board &board, bool fullClear) {
     m_clock.Start();
 
-    ClearSearch(fullSearchClearFlag);
+    ClearSearch(fullClear);
     
     D( m_debug.Increment("IterativeDeepening: _: Start") );
     m_searchCount++;
@@ -161,37 +162,14 @@ void Search::IterativeDeepening(Board &board, bool fullSearchClearFlag) {
         m_elapsedTime = ElapsedTime();
         m_nps = static_cast<int>(1000 * m_nodes / (m_elapsedTime+1));
 
-        // Build principal variation (PV) line from transposition table
-        std::string PV;
-        m_ponderMove = Move();
-        Board newBoard = board;
-        D(
-            BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(board);
-            BoardIdentity aft = BoardIntegrityChecker::GenerateBoardIdentity(newBoard);
-            assert(bef == aft);
-        );
-        for(int depth = 1; depth <= m_depth; depth++) {
-            TTEntry *ttEntry = Hash::tt.Probe(newBoard.ZKey(), 0);
-            if(!ttEntry) continue;
-            if(ttEntry->bestMove.MoveType() == NULLMOVE) break;
-
-            Move bestMove = ttEntry->bestMove;
-            PV += bestMove.Notation();
-            PV += " ";
-
-            if(depth == 2)
-                m_ponderMove = bestMove;
-
-            newBoard.MakeMove(bestMove, false);
-        }
-
+        // PV
         if(UCI_OUTPUT)
-            UciOutput(PV);
+            UciOutput(m_pv.PVString());
 
         // Stop search if we used half of the allocated time, since
         // next iteration will likely use more than the allocated time
         if(m_elapsedTime > (m_allocatedTime / 2)) //check
-             break;
+            break;
 
         if(DEBUG_PRINT_STATISTICS && m_depth == m_maxDepth)
             D( m_debug.Print() );
@@ -200,7 +178,7 @@ void Search::IterativeDeepening(Board &board, bool fullSearchClearFlag) {
     if(UCI_OUTPUT) {
         std::cout << "bestmove " << m_bestMove.Notation();
         if(UCI_PONDER)
-            std::cout << " ponder " << m_ponderMove.Notation();
+            std::cout << " ponder " << m_pv.PonderMove().Notation();
         std::cout << std::endl;
     }
 }
@@ -220,6 +198,8 @@ void Search::UciOutput(std::string PV) {
     std::cout << " nps " << m_nps;
     if(m_elapsedTime > 1000)
         std::cout << " hashfull " << Hash::tt.Occupancy();
+    if(m_tbHits)
+        std::cout << " tbhits " << m_tbHits;
     std::cout << " pv " << PV;
     std::cout << std::endl;
 }
@@ -286,6 +266,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     Move bestMove;
     int score;
 
+    m_pv.ClearPly(m_ply);
     int alphaOriginal = alpha; // Save the original alpha for TT logic
 
     MoveList moves = MoveGenerator::GenerateMoves(board);
@@ -295,6 +276,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
 
     int moveNumber = 0;
+
     for(auto move : moves) {
         moveNumber++;
         bool isPV = (moveNumber == 1);
@@ -323,9 +305,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             score = -NegaMax(board, depth-1, -alpha-1, -alpha, false);
 
             // Score within window: new PV found! Re-search with full window
-            if(score > alpha && score < beta) {
+            if(score > alpha && score < beta)
                 score = -NegaMax(board, depth-1, -beta, -alpha, true);
-            }
         }
 
         board.TakeMove(move);
@@ -335,6 +316,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update: BestMove (score > alpha)") );
             alpha = score;
             bestMove = move;
+
+            m_pv.Update(m_ply, move, score);
         }
 
         // Not useful to store in TT due to aspiration window
@@ -369,6 +352,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
     assert(m_ply <= MAX_PLY);
 
     D( m_debug.Increment("NegaMax: _: Entering function") );
+
+    m_pv.ClearPly(m_ply);
 
     // --------- Termination checks -----------
     m_nodesTimeCheck++;
@@ -564,6 +549,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
 
     // --------- Move loop ---------
     int moveNumber = 0;
+
     for(auto move : moves) {
         assert(move.MoveType());
 
@@ -635,13 +621,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
             score = -NegaMax(board, reducedDepth, -alpha-1, -alpha, false);
 
             // Reduced search failed high: re-search with full depth
-            if(reduction && score > alpha) {
+            if(reduction && score > alpha)
                 score = -NegaMax(board, fullDepth, -alpha-1, -alpha, false);
-            }
+
             // Score within window: new PV found! Re-search with full window and depth
-            if(score > alpha && score < beta) { // 'score < beta' needed in fail-soft schemes
+            if(score > alpha && score < beta) // 'score < beta' needed in fail-soft schemes
                 score = -NegaMax(board, fullDepth, -beta, -alpha, true);
-            }
         }
 
         board.TakeMove(move);
@@ -670,6 +655,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         if(score > alpha) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update: Alpha") );
             alpha = score;
+ 
+            m_pv.Update(m_ply, move, score);
         }
 
     } // End move loop

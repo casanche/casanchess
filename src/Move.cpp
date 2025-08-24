@@ -16,7 +16,7 @@ Move::Move(u32 from, u32 to, PIECE_TYPE piece, MOVE_TYPE moveType) : m_move(0) {
         | PushBits(moveType, 3, 15);
 }
 
-std::string Move::Notation() {
+std::string Move::Notation() const {
     if( MoveType() == NULLMOVE ) return "0000";
     
     const bool useDescriptive = true;
@@ -62,7 +62,7 @@ std::string Move::Notation() {
     return prefix + IndexToNotation(data.toSq) + promotionSuffix;
 }
 
-std::string Move::DescriptiveNotation() {
+std::string Move::DescriptiveNotation() const {
     MoveData data = Data();
 
     //Promotion suffix
@@ -81,12 +81,12 @@ std::string Move::DescriptiveNotation() {
     return IndexToNotation(data.fromSq) + IndexToNotation(data.toSq) + promotionSuffix;
 }
 
-std::string Move::IndexToNotation(int index) {
+std::string Move::IndexToNotation(int index) const {
     char file = FILES_NOTATION[index % 8];
     char rank = RANKS_NOTATION[index / 8];
     return std::string({file, rank});
 }
-std::string Move::PieceTypeToNotation(PIECE_TYPE pieceType) {
+std::string Move::PieceTypeToNotation(PIECE_TYPE pieceType) const {
     return std::string({PIECES_NOTATION[pieceType]});
 }
 

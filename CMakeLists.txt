@@ -138,6 +138,7 @@ set(ENGINE_SOURCES
     src/MoveGenerator.cpp
     src/MoveMaker.cpp
     src/NNUE.cpp
+    src/PV.cpp
     src/Search.cpp
     src/Syzygy.cpp
     src/Uci.cpp
