@@ -63,8 +63,8 @@ private:
     // Internal search algorithms
     int AspirationWindow(Board& board, const int depth, const int bestScore);
     int RootMax(Board &board, int depth, int alpha, int beta);
-    int NegaMax(Board  &board, int depth, int alpha, int beta, bool isPV);
-    int QuiescenceSearch(Board &board, int alpha, int beta, bool isPV);
+    int NegaMax(Board  &board, int depth, int alpha, int beta);
+    int QuiescenceSearch(Board &board, int alpha, int beta);
 
     // IterativeDeepening methods
     void UciOutput(std::string PV);
