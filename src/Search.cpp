@@ -395,7 +395,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
     // Activated at leaf nodes
     // TODO: verify the condition !inCheck
     if(depth <= 0 && !inCheck) {
-        return QuiescenceSearch(board, alpha, beta, isPV);
+        return QuiescenceSearch(board, alpha, beta);
     }
 
     D( m_debug.Increment("NegaMax: _: Hits") );
@@ -676,7 +676,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
 
 // Quiescence search: extends the search at the leaf nodes to avoid the horizon effect
 // in tactical sequences (captures and checks).
-int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
+int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
     assert(m_ply < MAX_PLY);
 
@@ -718,7 +718,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
     // Probe transposition table.
     // Only non-PV nodes: PV nodes require the most accurate score possible.
     TTEntry* ttEntry = Hash::tt.Probe(board.ZKey(), 0);
-    if(ttEntry && !isPV) {
+    if(ttEntry) {
         int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
         if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
             || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
@@ -792,7 +792,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
         m_ply++; m_plyqs++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
         D( m_debug.Increment("Quiescence: MakeMove (QPly > 0)") );
 
-        int score = -QuiescenceSearch(board, -beta, -alpha, isPV);
+        int score = -QuiescenceSearch(board, -beta, -alpha);
         
         board.TakeMove(move);
         m_ply--; m_plyqs--;
