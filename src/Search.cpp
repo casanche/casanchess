@@ -690,7 +690,6 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         return Evaluation::Evaluate(board);
     }
 
-    const bool isPV = (beta - alpha) != 1;
     int bestScore = -INFINITE_SCORE;
     bool inCheck = board.IsCheck();
 
@@ -717,10 +716,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         bestScore =  standPat;
     }
 
-    // Probe transposition table.
-    // Only non-PV nodes: PV nodes require the most accurate score possible.
+    // Transposition table probe
     TTEntry* ttEntry = Hash::tt.Probe(board.ZKey(), 0);
-    if(ttEntry && !isPV) {
+    if(ttEntry) {
         int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
         if( ttEntry->type == TTENTRY_TYPE::EXACT
             || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
