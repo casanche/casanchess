@@ -792,7 +792,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
         m_ply++; m_plyqs++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
         D( m_debug.Increment("Quiescence: MakeMove (QPly > 0)") );
 
-        int score = -QuiescenceSearch(board, -beta, -alpha, isPV);
+        int score = -QuiescenceSearch(board, -beta, -alpha, false);
         
         board.TakeMove(move);
         m_ply--; m_plyqs--;
