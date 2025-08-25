@@ -411,7 +411,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool isPV) {
         int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
         if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
             || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
-            || (ttEntry->type == TTENTRY_TYPE::EXACT && score >= alpha && score <= beta) )
+            || ttEntry->type == TTENTRY_TYPE::EXACT )
         {
             D( m_debug.Increment("NegaMax: TT Hit: Cut-Off") );
             return score;
@@ -722,7 +722,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
         int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
         if( (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
             || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
-            || (ttEntry->type == TTENTRY_TYPE::EXACT && score >= alpha && score <= beta) )
+            || ttEntry->type == TTENTRY_TYPE::EXACT )
         {
             D( m_debug.Increment("Quiescence: TT Hit") );
             return score;
@@ -792,7 +792,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta, bool isPV) {
         m_ply++; m_plyqs++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
         D( m_debug.Increment("Quiescence: MakeMove (QPly > 0)") );
 
-        int score = -QuiescenceSearch(board, -beta, -alpha, false);
+        int score = -QuiescenceSearch(board, -beta, -alpha, isPV);
         
         board.TakeMove(move);
         m_ply--; m_plyqs--;
