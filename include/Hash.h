@@ -17,9 +17,10 @@ constexpr uint EVALCACHE_ENTRIES = 1 << 18;
 // Beta node: the true eval is at least equal to the score (true >= score) LOWER_BOUND
 enum class TTENTRY_TYPE : u8 { NONE, EXACT, LOWER_BOUND, UPPER_BOUND };
 
-// 64(zkey) + 32(move) + 16(score) + 8(depth) + 2(type) + 6(age) = 128 bits per entry
+// 32(zkey) + 32(move) + 16(score) + 8(depth) + 2(type) + 6(age) + 32(padding) = 128 bits per entry
 struct TTEntry {
-    u64 zkey;
+    u32 zkey;
+    u32 padding;
     i16 score;
     u8 depth;
     TTENTRY_TYPE type : 2;
@@ -46,6 +47,7 @@ public:
 
 private:
     int ScoreToHash(int score, int ply);
+    static u32 UpperBits(u64 zkey);
 
     TTEntry* m_entries;
     u64 m_size; // Number of entries

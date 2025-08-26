@@ -32,8 +32,10 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     TTEntry* entry = &m_entries[index];
 
     //Replacement scheme
-    if(age != entry->age || depth >= entry->depth) {
-        entry->zkey = zkey;
+    const bool older = age != entry-> age;
+    const bool higherDepth = depth >= entry->depth;
+    if(older || higherDepth) {
+        entry->zkey = UpperBits(zkey);
         entry->score = SafeCastInt16( ScoreToHash(score, ply) );
         entry->depth = SafeCastU8(depth);
         entry->type = type;
@@ -45,7 +47,10 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
 TTEntry* TT::Probe(u64 zkey, int depth) {
     u64 index = zkey % m_size;
     TTEntry* entry = &m_entries[index];
-    if(entry->zkey == zkey && entry->depth >= depth) {
+
+    const bool zkeyEqual = UpperBits(zkey) == entry->zkey;
+    const bool higherDepth = entry->depth >= depth;
+    if(zkeyEqual && higherDepth) {
         return entry;
     } else {
         return nullptr;
@@ -73,6 +78,10 @@ u64 TT::Occupancy(u64 sampleSize) const {
         count += (m_entries[i].zkey != 0);
     }
     return count;
+}
+
+u32 TT::UpperBits(u64 zkey) {
+    return static_cast<u32>(zkey >> 32);
 }
 
 //Translate mate scores as relative from the root (ROOT')
