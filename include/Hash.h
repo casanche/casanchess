@@ -6,8 +6,8 @@
 constexpr uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
 constexpr int PAWN_HASH_SIZE = 8192; //In number of entries
 
-// 2 MB / 64 bits per entry = 2^18 entries
-constexpr uint EVALCACHE_ENTRIES = 1 << 18;
+// 2^19 entries = 2 MB / 32 bits per entry
+constexpr u64 EVALCACHE_ENTRIES = 1 << 19;
 
 // =========================
 // == Transposition table ==
@@ -17,9 +17,10 @@ constexpr uint EVALCACHE_ENTRIES = 1 << 18;
 // Beta node: the true eval is at least equal to the score (true >= score) LOWER_BOUND
 enum class TTENTRY_TYPE : u8 { NONE, EXACT, LOWER_BOUND, UPPER_BOUND };
 
-// 64(zkey) + 32(move) + 16(score) + 8(depth) + 2(type) + 6(age) = 128 bits per entry
+// 32(zkey) + 32(move) + 16(score) + 8(depth) + 2(type) + 6(age) + 32(padding) = 128 bits per entry
 struct TTEntry {
-    u64 zkey;
+    u32 zkey;
+    u32 padding;
     i16 score;
     u8 depth;
     TTENTRY_TYPE type : 2;
@@ -38,7 +39,7 @@ public:
     TTEntry* Probe(u64 zkey, int depth);
 
     void Clear();
-    void SetSize(int size);
+    void SetSize(int sizeInMB);
 
     u64 Size() { return m_size; };
     u64 Occupancy(u64 sampleSize = 1000) const;
@@ -49,15 +50,16 @@ private:
 
     TTEntry* m_entries;
     u64 m_size; // Number of entries
+    u64 m_mask; // Mask for AND operations
 };
 
 // ================
 // == Eval cache ==
 // ================
 
-// 32(zkey) + 16(eval) + 16(padding) = 64 bits per entry
+// 16(zkey) + 16(eval) = 32 bits per entry
 struct EvalEntry {
-    u32 zkey32;
+    u16 zkey;
     i16 eval;
 };
 
