@@ -6,8 +6,8 @@
 constexpr uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
 constexpr int PAWN_HASH_SIZE = 8192; //In number of entries
 
-// 2 MB / 64 bits per entry = 2^18 entries
-constexpr uint EVALCACHE_ENTRIES = 1 << 18;
+// 2^19 entries = 2 MB / 32 bits per entry
+constexpr u64 EVALCACHE_ENTRIES = 1 << 19;
 
 // =========================
 // == Transposition table ==
@@ -47,7 +47,6 @@ public:
 
 private:
     int ScoreToHash(int score, int ply);
-    static u32 UpperBits(u64 zkey);
 
     TTEntry* m_entries;
     u64 m_size; // Number of entries
@@ -58,9 +57,9 @@ private:
 // == Eval cache ==
 // ================
 
-// 32(zkey) + 16(eval) + 16(padding) = 64 bits per entry
+// 16(zkey) + 16(eval) = 32 bits per entry
 struct EvalEntry {
-    u32 zkey32;
+    u16 zkey;
     i16 eval;
 };
 

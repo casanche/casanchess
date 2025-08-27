@@ -33,6 +33,14 @@ namespace BitboardUtils {
         return (input & BitMask(width, startIndex)) >> startIndex;
     }
 
+    //First bits of the input number (16 if u16)
+    template<typename T>
+    constexpr T UpperBits(u64 input) {
+        constexpr int numBits = sizeof(T) * 8;
+        constexpr int shift = 64 - numBits;
+        return static_cast<T>(input >> shift);
+    }
+
     int BitscanForward(Bitboard b);
     int BitscanReverse(Bitboard b);
     int PopCount(Bitboard b);

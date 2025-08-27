@@ -37,7 +37,7 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     const bool older = age != entry-> age;
     const bool higherDepth = depth >= entry->depth;
     if(older || higherDepth) {
-        entry->zkey = UpperBits(zkey);
+        entry->zkey = UpperBits<u32>(zkey);
         entry->score = SafeCastInt16( ScoreToHash(score, ply) );
         entry->depth = SafeCastU8(depth);
         entry->type = type;
@@ -50,7 +50,7 @@ TTEntry* TT::Probe(u64 zkey, int depth) {
     u64 index = zkey & m_mask;
     TTEntry* entry = &m_entries[index];
 
-    const bool zkeyEqual = UpperBits(zkey) == entry->zkey;
+    const bool zkeyEqual = UpperBits<u32>(zkey) == entry->zkey;
     const bool higherDepth = entry->depth >= depth;
     if(zkeyEqual && higherDepth) {
         return entry;
@@ -86,10 +86,6 @@ u64 TT::Occupancy(u64 sampleSize) const {
     return count;
 }
 
-u32 TT::UpperBits(u64 zkey) {
-    return static_cast<u32>(zkey >> 32);
-}
-
 //Translate mate scores as relative from the root (ROOT')
 //ROOT' <---- (Mate in X+ply') <---- POS <---- (Mate in X)
 int TT::ScoreFromHash(int score, int ply) {
@@ -117,6 +113,8 @@ int TT::ScoreToHash(int score, int ply) {
 // ================
 
 EvalCache::EvalCache() {
+    static_assert( std::has_single_bit(EVALCACHE_ENTRIES), "EVALCACHE_ENTRIES should be a power of 2." );
+
     m_size = EVALCACHE_ENTRIES;
     m_mask = m_size - 1;
     Clear();
@@ -125,18 +123,19 @@ EvalCache::EvalCache() {
 void EvalCache::Store(u64 zkey, int eval) {
     assert(abs(eval) < MATESCORE_MAX);
 
-    EvalEntry& entry = m_evalEntries[zkey & m_mask];
+    u64 index = zkey & m_mask;
+    EvalEntry& entry = m_evalEntries[index];
 
     // Always-replace strategy
-    entry.zkey32 = static_cast<u32>(zkey);
+    entry.zkey = UpperBits<u16>(zkey);
     entry.eval = SafeCastInt16(eval);
 }
 
 bool EvalCache::Probe(u64 zkey, int& eval) {
-    u32 key32 = static_cast<u32>(zkey);
-    EvalEntry& entry = m_evalEntries[zkey & m_mask];
+    u64 index = zkey & m_mask;
+    EvalEntry& entry = m_evalEntries[index];
 
-    if(entry.zkey32 == key32) {
+    if(entry.zkey == UpperBits<u16>(zkey)) {
         eval = entry.eval;
         return true;
     }
@@ -152,7 +151,7 @@ void EvalCache::Clear() {
 u64 EvalCache::Occupancy(u64 sampleSize) const {
     u64 count = 0;
     for(u64 i = 0; i < sampleSize; ++i) {
-        count += (m_evalEntries[i].zkey32 != 0);
+        count += (m_evalEntries[i].zkey != 0);
     }
     return count;
 }
