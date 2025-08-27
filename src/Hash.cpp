@@ -2,6 +2,8 @@
 
 #include "Debug.h"
 
+#include <bit>
+
 // =========================
 // == Transposition table ==
 // =========================
@@ -28,7 +30,7 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     assert(abs(score) <= MATESCORE_MAX);
     assert(depth <= MAX_DEPTH);
 
-    u64 index = zkey % m_size;
+    u64 index = zkey & m_mask;
     TTEntry* entry = &m_entries[index];
 
     //Replacement scheme
@@ -45,7 +47,7 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
 }
 
 TTEntry* TT::Probe(u64 zkey, int depth) {
-    u64 index = zkey % m_size;
+    u64 index = zkey & m_mask;
     TTEntry* entry = &m_entries[index];
 
     const bool zkeyEqual = UpperBits(zkey) == entry->zkey;
@@ -63,12 +65,16 @@ void TT::Clear() {
     }
 }
 
-void TT::SetSize(int size) {  // size in MB
-    m_size = size * (1024*1024) / sizeof(TTEntry);
+// For a faster entry lookup using a mask: downsize entries (m_size) to fill in a power of 2
+void TT::SetSize(int sizeInMB) {
+    u64 maxEntries = sizeInMB * (1024 * 1024) / sizeof(TTEntry);
+
+    m_size = std::bit_floor(maxEntries);
+    m_mask = m_size - 1;
 
     delete [] m_entries;
     m_entries = new TTEntry[m_size];
-    
+
     Clear();
 }
 

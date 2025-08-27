@@ -39,7 +39,7 @@ public:
     TTEntry* Probe(u64 zkey, int depth);
 
     void Clear();
-    void SetSize(int size);
+    void SetSize(int sizeInMB);
 
     u64 Size() { return m_size; };
     u64 Occupancy(u64 sampleSize = 1000) const;
@@ -51,6 +51,7 @@ private:
 
     TTEntry* m_entries;
     u64 m_size; // Number of entries
+    u64 m_mask; // Mask for AND operations
 };
 
 // ================
