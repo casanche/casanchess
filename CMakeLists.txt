@@ -137,6 +137,7 @@ set(ENGINE_SOURCES
     src/Move.cpp
     src/MoveGenerator.cpp
     src/MoveMaker.cpp
+    src/MoveScorer.cpp
     src/NNUE.cpp
     src/PV.cpp
     src/Search.cpp

@@ -10,21 +10,6 @@ struct Heuristics;
 const int HEURISTICS_MAX_PLY = 128;
 const int VALUE_TO_RESET_HISTORY = INFINITE / 512;
 
-namespace SEE {
-    constexpr int MATERIAL_VALUES[8] = {0, 100, 350, 350, 500, 1050, 0}; // [PIECE]
-
-    const int MIN_SCORE = 1;
-    const int MAX_SCORE = 253;
-    constexpr int SCORE_RANGE = MAX_SCORE - MIN_SCORE;
-    constexpr int ZERO_SCORE = (MIN_SCORE + MAX_SCORE) / 2; // Equivalent to SEE = 0 (neutral capture)
-    
-    constexpr int SEE_MAX = MATERIAL_VALUES[QUEEN];
-    constexpr int SEE_RANGE = SEE_MAX * 2;
-
-    int FromScore(u8 score);
-    u8 ToScore(int see);
-}
-
 namespace Sorting {
     void SortMoves(Board &board, MoveList &moves, TT& tt, const Heuristics &heuristics, int ply);
     void SortEvasions(Board &board, MoveList &moves);
