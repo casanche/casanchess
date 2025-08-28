@@ -37,7 +37,7 @@
 
 #include "Evaluation.h"
 #include "MoveGenerator.h"
-#include "NNUE.h" //JUST FOR THE PV
+#include "MoveScorer.h"
 #include "Syzygy.h"
 #include "Uci.h"
 using namespace Sorting;
@@ -757,7 +757,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     for(auto move : moves) {
 
         if(!inCheck && move.MoveType() == CAPTURE) {
-            const int seeValue = SEE::FromScore(move.Score());
+            const int seeValue = Scorer::SEEFromTacticalScore( move.Score() );
 
             // --- Static SEE Pruning ---
             // Quick filter to discard tactically hopeless captures

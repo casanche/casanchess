@@ -35,6 +35,10 @@ constexpr int MAX_DEPTH = 128;
 const int MAX_PLY = 256;
 const int MAX_PLY_HISTORY = 2048;
 
+namespace SEE{
+    constexpr int MATERIAL_VALUES[8] = {0, 100, 350, 350, 500, 1050, 0}; // [PIECE]
+}
+
 enum COLOR { WHITE, BLACK, NO_COLOR };
 enum FILES { FILEA, FILEB, FILEC, FILED, FILEE, FILEF, FILEG, FILEH };
 enum RANKS { RANK1, RANK2, RANK3, RANK4, RANK5, RANK6, RANK7, RANK8 };
