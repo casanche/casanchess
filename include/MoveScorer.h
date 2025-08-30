@@ -22,7 +22,7 @@ namespace Scorer {
     constexpr int HISTORY_MAX = 180;
     constexpr int HISTORY_MIN = 1;
     constexpr int UNDERPROMOTION = 0;
-    u8 ScoreFromHistory(int historyValue, int historyMax);
+    u8 ScoreFromHistory(int minScore, int maxScore, int historyValue, int historyMax);
     u8 ScoreFromSEE(int see);
 
     // Tactical positions
