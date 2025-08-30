@@ -52,7 +52,16 @@ namespace {
             // Captures
             if( move.CapturedType() ) {
                 int see = board.SEE(move);
-                move.SetScore( Scorer::ScoreFromSEE(see) );
+                if(see > 0)
+                    move.SetScore( Scorer::ScoreFromSEE(see) );
+                else if(see == 0) {
+                    int captureHistoryScore = heuristics.captureHistory.Get(move, board.ActivePlayer());
+                    int captureHistoryMax = heuristics.captureHistory.MaxValue();
+                    u8 score = Scorer::ScoreFromHistory(Scorer::NEUTRALCAPTURE_MIN, Scorer::NEUTRALCAPTURE_MAX, captureHistoryScore, captureHistoryMax);
+                    move.SetScore(score);
+                } else {
+                    move.SetScore( Scorer::ScoreFromSEE(see) );
+                }
                 continue;
             }
 

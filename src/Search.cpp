@@ -82,6 +82,7 @@ Search::Search() {
 
     ClearSearch(true);
     m_heuristics.history.Clear();
+    m_heuristics.captureHistory.Clear();
 
     // Clear transposition tables
     Hash::tt.Clear();
@@ -121,6 +122,7 @@ void Search::ClearSearch(bool fullClear) {
     // Move ordering
     m_heuristics.killer.Clear();
     m_heuristics.history.Age(); // Reduce history from old positions, but do not remove entirely
+    m_heuristics.captureHistory.Age();
 
     // Debug
     m_debug.Clear();
@@ -132,6 +134,7 @@ void Search::ClearSearch(bool fullClear) {
         Hash::pawnHash.Clear();
 
         m_heuristics.history.Clear();
+        m_heuristics.captureHistory.Clear();
     }
 }
 
@@ -649,6 +652,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
                 m_heuristics.killer.Update(move, m_ply);
                 m_heuristics.history.GoodHistory(move, board.ActivePlayer(), depth);
             }
+            if( Scorer::IsNegativeOrNeutralSEE(move.Score()) )
+                m_heuristics.captureHistory.GoodHistory(move, board.ActivePlayer(), depth);
 
             return score;
         }

@@ -2,7 +2,6 @@
 
 #include "Constants.h"
 #include "BitboardUtils.h"
-#include "MoveScorer.h"
 
 enum MOVE_TYPE { NULLMOVE, NORMAL, CAPTURE, CASTLING, PROMOTION, DOUBLE_PUSH, PROMOTION_CAPTURE, ENPASSANT }; //CAPTURE + PROMOTION = PROMOTION_CAPTURE
 enum PROMOTION_TYPE { PROMOTION_QUEEN, PROMOTION_KNIGHT, PROMOTION_ROOK, PROMOTION_BISHOP };
@@ -61,9 +60,6 @@ public:
     bool operator!=(const Move& rmove) const {
         return !(*this == rmove);
     };
-
-    // Scorer methods
-    bool IsNegativeCapture() const { return Scorer::IsNegativeCapture(this->Score()); };
 
 private:
     std::string IndexToNotation(int index) const;

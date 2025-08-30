@@ -10,9 +10,9 @@ namespace Scorer {
     constexpr int PROMOTION = 253;
     constexpr int POSITIVECAPTURE_MAX = 249;
     constexpr int POSITIVECAPTURE_MIN = 241;
-    constexpr int NEUTRALCAPTURE = 240;
-    constexpr int NEUTRALCAPTURE_MAX = 240;
-    constexpr int NEUTRALCAPTURE_MIN = 240;
+    // constexpr int NEUTRALCAPTURE = 240;
+    constexpr int NEUTRALCAPTURE_MAX = 239;
+    constexpr int NEUTRALCAPTURE_MIN = 231;
     constexpr int KILLER_1 = 194;
     constexpr int KILLER_2 = 193;
     constexpr int KILLER_3 = 192;
@@ -40,7 +40,8 @@ namespace Scorer {
     // Single methods
 
     inline bool IsNeutralCapture(int score) {
-        return score == NEUTRALCAPTURE;
+        return score >= NEUTRALCAPTURE_MIN
+            && score <= NEUTRALCAPTURE_MAX;
     }
 
     inline bool IsNegativeCapture(int score) {
@@ -55,7 +56,7 @@ namespace Scorer {
 
     // Composite methods
     
-    inline bool IsNegativeOrNeutral(int score) {
+    inline bool IsNegativeOrNeutralSEE(int score) {
         return IsNeutralCapture(score) || IsNegativeCapture(score);
     }
 }

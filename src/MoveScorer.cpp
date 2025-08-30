@@ -31,7 +31,7 @@ u8 Scorer::ScoreFromSEE(int see) {
         return SafeCastU8(score);
     }
     else if(see == 0) {
-        return NEUTRALCAPTURE;
+        return NEUTRALCAPTURE_MIN;
     }
     else { // see < 0
         constexpr int SCORE_RANGE = NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN;

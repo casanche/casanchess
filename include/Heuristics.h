@@ -92,7 +92,61 @@ private:
     int m_maxValue;
 };
 
+//Loop over all elements of the history table, to perform operations
+#define LoopCaptureHistoryTable(stmt) \
+    for(COLOR color : {WHITE, BLACK}) { \
+        for(int piece = 0; piece < 6; piece++) { \
+            for (int to = 0; to < 64; to++) { \
+                stmt; \
+            } \
+        } \
+    }
+
+class CaptureHistoryHeuristics {
+public:
+    void Age() {
+        LoopCaptureHistoryTable(m_history[color][piece][to] /= 8);
+        m_maxValue /= 8;
+    }
+    void Clear() {
+        LoopCaptureHistoryTable(m_history[color][piece][to] = 0);
+        m_maxValue = 0;
+    }
+    void GoodHistory(const Move& move, COLOR color, int depth) {
+        m_history[color][PieceIndex(move)][move.ToSq()] += depth*depth;
+        TestOverflow(move, color);
+    }
+    void BadHistory(const Move& move, COLOR color, int depth) {
+        m_history[color][PieceIndex(move)][move.ToSq()] -= depth*depth;
+        TestOverflow(move, color);
+    }
+    int Get(const Move& move, COLOR color) const {
+        return m_history[color][PieceIndex(move)][move.ToSq()];
+    }
+    int MaxValue() const {
+        return m_maxValue;
+    }
+private:
+    int PieceIndex(const Move& move) const {
+        return move.PieceType() - 1;
+    }
+    void TestOverflow(const Move& move, COLOR activeColor) {
+        int value = m_history[activeColor][PieceIndex(move)][move.ToSq()];
+        if(value > m_maxValue) {
+            m_maxValue = value;
+        }
+        if(m_maxValue > VALUE_TO_RESET_HISTORY) {
+            LoopCaptureHistoryTable(m_history[color][piece][to] /= 16);
+            m_maxValue /= 16;
+        }
+    }
+
+    int m_history[2][6][64]; //[COLOR][PIECE][SQUARE]
+    int m_maxValue;
+};
+
 struct Heuristics {
     KillerHeuristics killer;
     HistoryHeuristics history;
+    CaptureHistoryHeuristics captureHistory;
 };
