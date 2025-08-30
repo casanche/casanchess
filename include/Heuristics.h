@@ -113,12 +113,10 @@ public:
         m_maxValue = 0;
     }
     void GoodHistory(const Move& move, COLOR color, int depth) {
-        m_history[color][PieceIndex(move)][move.ToSq()] += depth*depth;
-        TestOverflow(move, color);
-    }
-    void BadHistory(const Move& move, COLOR color, int depth) {
-        m_history[color][PieceIndex(move)][move.ToSq()] -= depth*depth;
-        TestOverflow(move, color);
+        int& historyValue = m_history[color][PieceIndex(move)][move.ToSq()];
+        int bonus = Bonus(depth);
+        historyValue += bonus - (bonus * historyValue) / MAX_HISTORY_VALUE; // Dumped update
+        UpdateMaxValue(historyValue);
     }
     int Get(const Move& move, COLOR color) const {
         return m_history[color][PieceIndex(move)][move.ToSq()];
@@ -127,19 +125,27 @@ public:
         return m_maxValue;
     }
 private:
+    int Bonus(int depth) const {
+        int bonus = 16 * depth;
+        return std::min(400, bonus);
+    }
     int PieceIndex(const Move& move) const {
         return move.PieceType() - 1;
     }
-    void TestOverflow(const Move& move, COLOR activeColor) {
-        int value = m_history[activeColor][PieceIndex(move)][move.ToSq()];
-        if(value > m_maxValue) {
-            m_maxValue = value;
-        }
-        if(m_maxValue > VALUE_TO_RESET_HISTORY) {
-            LoopCaptureHistoryTable(m_history[color][piece][to] /= 16);
-            m_maxValue /= 16;
-        }
+    void UpdateMaxValue(int historyValue) {
+        if(historyValue > m_maxValue)
+            m_maxValue = historyValue;
     }
+    // void TestOverflow(const Move& move, COLOR activeColor) {
+    //     int value = m_history[activeColor][PieceIndex(move)][move.ToSq()];
+    //     if(value > m_maxValue) {
+    //         m_maxValue = value;
+    //     }
+    //     // if(m_maxValue > VALUE_TO_RESET_HISTORY) {
+    //     //     LoopCaptureHistoryTable(m_history[color][piece][to] /= 16);
+    //     //     m_maxValue /= 16;
+    //     // }
+    // }
 
     int m_history[2][6][64]; //[COLOR][PIECE][SQUARE]
     int m_maxValue;
