@@ -64,8 +64,8 @@ namespace {
 
                     int captureHistoryScore = heuristics.captureHistory.Get(move, board.ActivePlayer());
                     int captureHistoryMax = heuristics.captureHistory.MaxValue();
-                    u8 scoreHist = Scorer::ScoreFromHistory_v2(Scorer::NEGATIVECAPTURE_MIN, Scorer::NEGATIVECAPTURE_MAX, captureHistoryScore, captureHistoryMax);
-                    
+                    u8 scoreHist = Scorer::ScoreFromHistory(Scorer::NEGATIVECAPTURE_MIN, Scorer::NEGATIVECAPTURE_MAX, captureHistoryScore, captureHistoryMax);
+
                     move.SetScore( std::max(scoreSEE, scoreHist) );
                 }
                 continue;

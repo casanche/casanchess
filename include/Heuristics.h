@@ -127,7 +127,7 @@ public:
 private:
     int Bonus(int depth) const {
         int bonus = 16 * depth;
-        return std::min(400, bonus);
+        return std::min(MAX_BONUS, bonus);
     }
     int PieceIndex(const Move& move) const {
         return move.PieceType() - 1;
@@ -136,16 +136,6 @@ private:
         if(historyValue > m_maxValue)
             m_maxValue = historyValue;
     }
-    // void TestOverflow(const Move& move, COLOR activeColor) {
-    //     int value = m_history[activeColor][PieceIndex(move)][move.ToSq()];
-    //     if(value > m_maxValue) {
-    //         m_maxValue = value;
-    //     }
-    //     // if(m_maxValue > VALUE_TO_RESET_HISTORY) {
-    //     //     LoopCaptureHistoryTable(m_history[color][piece][to] /= 16);
-    //     //     m_maxValue /= 16;
-    //     // }
-    // }
 
     int m_history[2][6][64]; //[COLOR][PIECE][SQUARE]
     int m_maxValue;
