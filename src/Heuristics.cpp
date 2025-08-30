@@ -60,7 +60,13 @@ namespace {
                     u8 score = Scorer::ScoreFromHistory(Scorer::NEUTRALCAPTURE_MIN, Scorer::NEUTRALCAPTURE_MAX, captureHistoryScore, captureHistoryMax);
                     move.SetScore(score);
                 } else {
-                    move.SetScore( Scorer::ScoreFromSEE(see) );
+                    u8 scoreSEE = Scorer::ScoreFromSEE(see);
+
+                    int captureHistoryScore = heuristics.captureHistory.Get(move, board.ActivePlayer());
+                    int captureHistoryMax = heuristics.captureHistory.MaxValue();
+                    u8 scoreHist = Scorer::ScoreFromHistory_v2(Scorer::NEGATIVECAPTURE_MIN, Scorer::NEGATIVECAPTURE_MAX, captureHistoryScore, captureHistoryMax);
+                    
+                    move.SetScore( std::max(scoreSEE, scoreHist) );
                 }
                 continue;
             }
