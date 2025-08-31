@@ -3,12 +3,15 @@
 #include "Move.h"
 #include "MoveGenerator.h"
 
+#include <bit>
+
 class Board;
 class TT;
 struct Heuristics;
 
 const int HEURISTICS_MAX_PLY = 128;
-const int VALUE_TO_RESET_HISTORY = INFINITE / 512;
+const int MAX_BONUS = 400;
+constexpr int MAX_HISTORY_VALUE = std::bit_floor( (uint)INFINITE / MAX_BONUS );
 
 namespace Sorting {
     void SortMoves(Board &board, MoveList &moves, TT& tt, const Heuristics &heuristics, int ply);
@@ -63,12 +66,10 @@ public:
         m_maxValue = 0;
     }
     void GoodHistory(const Move& move, COLOR color, int depth) {
-        m_history[color][move.FromSq()][move.ToSq()] += depth*depth;
-        TestOverflow(move, color);
-    }
-    void BadHistory(const Move& move, COLOR color, int depth) {
-        m_history[color][move.FromSq()][move.ToSq()] -= depth*depth;
-        TestOverflow(move, color);
+        int& historyValue = m_history[color][move.FromSq()][move.ToSq()];
+        int bonus = Bonus(depth);
+        historyValue += bonus - (bonus * historyValue) / MAX_HISTORY_VALUE; // Dumped update
+        UpdateMaxValue(historyValue);
     }
     int Get(const Move& move, COLOR color) const {
         return m_history[color][move.FromSq()][move.ToSq()];
@@ -77,18 +78,17 @@ public:
         return m_maxValue;
     }
 private:
-    void TestOverflow(const Move& move, COLOR activeColor) {
-        int value = m_history[activeColor][move.FromSq()][move.ToSq()];
-        if(value > m_maxValue) {
-            m_maxValue = value;
-        }
-        if(m_maxValue > VALUE_TO_RESET_HISTORY) {
-            LoopHistoryTable(m_history[color][from][to] /= 16);
-            m_maxValue /= 16;
+    int Bonus(int depth) const {
+        int bonus = depth * depth;
+        return std::min(MAX_BONUS, bonus);
+    }
+    void UpdateMaxValue(int historyValue) {
+        if(historyValue > m_maxValue) {
+            m_maxValue = historyValue;
         }
     }
 
-    int m_history[2][64][64]; //[COLOR][SQUARE][SQUARE]
+    int m_history[2][64][64]; //[COLOR][SQUARE_FROM][SQUARE_TO]
     int m_maxValue;
 };
 

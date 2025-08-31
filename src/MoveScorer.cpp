@@ -10,10 +10,13 @@ namespace Scorer {
     constexpr int TACTICAL_NEUTRALCAPTURE = (TACTICAL_MIN + TACTICAL_MAX) / 2; // Equivalent to SEE = 0 for tactical scores
 }
 
-u8 Scorer::ScoreFromHistory(int historyValue, int historyMax) {   
-    int historyScore = HISTORY_MIN + historyValue * (HISTORY_MAX-HISTORY_MIN) / (historyMax+1);
-    
-    assert(historyScore >= HISTORY_MIN && historyScore <= HISTORY_MAX);
+u8 Scorer::ScoreFromHistory(int minScore, int maxScore, int historyValue, int historyMax) {   
+    int scoreRange = maxScore - minScore;
+    int denominator = historyMax ? historyMax : 1;
+
+    int historyScore = minScore + historyValue * scoreRange / denominator;
+
+    assert(historyScore >= minScore && historyScore <= maxScore);
     return SafeCastU8(historyScore);
 }
 

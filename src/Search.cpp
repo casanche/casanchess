@@ -887,7 +887,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     const int MULT_FACTOR = 100; 
 
     // History moves
-    if(moveScore < 180) {
+    if(moveScore <= Scorer::HISTORY_MAX) {
         lmr_value = -50 - 200*(isPV)
             + (
                 - (20 * logScore)
