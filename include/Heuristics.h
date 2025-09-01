@@ -105,8 +105,8 @@ private:
 class CaptureHistoryHeuristics {
 public:
     void Age() {
-        LoopCaptureHistoryTable(m_history[color][piece][to] /= 8);
-        m_maxValue /= 8;
+        LoopCaptureHistoryTable(m_history[color][piece][to] /= 2);
+        m_maxValue /= 2;
     }
     void Clear() {
         LoopCaptureHistoryTable(m_history[color][piece][to] = 0);
