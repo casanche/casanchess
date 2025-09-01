@@ -13,11 +13,12 @@ namespace Scorer {
     // constexpr int NEUTRALCAPTURE = 240;
     constexpr int NEUTRALCAPTURE_MAX = 239;
     constexpr int NEUTRALCAPTURE_MIN = 231;
-    constexpr int KILLER_1 = 194;
-    constexpr int KILLER_2 = 193;
-    constexpr int KILLER_3 = 192;
-    constexpr int KILLER_4 = 191;
-    constexpr int NEGATIVECAPTURE_MAX = 189;
+    constexpr int KILLER_1 = 205;
+    constexpr int KILLER_2 = 204;
+    constexpr int KILLER_3 = 202;
+    constexpr int KILLER_4 = 201;
+    constexpr int NEGATIVECAPTURE_MAX = 198;
+    constexpr int NEGATIVECAPTURE_MIDDLE = 189;
     constexpr int NEGATIVECAPTURE_MIN = 181;
     constexpr int HISTORY_MAX = 180;
     constexpr int HISTORY_MIN = 1;

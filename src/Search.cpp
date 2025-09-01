@@ -572,7 +572,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinValue(alpha)
             && depth <= 4
             && eval + futilityMargin <= alpha
-            && ( move.Score() < 120 || (move.Score() >= 181 && move.Score() <= 188) )
+            && ( move.Score() < 120 || (move.Score() >= 181 && move.Score() <= 197) )
         ) {
             D( m_debug.Increment("NegaMax: Pruning: Futility") );
             D( m_debug.Increment("NegaMax: Pruning: Futility - Depth " + std::to_string(depth)) );
@@ -906,17 +906,17 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     }
 
     // Very bad captures
-    else if(moveScore >= 181 && moveScore <= 184) {
+    else if(moveScore >= 181 && moveScore <= 189) {
         lmr_value = 50 - 40*(isPV) + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
     }
 
     // Bad captures
-    else if(moveScore >= 185 && moveScore <= 189) {
+    else if(moveScore >= 190 && moveScore <= 197) {
         lmr_value = -85 + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
     }
 
     // Killers 2,3,4: less-promising killer moves in non-PV nodes
-    else if(moveScore >= 191 && moveScore <= 193 && !isPV) {
+    else if(moveScore >= 201 && moveScore <= 204 && !isPV) {
         lmr_value = -185 + ( (50*logDepth) + (165*logMoveNumber) ) / LOG_TABLE_SCALE;
     }
 

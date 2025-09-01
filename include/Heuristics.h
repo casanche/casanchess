@@ -126,7 +126,7 @@ public:
     }
 private:
     int Bonus(int depth) const {
-        int bonus = depth * depth;
+        int bonus = depth * depth + 16 * depth;
         return std::min(MAX_BONUS, bonus);
     }
     int PieceIndex(const Move& move) const {

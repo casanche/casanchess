@@ -34,12 +34,12 @@ u8 Scorer::ScoreFromSEE(int see) {
         return NEUTRALCAPTURE_MIN;
     }
     else { // see < 0
-        constexpr int SCORE_RANGE = NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN;
+        constexpr int SCORE_RANGE = NEGATIVECAPTURE_MIDDLE - NEGATIVECAPTURE_MIN;
 
         int normalized_see = std::clamp(see, -SEE_MAX, 0);
-        int score = NEGATIVECAPTURE_MAX + normalized_see * SCORE_RANGE / SEE_MAX;
+        int score = NEGATIVECAPTURE_MIDDLE + normalized_see * SCORE_RANGE / SEE_MAX;
         
-        assert(score >= NEGATIVECAPTURE_MIN && score <= NEGATIVECAPTURE_MAX);
+        assert(score >= NEGATIVECAPTURE_MIN && score <= NEGATIVECAPTURE_MIDDLE);
         return SafeCastU8(score);
     }
 }
