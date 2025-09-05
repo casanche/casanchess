@@ -564,19 +564,27 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             P("  NegamaxLoop, ply " << m_ply << " move: " << move.Notation());
 
         // ------- Futility pruning -------
-        // Prune quiet moves and bad captures if unlikely to raise alpha
-        const int futilityMargin = 0 + depth * 25;
-        if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinValue(alpha)
-            && depth <= 4
-            && eval + futilityMargin <= alpha
-            && ( move.Score() < 120 || (move.Score() >= 181 && move.Score() <= 188) )
-        ) {
-            D( m_debug.Increment("NegaMax: Pruning: Futility") );
-            D( m_debug.Increment("NegaMax: Pruning: Futility - Depth " + std::to_string(depth)) );
-            if(eval + futilityMargin > bestScore) {
-                bestScore = eval + futilityMargin;
+        const int historyFutilityMargin = 0 + depth * 20; // Quiet moves
+        const int captureFutilityMargin = 15 + depth * 17; // Bad Captures
+        if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinValue(alpha) && depth <= 4) {
+            // Quiet moves
+            if(move.Score() < 120 && eval + historyFutilityMargin <= alpha) {
+                D( m_debug.Increment("NegaMax: Pruning: Futility - History") );
+                D( m_debug.Increment("NegaMax: Pruning: Futility - History - Depth " + std::to_string(depth)) );
+                if(eval + historyFutilityMargin > bestScore) {
+                    bestScore = eval + historyFutilityMargin;
+                }
+                continue;
             }
-            continue;
+            // Bad Captures
+            if((move.Score() >= 181 && move.Score() <= 188) && eval + captureFutilityMargin <= alpha) {
+                D( m_debug.Increment("NegaMax: Pruning: Futility - BadCaptures") );
+                D( m_debug.Increment("NegaMax: Pruning: Futility - BadCaptures - Depth " + std::to_string(depth)) );
+                if(eval + captureFutilityMargin > bestScore) {
+                    bestScore = eval + captureFutilityMargin;
+                }
+                continue;
+            }
         }
 
         // ---- Pawn to 7th/8th extension -----
