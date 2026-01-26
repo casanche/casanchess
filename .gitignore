@@ -1,9 +1,12 @@
 build*
+docs/
 testing/
 versions/
 
+data/games
+data/syzygy*
+
 syzygy/
-data/syzygy/
 
 # OS-generated files
 .DS_Store
@@ -15,3 +18,6 @@ data/syzygy/
 *.rar
 *.tar
 *.zip
+
+# AI
+.github/copilot-instructions.md

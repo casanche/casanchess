@@ -6,11 +6,6 @@
 
 #include <iostream>
 
-// bool Syzygy::ProbeRoot(Board &board) {
-//     std::cout << "To be implemented." << std::endl;
-//     return false;
-// }
-
 unsigned int Syzygy::Init(const std::string& path) {
     tb_init( path.c_str() );
     if(TB_LARGEST)

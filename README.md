@@ -44,7 +44,6 @@ The following UCI options are available:
 * **``NNUE_Path``**: Path to the NNUE file.
 
 ## Future roadmap
-* Syzygy tablebases
 * Multi-thread implementation
 
 ## Special thanks
