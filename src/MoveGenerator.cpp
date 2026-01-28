@@ -1,3 +1,20 @@
+// MoveGenerator.cpp
+//
+// Legal move generation.
+//
+// Key concepts:
+//   - Pinned pieces: Pieces that cannot move freely because they block an attack on the king.
+//     Tracked via `pinnedPieces` bitboard and pin direction.
+//   - Check evasions: When in check, only specific moves are legal:
+//     - `captureMask`: Squares where capturing resolves the check (the checking piece)
+//     - `pushMask`: Squares where blocking resolves the check (between king and slider)
+//   - King danger squares: Squares attacked by enemy, where king cannot move.
+//
+// Three generation modes:
+//   - Legal: All legal moves (normal search)
+//   - Evasion: Only check evasions (when in check)
+//   - Tactical: Captures and promotions only (quiescence search)
+
 #include "MoveGenerator.h"
 
 #include "Attacks.h"

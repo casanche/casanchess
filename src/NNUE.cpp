@@ -1,3 +1,23 @@
+// NNUE.cpp
+//
+// NNUE (Efficiently Updatable Neural Network) evaluation.
+// A neural network that evaluates chess positions, optimized for incremental updates.
+//
+// Architecture: HalfKP variant
+//   Input:  32 king buckets × 64 squares × 5 piece types × 2 colors = 20480 features
+//   Hidden: 128 → 32 → 32 → 1
+//   Output: Position score in centipawns
+//
+// Key concepts:
+//   - King buckets: 32 partitions of king position for learning king-relative patterns
+//   - Accumulator: Cached first layer output, updated incrementally on piece moves
+//   - Perspective: Each side has its own accumulator (white/black view of the board)
+//   - SIMD: Uses AVX/SSE intrinsics for vectorized layer computation
+//
+// Efficiency: Only the first layer (largest) needs incremental updates.
+// On most moves, we add/remove a few features instead of recomputing 20480 inputs.
+// Full refresh only needed on king moves (bucket changes).
+
 #include "NNUE.h"
 #include "BitboardUtils.h"
 #include <immintrin.h>

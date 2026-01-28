@@ -143,9 +143,17 @@ void Board::ShowMoves() {
     P("size: " << moves.size());
 }
 
-//Static Exchange Evaluator
+// Static Exchange Evaluation (SEE)
+// Evaluates a capture sequence to determine if it wins or loses material.
+// Simulates all recaptures on the target square using least valuable attacker first.
+//
+// Example: White Pawn takes Black Knight, Black Pawn recaptures
+//   scores[0] = +300 (knight value)
+//   scores[1] = 100 - 300 = -200 (pawn value minus previous)
+//   Negamax: scores[0] = +200 (net: knight gained, pawn lost)
+//
+// Returns: Material gain/loss in centipawns (positive = good for side to move)
 int Board::SEE(Move move) {
-    //Retrieve info
     COLOR color = ActivePlayer();
     COLOR enemyColor = InactivePlayer();
     MoveData moveData = move.Data();
