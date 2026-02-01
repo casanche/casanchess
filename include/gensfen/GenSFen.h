@@ -15,7 +15,7 @@ class GenSFen {
 public:
     GenSFen();
 
-    void Run(const std::string& gensfen_mode, int concurrency);
+    void Run(const std::string& gensfen_mode, int concurrency, int depth = 7);
     
 private:
     void Games(std::string filename);
@@ -32,4 +32,5 @@ private:
     Move RandomMove(Board& board);
 
     Utils::PRNG m_rng;
+    int m_depth = 7;
 };
