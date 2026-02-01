@@ -1,20 +1,8 @@
 #include "Fen.h"
 #include "Board.h"
-#include "Utils.h"
 
 #include <cassert>
 #include <sstream>
-
-namespace {
-    const Bitboard LIGHT_SQUARES = 0x55AA55AA55AA55AA;
-    const Bitboard DARK_SQUARES = 0xAA55AA55AA55AA55;
-
-    bool RedundantBishop(Board& board, COLOR c, Bitboard newBishop) {
-        Bitboard oldBishop = board.Piece(c, BISHOP);
-        return ((oldBishop & LIGHT_SQUARES) && (newBishop & LIGHT_SQUARES)) 
-            || ((oldBishop & DARK_SQUARES) && (newBishop & DARK_SQUARES));
-    }
-}
 
 void Fen::SetPosition(Board& board, std::string fenString) {
     board.ClearBits();
@@ -90,92 +78,6 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     }
 
     board.InitStateAndHistory();
-}
-
-//Sets the board with a random fen string
-//Returns the sfen
-std::string Fen::SetRandomPosition(Board& board) {
-    board.ClearBits();
-
-    Utils::PRNG rng;
-
-    const int pieceMax[8] = {0, 8, 2, 2, 2, 1, 1, 0};
-
-    auto CheckIsValid = [&] (COLOR c, int p, Bitboard bb) {
-        // Not occupied
-        if(bb & board.m_allpieces)
-            return false;
-        int square = BitscanForward(bb);
-        // Pawn not in ranks 1-8
-        if(p == PAWN && (Rank(square) == RANK1 || Rank(square) == RANK8))
-            return false;
-        // Only one pawn allowed in 7th rank --> convenient
-        if(p == PAWN
-            && RelativeRank(c, square) == RANK7
-            && PopCount( board.Piece(c,PAWN) & RelativeMaskRank(c, RANK7) ) == 1
-        )
-            return false;
-        // At most, 2 pawns in same file
-        if(p == PAWN && PopCount( board.Piece(c,PAWN) & MaskFile[File(square)] ) == 2)
-            return false;
-        // Only one bishop per square type
-        if(p == BISHOP && RedundantBishop(board, c, bb))
-            return false;
-        int nHeavyPieces = PopCount(board.m_allpieces ^ board.Piece(c, PAWN) ^ board.Piece((COLOR)!c, PAWN));
-        // Heavy pieces [9-12]: middlegame: king allowed in ranks 1-4
-        if(p == KING && nHeavyPieces >= 9 && nHeavyPieces <= 12 && RelativeRank(c, square) > RANK4)
-            return false;
-        // Heavy pieces [13-14]: earlygame: king allowed in ranks 1-2
-        if(p == KING && nHeavyPieces >= 13 && RelativeRank(c, square) > RANK2)
-            return false;
-        // Try to make the position as quiet as possible
-        // TODO: check this condition (?)
-        // if(p != PAWN && board.AttackersTo(c, square))
-            // return false;
-
-        return true;
-    };
-
-    do {
-        board.ClearBits();
-
-        for(int c = WHITE; c <= BLACK; c++) {
-            for(int p = PAWN; p <= KING; p++) {
-
-            const int max = (p == KING) ? 1 : rng.Random(0, pieceMax[p]);
-
-            for(int m = 1; m <= max; m++) {
-                Bitboard randomSquareBB;
-                bool isValid;
-                int tries = 0;
-                do {
-                    tries++;
-                    int random = rng.Random(1,3);
-                    int randomSquare;
-                    if(random == 3) // 1/3 of cases, white piece on the upper board
-                        randomSquare = (c == WHITE) ? rng.Random(32, 63) : rng.Random(0, 31);
-                    else // 2/3 of cases, white piece on the lower board
-                        randomSquare = (c == WHITE) ? rng.Random(0, 31) : rng.Random(32, 63);
-                    randomSquareBB = SquareBB(randomSquare);
-                    isValid = CheckIsValid((COLOR)c, p, randomSquareBB);
-                } while(!isValid && tries < 100);
-                if(tries >= 100)
-                    continue;
-                board.m_pieces[c][p] |= randomSquareBB;
-                board.m_allpieces |= randomSquareBB;
-            }
-
-            } //p
-        } //c
-
-    } while(board.IsCheckAnyColor() || !board.GetPieces(WHITE, KING) || !board.GetPieces(BLACK, KING));
-
-    int random = rng.Random(0, 1);
-    board.m_activePlayer = random ? WHITE : BLACK;
-
-    board.InitStateAndHistory();
-
-    return GetSimplifiedFen(board);
 }
 
 //Fen with only the piece positions (without side-to-move, castling rights...)

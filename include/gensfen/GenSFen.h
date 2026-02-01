@@ -3,6 +3,7 @@
 #include "Board.h"
 #include "Search.h"
 #include "Utils.h"
+#include "gensfen/RandomPosition.h"
 
 #include <fstream>
 #include <string>
@@ -33,5 +34,6 @@ private:
     Move RandomMove(Board& board);
 
     Utils::PRNG m_rng;
+    RandomPositionGenerator m_positionGenerator;
     int m_depth = 7;
 };

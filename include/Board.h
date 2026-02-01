@@ -39,7 +39,6 @@ public:
 
     // Fen
     void SetFen(std::string fenString) { Fen::SetPosition(*this, fenString); }
-    std::string SetFenRandom() { return Fen::SetRandomPosition(*this); }
     std::string GetSimplifiedFen() const { return Fen::GetSimplifiedFen(*this); }
 
     // MoveMaker
@@ -116,4 +115,5 @@ private:
 
     friend class Fen;
     friend class MoveMaker;
+    friend class RandomPositionGenerator;
 };
