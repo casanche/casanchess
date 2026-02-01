@@ -35,9 +35,9 @@ private:
 
     //Current state
     Bitboard* m_pieces[2];
-    float     m_accumulator[2][NNUE_SIZE];
+    alignas(32) float m_accumulator[2][NNUE_SIZE];
     //Backups
-    float     m_backupAccumulator[MAX_PLY_HISTORY][2][NNUE_SIZE];
+    alignas(32) float m_backupAccumulator[MAX_PLY_HISTORY][2][NNUE_SIZE];
 
     bool m_isLoaded;
     std::string m_filepath;
@@ -61,7 +61,7 @@ constexpr uint ARCH_DIMENSIONS[NNUE_LAYERS][PARAMETER_TYPES] = {
     {ARCH[L4][ROW] * ARCH[L4][COL], ARCH[L4][COL]},
 };
 
-struct Network {
+struct alignas(32) Network {
     float w1[ ARCH_DIMENSIONS[L1][W] ];
     float b1[ ARCH_DIMENSIONS[L1][B] ];
     float w2[ ARCH_DIMENSIONS[L2][W] ];

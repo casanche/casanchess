@@ -93,7 +93,7 @@ Utils::Clock clock_eval;
 
 int NNUE::Evaluate(int color) {
     //Layer 1
-    float o1[ ARCH[L2][ROW] ];
+    alignas(32) float o1[ ARCH[L2][ROW] ];
     for(uint i = 0; i < NNUE_SIZE; i++) {
         o1[i            ] = Clamp(m_accumulator[color][i]);
     }
@@ -102,8 +102,8 @@ int NNUE::Evaluate(int color) {
     }
 
     //Layers 2,3,4
-    float o2[ ARCH[L3][ROW] ];
-    float o3[ ARCH[L4][ROW] ];
+    alignas(32) float o2[ ARCH[L3][ROW] ];
+    alignas(32) float o3[ ARCH[L4][ROW] ];
     float o4[1];
 
     ComputeLayer(o1, o2, m_network.b2, m_network.w2, ARCH[L2][ROW], ARCH[L2][COL], true);
