@@ -1,3 +1,14 @@
+// Evaluation.cpp
+//
+// Position evaluation. Returns a score in centipawns from the side to move's perspective.
+//
+// Primary: NNUE neural network (see NNUE.cpp)
+// Fallback: Classical hand-tuned evaluation (legacy, enabled via UCI option ClassicalEval)
+//
+// Classical evaluation uses tapered scoring: interpolates between middlegame and endgame
+// values based on remaining material. Terms: material, piece-square tables, mobility,
+// pawn structure, king safety.
+
 #include "Evaluation.h"
 using namespace Evaluation;
 

@@ -375,7 +375,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     //---------- Mate distance pruning -------------
     // Prevents the search from reporting mates that are too far away
-    // TODO: should be different for PV nodes?
     alpha = std::max(alpha, -MATESCORE_MAX + m_ply);
     beta = std::min(beta, +MATESCORE_MAX - m_ply - 1);
     if(alpha >= beta) {
@@ -394,7 +393,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Quiescence search -----------
     // Activated at leaf nodes
-    // TODO: verify the condition !inCheck
     if(depth <= 0 && !inCheck) {
         return QuiescenceSearch(board, alpha, beta);
     }
@@ -578,12 +576,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             }
             continue;
         }
-
-        // ---- Pawn to 7th/8th extension -----
-        // if(move.PieceType() == PAWN
-        //     && RelativeRank(board.ActivePlayer(), move.ToSq()) >= RANK7
-        // )
-        //     extension++;
 
         // ----- Recapture extension ------
         // Extend if the move is a recapture of the same piece type

@@ -192,6 +192,8 @@ if(BUILD_TESTS)
     add_executable(tests
         tests/test-Main.cpp
         tests/test-Board.cpp
+        tests/test-Evaluation.cpp
+        tests/test-Hash.cpp
         tests/test-Misc.cpp
         tests/test-Utils.cpp
         tests/test-ZobristKey.cpp
