@@ -11,7 +11,6 @@
 
 const std::string OUTPUT_PATH = "../dev/nnue/sfen/latest/";
 const std::string BOOK_FILE = "../dev/books/lichess_4moves.epd";
-const int DEPTH = 7;
 const int TACTICAL_THRESHOLD = 120;
 const int MAX_NPIECES = 10;
 
@@ -48,7 +47,8 @@ GenSFen::GenSFen() : m_rng(0) {
 }
 
 // Supported modes: 'games', 'random', 'benchmark'
-void GenSFen::Run(const std::string& gensfen_mode, int concurrency) {
+void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth) {
+    m_depth = depth;
     std::vector<std::thread> threads;
 
     if(!concurrency)
@@ -150,7 +150,7 @@ void GenSFen::Random(std::string filename) {
 
     Board board;
     Search search;
-    search.FixDepth(DEPTH);
+    search.FixDepth(m_depth);
     State state;
 
     const int maxGames = INFINITE;
@@ -212,7 +212,7 @@ void GenSFen::RandomBenchmark(int maxGames) {
 
     Board board;
     Search search;
-    search.FixDepth(DEPTH);
+    search.FixDepth(m_depth);
 
     for(int n_game = 1; n_game <= maxGames; n_game++) {
         clock.Start();
@@ -307,9 +307,9 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
 // - Best move is quiet at low depths (to skip trivial captures)
 // - Evaluation conditions: At least one color has [-200,200]. Both colors have [-800,800].
 bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition, int thresholdEval, int thresholdEvalBoth, int tacticalThreshold, uint minPly) {  
-    search.FixDepth(DEPTH-2);
+    search.FixDepth(m_depth-2);
     search.IterativeDeepening(board);
-    currentPosition.calculatedDepth = DEPTH-2;
+    currentPosition.calculatedDepth = m_depth-2;
     currentPosition.bestMove = search.BestMove();
     int eval = Evaluation::Evaluate(board);
     
@@ -319,9 +319,9 @@ bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     )
         return false;
 
-    search.FixDepth(DEPTH);
+    search.FixDepth(m_depth);
     search.IterativeDeepening(board);
-    currentPosition.calculatedDepth = DEPTH;
+    currentPosition.calculatedDepth = m_depth;
     currentPosition.bestMove = search.BestMove();
 
     int score[2]; //COLOR
@@ -338,7 +338,7 @@ bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     }
 
     // Low depth. Check that move is quiet.
-    search.FixDepth(DEPTH-2);
+    search.FixDepth(m_depth-2);
     search.IterativeDeepening(board);
     eval = Evaluation::Evaluate(board);
     if( (search.BestScore() - eval) > tacticalThreshold
@@ -349,7 +349,7 @@ bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     }
 
     // Normal depth
-    search.FixDepth(DEPTH);
+    search.FixDepth(m_depth);
     search.IterativeDeepening(board);
     score[1-color] = search.BestScore();
 
