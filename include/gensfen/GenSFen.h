@@ -23,6 +23,7 @@ private:
     void RandomBenchmark(int maxGames);
 
     int GenerateRandomPosition(Board& board, std::string& position);
+    bool ValidateRandomPosition(Board& board, Search& search, int scoreFilter);
     bool WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition,
                     int thresholdEval, int thresholdEvalBoth, int tacticalThreshold, uint minPly = 0);
 
