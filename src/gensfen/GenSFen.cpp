@@ -254,6 +254,44 @@ void GenSFen::RandomBenchmark(int maxGames) {
         << " search time " << sum_time_search);
 }
 
+bool GenSFen::ValidateRandomPosition(Board& board, Search& search, int scoreFilter) {
+    // Quick filters
+    int nPieces = PopCount(board.AllPieces());
+    if(NoMoves(board) || board.IsCheck() || nPieces <= MAX_NPIECES)
+        return false;
+
+    // Active side: score and tactical check
+    search.IterativeDeepening(board, false);
+    int activeScore = search.BestScore();
+    if(abs(activeScore) > scoreFilter)
+        return false;
+    
+    int activeEval = Evaluation::Evaluate(board);
+    if(abs(activeScore - activeEval) > TACTICAL_THRESHOLD)
+        return false;
+
+    // Inactive side: validate after null move
+    board.MakeNull();
+    
+    bool valid = true;
+    if(NoMoves(board) || board.IsCheck()) {
+        valid = false;
+    } else {
+        search.IterativeDeepening(board, false);
+        int inactiveScore = search.BestScore();
+        if(abs(inactiveScore) > scoreFilter) {
+            valid = false;
+        } else {
+            int inactiveEval = Evaluation::Evaluate(board);
+            if(abs(inactiveScore - inactiveEval) > TACTICAL_THRESHOLD)
+                valid = false;
+        }
+    }
+    
+    board.TakeNull();  // Always restore board state
+    return valid;
+}
+
 int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
     const int SCORE_FILTER = 250;
     const int VALIDATION_DEPTH = 4;
@@ -262,41 +300,12 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
     validationSearch.FixDepth(VALIDATION_DEPTH);
 
     int tries = 0;
-
     while(true) {
         tries++;
-
-        // 1.Generate
         position = board.SetFenRandom();
-
-        // 2.Quick filters
-        int nPieces = PopCount(board.AllPieces());
-        if(NoMoves(board) || board.IsCheck() || nPieces <= MAX_NPIECES)
-            continue;
-
-        // 3.Eval filters
-        validationSearch.IterativeDeepening(board, false);
-        int activeScore = validationSearch.BestScore();
-        if(abs(activeScore) > SCORE_FILTER)
-            continue;
-        int activeEval = Evaluation::Evaluate(board);
-        if(abs(activeScore - activeEval) > TACTICAL_THRESHOLD)
-            continue;
-
-        // 4.Reverse position
-        board.MakeNull();
-        if(NoMoves(board) || board.IsCheck())
-            continue;
-        validationSearch.IterativeDeepening(board, false);
-        int inactiveScore = validationSearch.BestScore();
-        if(abs(inactiveScore) > SCORE_FILTER)
-            continue;
-        int inactiveEval = Evaluation::Evaluate(board);
-        if(abs(inactiveScore - inactiveEval) > TACTICAL_THRESHOLD)
-            continue;
-        board.TakeNull();
-
-        break;
+        
+        if(ValidateRandomPosition(board, validationSearch, SCORE_FILTER))
+            break;
     }
 
     return tries;
