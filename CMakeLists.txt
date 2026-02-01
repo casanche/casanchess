@@ -223,6 +223,7 @@ if(BUILD_EXECUTABLES_EXTRA)
     # GenSFen executable
     add_executable(gensfen
         src/gensfen/GenSFen.cpp
+        src/gensfen/RandomPosition.cpp
         src/gensfen/Main.cpp
     )
     target_compile_options(gensfen PRIVATE ${COMPILER_OPTIONS})

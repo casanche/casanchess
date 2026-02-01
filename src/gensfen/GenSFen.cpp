@@ -302,7 +302,7 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
     int tries = 0;
     while(true) {
         tries++;
-        position = board.SetFenRandom();
+        position = m_positionGenerator.Generate(board);
         
         if(ValidateRandomPosition(board, validationSearch, SCORE_FILTER))
             break;
