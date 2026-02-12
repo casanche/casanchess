@@ -31,18 +31,20 @@ struct State {
         consecutiveFailedEvals = 0;
     }
     void UpdateGame(bool passed, bool failed) {
-        assert(passed != failed);
+        assert(!(passed && failed));
         gameWrittenEvals += passed;
-        if(passed)
+        if(passed) {
             consecutiveFailedEvals = 0;
-        consecutiveFailedEvals += failed;
+        } else if(failed) {
+            consecutiveFailedEvals++;
+        }
     }
     void FinishGame() {
         totalWrittenEvals += gameWrittenEvals;
     }
 };
 
-GenSFen::GenSFen(GenSFenConfig config) : m_rng(0), m_config(std::move(config)) {
+GenSFen::GenSFen(GenSFenConfig config) : m_config(std::move(config)) {
     UCI_OUTPUT = false;
 }
 
@@ -115,10 +117,11 @@ void GenSFen::Games(std::string filename) {
     Board board;
     Search search;
     State state;
+    Utils::PRNG rng;
 
     for(int n_game = 0; n_game < maxGames; n_game++) {
         //New starting position
-        uint32_t randomIndex = m_rng.Random(0, static_cast<uint32_t>(bookPositions.size())-1);
+        uint32_t randomIndex = rng.Random(0, static_cast<uint32_t>(bookPositions.size())-1);
         std::string position = bookPositions[randomIndex];
         board.SetFen(position);
 
@@ -138,7 +141,7 @@ void GenSFen::Games(std::string filename) {
                 SCORE_THRESHOLD_BOTH,
                 TACTICAL_THRESHOLD, 4);
 
-            Move nextMove = DoRandomMove(board) ? RandomMove(board) : currentPosition.bestMove;
+            Move nextMove = DoRandomMove(board, rng) ? RandomMove(board) : currentPosition.bestMove;
             board.MakeMove(nextMove);
 
             state.UpdateGame(currentPosition.scorePass, currentPosition.scoreFail);
@@ -179,11 +182,12 @@ void GenSFen::Random(std::string filename) {
     Search search;
     search.FixDepth(m_depth);
     State state;
+    RandomPositionGenerator positionGenerator;
 
     const int maxGames = INFINITE;
     for(int n_game = 0; n_game < maxGames; n_game++) {
         std::string position;
-        GenerateRandomPosition(board, position);
+        GenerateRandomPosition(board, position, positionGenerator);
 
         //To avoid overlap in standard output due to multiple threads
         std::stringstream ss;
@@ -240,11 +244,12 @@ void GenSFen::RandomBenchmark(int maxGames) {
     Board board;
     Search search;
     search.FixDepth(m_depth);
+    RandomPositionGenerator positionGenerator;
 
     for(int n_game = 1; n_game <= maxGames; n_game++) {
         clock.Start();
         std::string position;
-        int tries = GenerateRandomPosition(board, position);
+        int tries = GenerateRandomPosition(board, position, positionGenerator);
         time_choose = clock.Elapsed();
         sum_time_choose += time_choose;
 
@@ -319,7 +324,7 @@ bool GenSFen::ValidateRandomPosition(Board& board, Search& search, int scoreFilt
     return valid;
 }
 
-int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
+int GenSFen::GenerateRandomPosition(Board& board, std::string& position, RandomPositionGenerator& positionGenerator) {
     const int SCORE_FILTER = 250;
     const int VALIDATION_DEPTH = 4;
 
@@ -329,7 +334,7 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
     int tries = 0;
     while(true) {
         tries++;
-        position = m_positionGenerator.Generate(board);
+        position = positionGenerator.Generate(board);
         
         if(ValidateRandomPosition(board, validationSearch, SCORE_FILTER))
             break;
@@ -408,14 +413,14 @@ bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
 }
 
 // Choose if the next move will be 'random' or ' best'
-bool GenSFen::DoRandomMove(Board& board) {
+bool GenSFen::DoRandomMove(Board& board, Utils::PRNG& rng) {
     if(board.Ply() > 22 || board.IsCheck())
         return false;
 
     // Ply [minPly, 11]: 33% random
     // Ply [12, 22]: 20% random
     uint perc = board.Ply() <= 11 ? 33 : 20;
-    return (m_rng.Random(0,100) < perc);
+    return (rng.Random(0,100) < perc);
 }
 
 bool GenSFen::NoMoves(Board& board) {
