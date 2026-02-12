@@ -12,9 +12,14 @@
 using BookPositions = std::vector<std::string>;
 struct CurrentPosition;
 
+struct GenSFenConfig {
+    std::string outputDir;
+    std::string bookFile;
+};
+
 class GenSFen {
 public:
-    GenSFen();
+    explicit GenSFen(GenSFenConfig config);
 
     void Run(const std::string& gensfen_mode, int concurrency, int depth = 7);
     

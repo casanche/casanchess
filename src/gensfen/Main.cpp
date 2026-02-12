@@ -7,11 +7,93 @@
 #include "Uci.h"
 #include "ZobristKeys.h"
 
+#include <cstdlib>
 #include <iostream>
-#include <span>
 #include <string_view>
 
+namespace {
+
+struct CliArgs {
+    std::string mode;
+    int concurrency = 0;
+    int depth = 7;
+    std::string outputDir;
+    std::string bookFile;
+    bool showHelp = false;
+};
+
+void PrintUsage(std::ostream& os = std::cout) {
+    os << "Usage: gensfen -m <games|random|benchmark> [-c threads] [-d depth]"
+       << " [-o output_dir] [-b book_file]" << std::endl;
+}
+
+bool ParseArgs(int argc, char** argv, CliArgs& argsOut) {
+    for(int i = 1; i < argc; ++i) {
+        std::string_view arg = argv[i];
+
+        if(arg == "-m" && i + 1 < argc) {
+            argsOut.mode = argv[++i];
+        } else if(arg == "-c" && i + 1 < argc) {
+            argsOut.concurrency = std::atoi(argv[++i]);
+        } else if(arg == "-d" && i + 1 < argc) {
+            argsOut.depth = std::atoi(argv[++i]);
+        } else if((arg == "-o" || arg == "--output-dir") && i + 1 < argc) {
+            argsOut.outputDir = argv[++i];
+        } else if((arg == "-b" || arg == "--book-file") && i + 1 < argc) {
+            argsOut.bookFile = argv[++i];
+        } else if(arg == "-h" || arg == "--help") {
+            argsOut.showHelp = true;
+        } else {
+            std::cerr << "Error: unknown argument: " << arg << std::endl;
+            PrintUsage(std::cerr);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool ModifyArgs(CliArgs& args) {
+    if(args.mode.empty()) {
+        std::cerr << "Error: missing required mode (-m)." << std::endl;
+        PrintUsage(std::cerr);
+        return false;
+    }
+
+    if(args.outputDir.empty()) {
+        if(const char* env = std::getenv("CASANCHESS_GENSFEN_OUTPUT_DIR"))
+            args.outputDir = env;
+        else
+            args.outputDir = "gensfen-output";
+    }
+    if(args.bookFile.empty()) {
+        if(const char* env = std::getenv("CASANCHESS_GENSFEN_BOOK_FILE"))
+            args.bookFile = env;
+    }
+
+    if(args.mode == "games" && args.bookFile.empty()) {
+        std::cerr << "Error: games mode requires a book file. "
+                  << "Use -b/--book-file or CASANCHESS_GENSFEN_BOOK_FILE." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+} // namespace
+
 int main(int argc, char** argv) {
+    CliArgs args;
+    if(!ParseArgs(argc, argv, args))
+        return 1;
+    if(args.showHelp) {
+        PrintUsage();
+        return 0;
+    }
+
+    if(!ModifyArgs(args))
+        return 1;
+
     Attacks::Init();
     Evaluation::Init(); //after Attacks
     Syzygy::Init(Syzygy::DEFAULT_PATH);
@@ -20,30 +102,12 @@ int main(int argc, char** argv) {
 
     UCI_CLASSICAL_EVAL = false;
 
-    std::string mode;
-    int concurrency = 0;
-    int depth = 7;
+    GenSFenConfig config;
+    config.outputDir = args.outputDir;
+    config.bookFile = args.bookFile;
 
-    // m: mode ['games', 'random', 'benchmark']
-    // c: concurrency
-    // d: search depth (default: 7)
-    std::span<char*> args(argv, argc);
-    for (size_t i = 1; i < args.size(); ++i) {
-        std::string_view arg = args[i];
-        if (arg == "-m" && i + 1 < args.size()) {
-            mode = args[i + 1];
-            ++i;
-        } else if (arg == "-c" && i + 1 < args.size()) {
-            concurrency = std::atoi(args[i + 1]);
-            ++i;
-        } else if (arg == "-d" && i + 1 < args.size()) {
-            depth = std::atoi(args[i + 1]);
-            ++i;
-        }
-    }
-
-    GenSFen gensfen;
-    gensfen.Run(mode, concurrency, depth);
+    GenSFen gensfen(config);
+    gensfen.Run(args.mode, args.concurrency, args.depth);
 
     Syzygy::Free();
 
