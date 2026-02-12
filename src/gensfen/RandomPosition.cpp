@@ -52,9 +52,9 @@ std::string RandomPositionGenerator::Generate(Board& board, const RandomPosition
             }
         }
         
-    } while (board.IsCheckAnyColor() 
-             || !board.GetPieces(WHITE, KING) 
-             || !board.GetPieces(BLACK, KING));
+    } while (!board.GetPieces(WHITE, KING)
+             || !board.GetPieces(BLACK, KING)
+             || board.IsCheckAnyColor());
 
     // Random side to move
     board.m_activePlayer = m_rng.Random(0, 1) ? WHITE : BLACK;
