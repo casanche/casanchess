@@ -12,9 +12,14 @@
 typedef std::vector<std::string> BookPositions;
 struct CurrentPosition;
 
+struct GenSFenConfig {
+    std::string outputDir;
+    std::string bookFile;
+};
+
 class GenSFen {
 public:
-    GenSFen();
+    explicit GenSFen(GenSFenConfig config);
 
     void Run(const std::string& gensfen_mode, int concurrency, int depth = 7);
     
@@ -36,4 +41,5 @@ private:
     Utils::PRNG m_rng;
     RandomPositionGenerator m_positionGenerator;
     int m_depth = 7;
+    GenSFenConfig m_config;
 };

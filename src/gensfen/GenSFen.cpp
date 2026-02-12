@@ -6,11 +6,11 @@
 #include "MoveGenerator.h"
 #include "Uci.h"
 
+#include <filesystem>
 #include <sstream>
 #include <thread>
+#include <utility>
 
-const std::string OUTPUT_PATH = "../dev/nnue/sfen/latest/";
-const std::string BOOK_FILE = "../dev/books/lichess_4moves.epd";
 const int TACTICAL_THRESHOLD = 120;
 const int MAX_NPIECES = 10;
 
@@ -42,7 +42,7 @@ struct State {
     }
 };
 
-GenSFen::GenSFen() : m_rng(0) {
+GenSFen::GenSFen(GenSFenConfig config) : m_rng(0), m_config(std::move(config)) {
     UCI_OUTPUT = false;
 }
 
@@ -70,8 +70,19 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth) {
         return;
     }
 
+    std::error_code ec;
+    std::filesystem::create_directories(m_config.outputDir, ec);
+    if(ec) {
+        std::cerr << "Error: Cannot create output directory '" << m_config.outputDir
+                  << "': " << ec.message() << std::endl;
+        return;
+    }
+
     for(int i = 1; i <= concurrency; i++) {
-        std::string filename = OUTPUT_PATH + "evals_generated_" + gensfen_mode + "_" + std::to_string(i) + ".epd";
+        std::string filename =
+            (std::filesystem::path(m_config.outputDir) /
+             ("evals_generated_" + gensfen_mode + "_" + std::to_string(i) + ".epd"))
+                .string();
         threads.push_back( std::thread(function, this, filename) );
     }
     for(auto& th : threads) {
@@ -86,8 +97,20 @@ void GenSFen::Games(std::string filename) {
 
     std::ofstream outputFile;
     outputFile.open(filename);
+    if(!outputFile.is_open()) {
+        std::cerr << "Error: Cannot open output file: " << filename << std::endl;
+        return;
+    }
 
-    BookPositions bookPositions = ReadBook(BOOK_FILE);
+    if(m_config.bookFile.empty()) {
+        std::cerr << "Error: Book file not configured." << std::endl;
+        return;
+    }
+    BookPositions bookPositions = ReadBook(m_config.bookFile);
+    if(bookPositions.empty()) {
+        std::cerr << "Error: Book file is empty or unreadable: " << m_config.bookFile << std::endl;
+        return;
+    }
 
     Board board;
     Search search;
@@ -147,6 +170,10 @@ void GenSFen::Random(std::string filename) {
 
     std::ofstream outputFile;
     outputFile.open(filename);
+    if(!outputFile.is_open()) {
+        std::cerr << "Error: Cannot open output file: " << filename << std::endl;
+        return;
+    }
 
     Board board;
     Search search;
