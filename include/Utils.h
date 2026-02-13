@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <random>
 
 namespace Utils {
@@ -8,7 +9,7 @@ namespace Utils {
     //Pseudo-Random Number Generator
     class PRNG {
     public:
-        PRNG(int seed = 0);
+        PRNG(uint64_t seed = 0);
         uint32_t Random(uint32_t min, uint32_t max);
     private:
         std::random_device m_device;

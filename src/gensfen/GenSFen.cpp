@@ -6,7 +6,9 @@
 #include "MoveGenerator.h"
 #include "Uci.h"
 
+#include <ctime>
 #include <filesystem>
+#include <iomanip>
 #include <sstream>
 #include <thread>
 #include <utility>
@@ -44,30 +46,34 @@ struct State {
     }
 };
 
+std::string CurrentTimestampUtc() {
+    std::time_t now = std::time(nullptr);
+    std::tm* utc = std::gmtime(&now);
+    if(!utc)
+        return "unknown";
+
+    std::ostringstream oss;
+    oss << std::put_time(utc, "%Y-%m-%dT%H:%M:%SZ");
+    return oss.str();
+}
+
 GenSFen::GenSFen(GenSFenConfig config) : m_config(std::move(config)) {
     UCI_OUTPUT = false;
 }
 
 // Supported modes: 'games', 'random', 'benchmark'
-void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth) {
+void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth, int maxGames) {
     m_depth = depth;
+    m_maxGames = maxGames > 0 ? maxGames : INFINITE;
     std::vector<std::thread> threads;
 
     if(!concurrency)
         concurrency = std::thread::hardware_concurrency() - 1;
     std::cout << "Concurrency set to: " << std::to_string(concurrency) << std::endl;
+    if(m_config.seed)
+        std::cout << "Seed base: " << m_config.seed << std::endl;
 
-    if(gensfen_mode == "benchmark") {
-        RandomBenchmark(100);
-        return;
-    }
-
-    void (GenSFen::*function)(std::string);
-    if(gensfen_mode == "games")
-        function = &GenSFen::Games;
-    else if(gensfen_mode == "random")
-        function = &GenSFen::Random;
-    else {
+    if(gensfen_mode != "games" && gensfen_mode != "random" && gensfen_mode != "benchmark") {
         std::cout << "GenSFen mode '" << gensfen_mode << "' not supported." << std::endl;
         return;
     }
@@ -80,20 +86,37 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth) {
         return;
     }
 
-    for(int i = 1; i <= concurrency; i++) {
+    if(!WriteRunMetadata(gensfen_mode, concurrency, maxGames)) {
+        std::cerr << "Error: Cannot write run metadata in output directory '"
+                  << m_config.outputDir << "'." << std::endl;
+        return;
+    }
+
+    if(gensfen_mode == "benchmark") {
+        RandomBenchmark(maxGames > 0 ? maxGames : 100);
+        return;
+    }
+
+    void (GenSFen::*function)(std::string, int);
+    if(gensfen_mode == "games")
+        function = &GenSFen::Games;
+    else
+        function = &GenSFen::Random;
+
+    for(int i = 0; i < concurrency; i++) {
+        int fileIndex = i + 1;
         std::string filename =
             (std::filesystem::path(m_config.outputDir) /
-             ("evals_generated_" + gensfen_mode + "_" + std::to_string(i) + ".epd"))
+             ("evals_generated_" + gensfen_mode + "_" + std::to_string(fileIndex) + ".epd"))
                 .string();
-        threads.push_back( std::thread(function, this, filename) );
+        threads.push_back( std::thread(function, this, filename, i) );
     }
     for(auto& th : threads) {
         th.join();
     }
 }
 
-void GenSFen::Games(std::string filename) {
-    constexpr int maxGames = INFINITE;
+void GenSFen::Games(std::string filename, int threadIndex) {
     constexpr int SCORE_THRESHOLD_SINGLE = 125;
     constexpr int SCORE_THRESHOLD_BOTH = 4 * SCORE_THRESHOLD_SINGLE;
 
@@ -117,9 +140,10 @@ void GenSFen::Games(std::string filename) {
     Board board;
     Search search;
     State state;
-    Utils::PRNG rng;
+    uint64_t threadSeed = SeedForThread(threadIndex);
+    Utils::PRNG rng(threadSeed);
 
-    for(int n_game = 0; n_game < maxGames; n_game++) {
+    for(int n_game = 0; n_game < m_maxGames; n_game++) {
         //New starting position
         uint32_t randomIndex = rng.Random(0, static_cast<uint32_t>(bookPositions.size())-1);
         std::string position = bookPositions[randomIndex];
@@ -141,7 +165,7 @@ void GenSFen::Games(std::string filename) {
                 SCORE_THRESHOLD_BOTH,
                 TACTICAL_THRESHOLD, 4);
 
-            Move nextMove = DoRandomMove(board, rng) ? RandomMove(board) : currentPosition.bestMove;
+            Move nextMove = DoRandomMove(board, rng) ? RandomMove(board, rng) : currentPosition.bestMove;
             board.MakeMove(nextMove);
 
             state.UpdateGame(currentPosition.scorePass, currentPosition.scoreFail);
@@ -167,7 +191,7 @@ void GenSFen::Games(std::string filename) {
     outputFile.close();
 }
 
-void GenSFen::Random(std::string filename) {
+void GenSFen::Random(std::string filename, int threadIndex) {
     constexpr int SCORE_THRESHOLD_SINGLE = 75;
     constexpr int SCORE_THRESHOLD_BOTH = 4 * SCORE_THRESHOLD_SINGLE;
 
@@ -182,10 +206,10 @@ void GenSFen::Random(std::string filename) {
     Search search;
     search.FixDepth(m_depth);
     State state;
-    RandomPositionGenerator positionGenerator;
+    uint64_t threadSeed = SeedForThread(threadIndex);
+    RandomPositionGenerator positionGenerator(threadSeed);
 
-    const int maxGames = INFINITE;
-    for(int n_game = 0; n_game < maxGames; n_game++) {
+    for(int n_game = 0; n_game < m_maxGames; n_game++) {
         std::string position;
         GenerateRandomPosition(board, position, positionGenerator);
 
@@ -244,7 +268,7 @@ void GenSFen::RandomBenchmark(int maxGames) {
     Board board;
     Search search;
     search.FixDepth(m_depth);
-    RandomPositionGenerator positionGenerator;
+    RandomPositionGenerator positionGenerator(SeedForThread(0));
 
     for(int n_game = 1; n_game <= maxGames; n_game++) {
         clock.Start();
@@ -428,9 +452,46 @@ bool GenSFen::NoMoves(Board& board) {
     return moves.empty();
 }
 
-Move GenSFen::RandomMove(Board& board) {
+Move GenSFen::RandomMove(Board& board, Utils::PRNG& rng) {
     MoveList moves = MoveGenerator::GenerateMoves(board);
-    return MoveGenerator::RandomMove(moves);
+    return MoveGenerator::RandomMove(moves, rng);
+}
+
+uint64_t GenSFen::SeedForThread(int threadIndex) const {
+    assert(threadIndex >= 0);
+    if(!m_config.seed)
+        return 0;
+    return m_config.seed + static_cast<uint64_t>(threadIndex);
+}
+
+bool GenSFen::WriteRunMetadata(const std::string& mode, int concurrency, int requestedMaxGames) const {
+    const std::filesystem::path metadataPath = std::filesystem::path(m_config.outputDir) / "run_metadata.txt";
+    std::ofstream metadata(metadataPath);
+    if(!metadata.is_open())
+        return false;
+
+    metadata << "timestamp_utc=" << CurrentTimestampUtc() << '\n';
+    metadata << "mode=" << mode << '\n';
+    metadata << "concurrency=" << concurrency << '\n';
+    metadata << "depth=" << m_depth << '\n';
+    metadata << "max_games_requested=" << requestedMaxGames << '\n';
+    metadata << "max_games_effective=" << (m_maxGames == INFINITE ? "infinite" : std::to_string(m_maxGames)) << '\n';
+    metadata << "seed_base=" << m_config.seed << '\n';
+    metadata << "book_file=" << (m_config.bookFile.empty() ? "-" : m_config.bookFile) << '\n';
+
+    if(mode == "games" || mode == "random") {
+        for(int i = 0; i < concurrency; ++i) {
+            const int fileIndex = i + 1;
+            metadata << "thread_" << i
+                     << ".seed=" << SeedForThread(i)
+                     << " file=evals_generated_" << mode << "_" << fileIndex << ".epd"
+                     << '\n';
+        }
+    } else if(mode == "benchmark") {
+        metadata << "thread_0.seed=" << SeedForThread(0) << '\n';
+    }
+
+    return metadata.good();
 }
 
 BookPositions GenSFen::ReadBook(const std::string& bookPath) {

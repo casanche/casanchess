@@ -8,6 +8,7 @@
 #include "ZobristKeys.h"
 
 #include <cstdlib>
+#include <cstdint>
 #include <iostream>
 #include <string_view>
 
@@ -17,14 +18,16 @@ struct CliArgs {
     std::string mode;
     int concurrency = 0;
     int depth = 7;
+    int maxGames = 0;
     std::string outputDir;
     std::string bookFile;
+    uint64_t seed = 0;
     bool showHelp = false;
 };
 
 void PrintUsage(std::ostream& os = std::cout) {
     os << "Usage: gensfen -m <games|random|benchmark> [-c threads] [-d depth]"
-       << " [-o output_dir] [-b book_file]" << std::endl;
+       << " [--max-games N] [-o output_dir] [-b book_file] [-s seed]" << std::endl;
 }
 
 bool ParseArgs(int argc, char** argv, CliArgs& argsOut) {
@@ -37,10 +40,14 @@ bool ParseArgs(int argc, char** argv, CliArgs& argsOut) {
             argsOut.concurrency = std::atoi(argv[++i]);
         } else if(arg == "-d" && i + 1 < argc) {
             argsOut.depth = std::atoi(argv[++i]);
+        } else if(arg == "--max-games" && i + 1 < argc) {
+            argsOut.maxGames = std::atoi(argv[++i]);
         } else if((arg == "-o" || arg == "--output-dir") && i + 1 < argc) {
             argsOut.outputDir = argv[++i];
         } else if((arg == "-b" || arg == "--book-file") && i + 1 < argc) {
             argsOut.bookFile = argv[++i];
+        } else if((arg == "-s" || arg == "--seed") && i + 1 < argc) {
+            argsOut.seed = std::strtoull(argv[++i], nullptr, 10);
         } else if(arg == "-h" || arg == "--help") {
             argsOut.showHelp = true;
         } else {
@@ -105,9 +112,10 @@ int main(int argc, char** argv) {
     GenSFenConfig config;
     config.outputDir = args.outputDir;
     config.bookFile = args.bookFile;
+    config.seed = args.seed;
 
     GenSFen gensfen(config);
-    gensfen.Run(args.mode, args.concurrency, args.depth);
+    gensfen.Run(args.mode, args.concurrency, args.depth, args.maxGames);
 
     Syzygy::Free();
 

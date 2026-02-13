@@ -491,6 +491,12 @@ Move MoveGenerator::RandomMove(const MoveList& moves) {
     assert( !moves.empty() );
 
     Utils::PRNG rng;
+    return RandomMove(moves, rng);
+}
+
+Move MoveGenerator::RandomMove(const MoveList& moves, Utils::PRNG& rng) {
+    assert( !moves.empty() );
+
     int max_index = static_cast<int>( moves.size() ) - 1;
     uint32_t randomIndex = rng.Random(0, max_index);
 
