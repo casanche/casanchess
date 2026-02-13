@@ -2,6 +2,7 @@
 
 #include "Constants.h"
 #include "Move.h"
+#include "Utils.h"
 
 #include <array>
 #include <span>
@@ -51,4 +52,5 @@ namespace MoveGenerator {
     
     // Pick a random move from the move list
     Move RandomMove(const MoveList& moveList);
+    Move RandomMove(const MoveList& moveList, Utils::PRNG& rng);
 }

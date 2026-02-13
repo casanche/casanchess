@@ -13,7 +13,7 @@ namespace {
     }
 }
 
-RandomPositionGenerator::RandomPositionGenerator(uint64_t seed) 
+RandomPositionGenerator::RandomPositionGenerator(uint64_t seed)
     : m_rng(seed) {
 }
 

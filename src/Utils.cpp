@@ -3,8 +3,8 @@
 namespace Utils {
 
     //PRNG
-    PRNG::PRNG(int seed) :
-        m_mersenne(seed ? seed : m_device()) {}
+    PRNG::PRNG(uint64_t seed) :
+        m_mersenne(seed ? static_cast<uint32_t>(seed) : m_device()) {}
 
     uint32_t PRNG::Random(uint32_t min, uint32_t max) {
         return std::uniform_int_distribution<uint32_t>(min, max)(m_mersenne);
