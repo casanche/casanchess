@@ -2,6 +2,7 @@
 
 #include "BitboardUtils.h"
 #include "Constants.h"
+#include "Evaluation.h"
 #include "MoveGenerator.h"
 #include "Uci.h"
 
@@ -9,13 +10,16 @@
 #include <thread>
 
 const std::string OUTPUT_PATH = "../dev/nnue/sfen/latest/";
-const std::string BOOK_FILE = "../data/books/book5.epd";
+const std::string BOOK_FILE = "../dev/books/lichess_4moves.epd";
+const int DEPTH = 7;
+const int TACTICAL_THRESHOLD = 120;
+const int MAX_NPIECES = 10;
 
 struct CurrentPosition {
     Move bestMove = Move();
     int calculatedDepth = -1;
-    int evalFail = 0;
-    int evalPass = 0;
+    int scoreFail = 0;
+    int scorePass = 0;
 };
 
 struct State {
@@ -43,7 +47,7 @@ GenSFen::GenSFen() : m_rng(0) {
     UCI_OUTPUT = false;
 }
 
-// Supported modes: 'games', 'random', 'random_benchmark' or 'benchmark'
+// Supported modes: 'games', 'random', 'benchmark'
 void GenSFen::Run(const std::string& gensfen_mode, int concurrency) {
     std::vector<std::thread> threads;
 
@@ -51,7 +55,7 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency) {
         concurrency = std::thread::hardware_concurrency() - 1;
     std::cout << "Concurrency set to: " << std::to_string(concurrency) << std::endl;
 
-    if(gensfen_mode == "random_benchmark" || gensfen_mode == "benchmark") {
+    if(gensfen_mode == "benchmark") {
         RandomBenchmark(100);
         return;
     }
@@ -67,7 +71,7 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency) {
     }
 
     for(int i = 1; i <= concurrency; i++) {
-        std::string filename = OUTPUT_PATH + "evals_generated_" + std::to_string(i) + ".epd";
+        std::string filename = OUTPUT_PATH + "evals_generated_" + gensfen_mode + "_" + std::to_string(i) + ".epd";
         threads.push_back( std::thread(function, this, filename) );
     }
     for(auto& th : threads) {
@@ -76,6 +80,10 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency) {
 }
 
 void GenSFen::Games(std::string filename) {
+    constexpr int maxGames = INFINITE;
+    constexpr int SCORE_THRESHOLD_SINGLE = 125;
+    constexpr int SCORE_THRESHOLD_BOTH = 4 * SCORE_THRESHOLD_SINGLE;
+
     std::ofstream outputFile;
     outputFile.open(filename);
 
@@ -85,7 +93,6 @@ void GenSFen::Games(std::string filename) {
     Search search;
     State state;
 
-    const int maxGames = INFINITE;
     for(int n_game = 0; n_game < maxGames; n_game++) {
         //New starting position
         uint32_t randomIndex = m_rng.Random(0, static_cast<uint32_t>(bookPositions.size())-1);
@@ -99,21 +106,27 @@ void GenSFen::Games(std::string filename) {
            << ", " << position << ", ";
 
         //Game Loop
-        state.NewGame();
         bool exitGame;
+        state.NewGame();
         do {
             CurrentPosition currentPosition;
-            WriteEvals(board, search, outputFile, currentPosition, 200, 800, 8);
+            WriteEvals(board, search, outputFile, currentPosition,
+                SCORE_THRESHOLD_SINGLE,
+                SCORE_THRESHOLD_BOTH,
+                TACTICAL_THRESHOLD, 4);
 
-            // Make next move (random or best)
-            bool doRandomMove = board.Ply() < 20 && m_rng.Random(0,100) < 33 && !board.IsCheck();
-            Move nextMove = doRandomMove ? RandomMove(board) : currentPosition.bestMove;
+            Move nextMove = DoRandomMove(board) ? RandomMove(board) : currentPosition.bestMove;
             board.MakeMove(nextMove);
 
-            state.UpdateGame(currentPosition.evalPass, currentPosition.evalFail);
+            state.UpdateGame(currentPosition.scorePass, currentPosition.scoreFail);
 
             int nPieces = PopCount(board.AllPieces());
-            exitGame = (NoMoves(board) || nPieces <= 6 || board.Ply() > 200 || board.IsRepetitionDraw() || state.consecutiveFailedEvals >= 10);
+            exitGame = (NoMoves(board)
+                || nPieces <= MAX_NPIECES
+                || board.Ply() > 160
+                || board.IsRepetitionDraw()
+                || board.FiftyRule() > 60
+                || state.consecutiveFailedEvals >= 10);
         } while(!exitGame);
 
         state.FinishGame();
@@ -129,12 +142,15 @@ void GenSFen::Games(std::string filename) {
 }
 
 void GenSFen::Random(std::string filename) {
+    constexpr int SCORE_THRESHOLD_SINGLE = 75;
+    constexpr int SCORE_THRESHOLD_BOTH = 4 * SCORE_THRESHOLD_SINGLE;
+
     std::ofstream outputFile;
     outputFile.open(filename);
 
     Board board;
     Search search;
-    search.FixDepth(7);
+    search.FixDepth(DEPTH);
     State state;
 
     const int maxGames = INFINITE;
@@ -149,18 +165,25 @@ void GenSFen::Random(std::string filename) {
            << ", " << position << ", ";
 
         //Game loop
-        state.NewGame();
         bool exitGame;
+        state.NewGame();
         do {
             CurrentPosition currentPosition;
-            WriteEvals(board, search, outputFile, currentPosition, 100, 250, 0);
+            WriteEvals(board, search, outputFile, currentPosition,
+                SCORE_THRESHOLD_SINGLE,
+                SCORE_THRESHOLD_BOTH,
+                TACTICAL_THRESHOLD, 0);
 
             board.MakeMove(currentPosition.bestMove);
-
-            state.UpdateGame(currentPosition.evalPass, currentPosition.evalFail);
+            state.UpdateGame(currentPosition.scorePass, currentPosition.scoreFail);
 
             int nPieces = PopCount(board.AllPieces());
-            exitGame = (NoMoves(board) || nPieces <= 6 || board.Ply() > 40 || board.IsRepetitionDraw() || state.consecutiveFailedEvals >= 6);
+            exitGame = NoMoves(board)
+                || nPieces <= MAX_NPIECES
+                || board.Ply() > 40
+                || board.IsRepetitionDraw()
+                || state.consecutiveFailedEvals >= 6
+                || state.gameWrittenEvals >= 6;
         } while(!exitGame);
 
         state.FinishGame();
@@ -176,78 +199,105 @@ void GenSFen::Random(std::string filename) {
 }
 
 void GenSFen::RandomBenchmark(int maxGames) {
+    const int SCORE_PASS_SINGLE = 150;
+    const int SCORE_PASS_BOTH = 500;
+
     Utils::Clock clock, global_clock;
     global_clock.Start();
     int64_t time_choose = 0;
     int64_t time_search = 0;
+    u64 sum_time_choose = 0;
+    u64 sum_time_search = 0;
     int passed = 0;
 
     Board board;
     Search search;
-    search.FixDepth(7);
+    search.FixDepth(DEPTH);
 
     for(int n_game = 1; n_game <= maxGames; n_game++) {
         clock.Start();
         std::string position;
         int tries = GenerateRandomPosition(board, position);
         time_choose = clock.Elapsed();
+        sum_time_choose += time_choose;
 
         clock.Start();
 
-        search.IterativeDeepening(board);
+        search.IterativeDeepening(board, false);
         int score_active = search.BestScore();
 
         board.MakeNull();
-        search.IterativeDeepening(board);
+        search.IterativeDeepening(board, false);
         int score_inactive = search.BestScore();
         board.TakeNull();
 
         time_search = clock.Elapsed();
+        sum_time_search += time_search;
 
-        bool evalPass = (abs(score_active) < 100) || (abs(score_inactive) < 100);
-        bool evalPassBoth = abs(score_active) < 250 && abs(score_inactive) < 250;
+        bool evalPass = (abs(score_active) < SCORE_PASS_SINGLE) || (abs(score_inactive) < SCORE_PASS_SINGLE);
+        bool evalPassBoth = abs(score_active) < SCORE_PASS_BOTH && abs(score_inactive) < SCORE_PASS_BOTH;
         if(evalPass && evalPassBoth) {
             passed++;
+            P("FEN: " << position);
         }
 
         P("game " << n_game << " tries " << tries
+                  << " scoreActive " << score_active << " scoreInactive " << score_inactive
                   << " time_choose " << time_choose
                   << " time_search " << time_search);
 
     } //games
 
-    P("passed: " << passed << " total time " << global_clock.Elapsed() );
+    P("passed: " << passed
+        << " total time " << global_clock.Elapsed()
+        << " choose time " << sum_time_choose
+        << " search time " << sum_time_search);
 }
 
 int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
-    Search search_depth1;
-    search_depth1.FixDepth(1);
+    const int SCORE_FILTER = 250;
+    const int VALIDATION_DEPTH = 4;
 
-    bool validScore = false;
+    Search validationSearch;
+    validationSearch.FixDepth(VALIDATION_DEPTH);
+
     int tries = 0;
 
-    do {
-        position = board.SetFenRandom();
+    while(true) {
         tries++;
 
+        // 1.Generate
+        position = board.SetFenRandom();
+
+        // 2.Quick filters
         int nPieces = PopCount(board.AllPieces());
-        if(NoMoves(board) || nPieces <= 6)
+        if(NoMoves(board) || board.IsCheck() || nPieces <= MAX_NPIECES)
             continue;
-        search_depth1.IterativeDeepening(board);
-        int score_active = search_depth1.BestScore();
 
+        // 3.Eval filters
+        validationSearch.IterativeDeepening(board, false);
+        int activeScore = validationSearch.BestScore();
+        if(abs(activeScore) > SCORE_FILTER)
+            continue;
+        int activeEval = Evaluation::Evaluate(board);
+        if(abs(activeScore - activeEval) > TACTICAL_THRESHOLD)
+            continue;
+
+        // 4.Reverse position
         board.MakeNull();
-        if(NoMoves(board))
+        if(NoMoves(board) || board.IsCheck())
             continue;
-        search_depth1.IterativeDeepening(board);
-        int score_inactive = search_depth1.BestScore();
+        validationSearch.IterativeDeepening(board, false);
+        int inactiveScore = validationSearch.BestScore();
+        if(abs(inactiveScore) > SCORE_FILTER)
+            continue;
+        int inactiveEval = Evaluation::Evaluate(board);
+        if(abs(inactiveScore - inactiveEval) > TACTICAL_THRESHOLD)
+            continue;
+        board.TakeNull();
 
-        bool evalPass = (abs(score_active) < 66) || (abs(score_inactive) < 66);
-        bool evalPassBoth = abs(score_active) < 150 && abs(score_inactive) < 150;
-        validScore = evalPass && evalPassBoth;
-        if(validScore)
-            board.TakeNull();
-    } while(!validScore);
+        break;
+    }
 
     return tries;
 }
@@ -256,23 +306,27 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
 // - Board not in check
 // - Best move is quiet at low depths (to skip trivial captures)
 // - Evaluation conditions: At least one color has [-200,200]. Both colors have [-800,800].
-void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition, int thresholdEval, int thresholdEvalBoth, uint minPly) {
-    search.FixDepth(5);
+bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition, int thresholdEval, int thresholdEvalBoth, int tacticalThreshold, uint minPly) {  
+    search.FixDepth(DEPTH-2);
     search.IterativeDeepening(board);
-    currentPosition.calculatedDepth = 5;
+    currentPosition.calculatedDepth = DEPTH-2;
     currentPosition.bestMove = search.BestMove();
+    int eval = Evaluation::Evaluate(board);
     
-    if(board.Ply() < minPly || board.IsCheck() || !search.BestMove().IsQuiet())
-        return;
+    if(NoMoves(board) || board.IsCheck() || board.Ply() < minPly
+        ||(search.BestScore() - eval) > tacticalThreshold
+        || IsWinValue(search.BestScore())
+    )
+        return false;
 
-    search.FixDepth(7);
+    search.FixDepth(DEPTH);
     search.IterativeDeepening(board);
-    currentPosition.calculatedDepth = 7;
+    currentPosition.calculatedDepth = DEPTH;
     currentPosition.bestMove = search.BestMove();
 
-    int eval[2]; //COLOR
+    int score[2]; //COLOR
     COLOR color = board.ActivePlayer();
-    eval[color] = search.BestScore();
+    score[color] = search.BestScore();
 
     // Enemy move
     board.MakeNull();
@@ -280,37 +334,52 @@ void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     // Check that enemy move is possible
     if(NoMoves(board) || board.IsCheck()) {
         board.TakeNull();
-        return;
+        return false;
     }
 
     // Low depth. Check that move is quiet.
-    search.FixDepth(5);
+    search.FixDepth(DEPTH-2);
     search.IterativeDeepening(board);
-    if(!search.BestMove().IsQuiet()) {
+    eval = Evaluation::Evaluate(board);
+    if( (search.BestScore() - eval) > tacticalThreshold
+        || IsWinValue(search.BestScore())
+    ) {
         board.TakeNull();
-        return;
+        return false;
     }
 
     // Normal depth
-    search.FixDepth(7);
+    search.FixDepth(DEPTH);
     search.IterativeDeepening(board);
-    eval[1-color] = search.BestScore();
+    score[1-color] = search.BestScore();
 
     // Eval conditions
-    int evalPass = abs(eval[WHITE]) < thresholdEval || abs(eval[BLACK]) < thresholdEval;
-    int evalPassSoft = abs(eval[WHITE]) < thresholdEvalBoth && abs(eval[BLACK]) < thresholdEvalBoth;
-    if(!evalPass || !evalPassSoft) {
-        currentPosition.evalFail++;
+    int scorePass = abs(score[WHITE]) < thresholdEval || abs(score[BLACK]) < thresholdEval;
+    int scorePassSoft = abs(score[WHITE]) < thresholdEvalBoth && abs(score[BLACK]) < thresholdEvalBoth;
+    if(!scorePass || !scorePassSoft) {
+        currentPosition.scoreFail++;
         board.TakeNull();
-        return;
+        return false;
     }
-    currentPosition.evalPass++;
+    currentPosition.scorePass++;
 
     // Write evals to file
     std::string fenString = board.GetSimplifiedFen();
-    outputFile << fenString << ";" << eval[WHITE]/100. << ";" << eval[BLACK]/100. << std::endl;
+    outputFile << fenString << ";" << score[WHITE]/100. << ";" << score[BLACK]/100. << std::endl;
 
     board.TakeNull();
+    return true;
+}
+
+// Choose if the next move will be 'random' or ' best'
+bool GenSFen::DoRandomMove(Board& board) {
+    if(board.Ply() > 22 || board.IsCheck())
+        return false;
+
+    // Ply [minPly, 11]: 33% random
+    // Ply [12, 22]: 20% random
+    uint perc = board.Ply() <= 11 ? 33 : 20;
+    return (m_rng.Random(0,100) < perc);
 }
 
 bool GenSFen::NoMoves(Board& board) {
@@ -326,6 +395,8 @@ Move GenSFen::RandomMove(Board& board) {
 BookPositions GenSFen::ReadBook(const std::string& bookPath) {
     std::ifstream bookFile;
     bookFile.open(bookPath);
+    if(!bookFile.is_open())
+        std::cerr << "Error: Cannot open epd book file: " << bookPath << std::endl;
 
     BookPositions bookPositions;
     std::string position;
