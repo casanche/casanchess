@@ -23,9 +23,10 @@ private:
     void RandomBenchmark(int maxGames);
 
     int GenerateRandomPosition(Board& board, std::string& position);
-    void WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition,
-                    int thresholdEval, int thresholdEvalBoth, uint minPly = 0);
+    bool WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition,
+                    int thresholdEval, int thresholdEvalBoth, int tacticalThreshold, uint minPly = 0);
 
+    bool DoRandomMove(Board& board);
     bool NoMoves(Board& board);
     BookPositions ReadBook(const std::string& bookPath);
     Move RandomMove(Board& board);
