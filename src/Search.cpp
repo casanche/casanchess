@@ -828,7 +828,7 @@ bool Search::TimeOver() {
 // - depth: search for a fixed depth
 // - moveTime: search for a fixed time
 // - nodes: search for a fixed number of nodes
-void Search::AllocateLimits(Board &board, Limits limits) {
+void Search::AllocateLimits(Board &board, const Limits& limits) {
     m_limits = limits;
     m_nodes = 0;
     m_clock.Start();
@@ -846,7 +846,7 @@ void Search::AllocateLimits(Board &board, Limits limits) {
     if(limits.nodes)    { FixNodes(limits.nodes); return; }
     
     // Time estimation in normal games
-    limits.movesToGo = 20 + 20 * limits.ponderhit;
+    const int movesToGo = 20 + 20 * limits.ponderhit;
 
     COLOR color = board.ActivePlayer();
 
@@ -855,7 +855,7 @@ void Search::AllocateLimits(Board &board, Limits limits) {
 
     int myInc    = (color == WHITE) ? limits.winc  : limits.binc;
 
-    m_allocatedTime = myTime / limits.movesToGo + myInc;
+    m_allocatedTime = myTime / movesToGo + myInc;
 
     if(m_debugMode)
         std::cout << "info string TimeAllocation " <<  myTime << " " << yourTime << " " << m_allocatedTime << std::endl;

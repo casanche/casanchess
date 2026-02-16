@@ -20,11 +20,11 @@ struct Limits {
     int nodes = 0;
     int moveTime = 0;
 
-    int wtime;
-    int btime;
+    int wtime = 0;
+    int btime = 0;
 
-    int winc;
-    int binc;
+    int winc = 0;
+    int binc = 0;
 
     int movesToGo = 0;
 };
@@ -44,7 +44,7 @@ public:
 
     // Limits management
     Limits GetLimits() { return m_limits; }
-    void AllocateLimits(Board &board, Limits limits);
+    void AllocateLimits(Board &board, const Limits& limits);
     void FixDepth(int depth);
     void FixTime(int time); // (ms)
     void FixNodes(int nodes);
