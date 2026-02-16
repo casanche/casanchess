@@ -156,7 +156,7 @@ void Uci::Bench(int depth, bool verbose) {
         "6r1/1ppnr1kp/pq1b1p2/2p1pPP1/P3P3/1P1P1N2/R1PB3Q/5R1K b - - 2 30", // RG10 - Midgame Closed
         "8/5p2/2B2k2/p7/1pr5/4r3/P1P3P1/3R2K1 w - - 12 48", // RG4 - Ending
         "r3qb1k/1b4p1/p2pr2p/3n4/Pnp1N1N1/6RP/1B3PP1/1B1QR1K1 w - - 0 1", // Nolot 1 - Wide tree
-        "rnbq1b1r/p1pp1p1p/4k3/1p1NP1p1/2QP1p2/5N2/PP1B1KPP/n6R/ w - -", // Albillo 11 - Checks and mates
+        "rnbq1b1r/p1pp1p1p/4k3/1p1NP1p1/2QP1p2/5N2/PP1B1KPP/n6R w - - 0 1", // Albillo 11 - Checks and mates
         "8/3P4/n2K2kp/2p3nN/1b6/2p1p1P1/8/3B4 w - - 4 3",  // Quiescence and deep pruning
         "8/4RNpk/p7/r1pr4/5P2/2P3K1/b2R4/8 w - - 1 40", // Lichess study - Search extensions 1
         "8/p7/2k1p3/5p1p/2KP1P1P/P7/8/8 b - - 0 37", // Lichess study - Pawn Endgame 1
