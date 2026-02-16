@@ -102,26 +102,37 @@ std::string Fen::SetRandomPosition(Board& board) {
     const int pieceMax[8] = {0, 8, 2, 2, 2, 1, 1, 0};
 
     auto CheckIsValid = [&] (COLOR c, int p, Bitboard bb) {
-        //Illegal
+        // Not occupied
         if(bb & board.m_allpieces)
             return false;
         int square = BitscanForward(bb);
+        // Pawn not in ranks 1-8
         if(p == PAWN && (Rank(square) == RANK1 || Rank(square) == RANK8))
             return false;
-        //Convenient
-        if(p == PAWN && RelativeRank(c, square) == RANK7
-            && PopCount( board.Piece(c,PAWN) & RelativeMaskRank(c, RANK7) ) >= 1 //only one pawn allowed in 7th rank
+        // Only one pawn allowed in 7th rank --> convenient
+        if(p == PAWN
+            && RelativeRank(c, square) == RANK7
+            && PopCount( board.Piece(c,PAWN) & RelativeMaskRank(c, RANK7) ) == 1
         )
             return false;
+        // At most, 2 pawns in same file
+        if(p == PAWN && PopCount( board.Piece(c,PAWN) & MaskFile[File(square)] ) == 2)
+            return false;
+        // Only one bishop per square type
         if(p == BISHOP && RedundantBishop(board, c, bb))
             return false;
         int nHeavyPieces = PopCount(board.m_allpieces ^ board.Piece(c, PAWN) ^ board.Piece((COLOR)!c, PAWN));
+        // Heavy pieces [9-12]: middlegame: king allowed in ranks 1-4
         if(p == KING && nHeavyPieces >= 9 && nHeavyPieces <= 12 && RelativeRank(c, square) > RANK4)
             return false;
+        // Heavy pieces [13-14]: earlygame: king allowed in ranks 1-2
         if(p == KING && nHeavyPieces >= 13 && RelativeRank(c, square) > RANK2)
             return false;
-        if(p != PAWN && board.AttackersTo(c, square))
-            return false;
+        // Try to make the position as quiet as possible
+        // TODO: check this condition (?)
+        // if(p != PAWN && board.AttackersTo(c, square))
+            // return false;
+
         return true;
     };
 
@@ -141,9 +152,9 @@ std::string Fen::SetRandomPosition(Board& board) {
                     tries++;
                     int random = rng.Random(1,3);
                     int randomSquare;
-                    if(random == 3)
+                    if(random == 3) // 1/3 of cases, white piece on the upper board
                         randomSquare = (c == WHITE) ? rng.Random(32, 63) : rng.Random(0, 31);
-                    else
+                    else // 2/3 of cases, white piece on the lower board
                         randomSquare = (c == WHITE) ? rng.Random(0, 31) : rng.Random(32, 63);
                     randomSquareBB = SquareBB(randomSquare);
                     isValid = CheckIsValid((COLOR)c, p, randomSquareBB);
