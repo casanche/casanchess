@@ -139,11 +139,11 @@ void Evaluation::Init() {
     for(int square = 0; square < 64; square++) {
         PASSED_PAWN_FRONT[WHITE][square] = Attacks::GetRay(NORTH, square);
         PASSED_PAWN_FRONT[BLACK][square] = Attacks::GetRay(SOUTH, square);
-        if(Rank(square) == Rank(square+1)) {
+        if(File(square) != FILEH) {
             PASSED_PAWN_SIDES[WHITE][square] |= Attacks::GetRay(NORTH, square+1);
             PASSED_PAWN_SIDES[BLACK][square] |= Attacks::GetRay(SOUTH, square+1);
         }
-        if(Rank(square) == Rank(square-1)) {
+        if(File(square) != FILEA) {
             PASSED_PAWN_SIDES[WHITE][square] |= Attacks::GetRay(NORTH, square-1);
             PASSED_PAWN_SIDES[BLACK][square] |= Attacks::GetRay(SOUTH, square-1);
         }
