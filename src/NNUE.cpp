@@ -25,6 +25,9 @@
 #include <cstring>
 #include <fstream>
 
+// Global NNUE instance (thread-local for parallel search)
+thread_local NNUE nnue;
+
 namespace NNUEConstants {
     constexpr u8 KING_BUCKETS[64] = {
         0, 1, 2, 3, 4, 5, 6, 7,

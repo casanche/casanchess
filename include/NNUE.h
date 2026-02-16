@@ -83,4 +83,4 @@ struct NetworkStorage {
 };
 
 inline Network m_network;
-inline thread_local NNUE nnue;
+extern thread_local NNUE nnue;
