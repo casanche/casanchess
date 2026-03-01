@@ -27,7 +27,8 @@ class Board {
 public:
     Board();
     void Init();
-    
+    void SyncNNUE();
+
     u64 Perft(int depth);
     void Divide(int depth);
     

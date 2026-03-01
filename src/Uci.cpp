@@ -369,5 +369,6 @@ void Uci::SetOption(std::istringstream &stream) {
 }
 
 void Uci::StartSearch() {
+    m_board.SyncNNUE(); // needed since each thread has its own NNUE instance
     m_search.IterativeDeepening(m_board);
 }
