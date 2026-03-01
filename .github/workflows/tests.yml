@@ -122,3 +122,11 @@ jobs:
         BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
 
         echo bench | ./${BASE_PATH}casanchess${EXTENSION_SUFFIX}
+
+    - name: Smoke test - Simple search from position
+      working-directory: ./build
+      run: |
+        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
+        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
+
+        (printf "position fen 8/3P3k/n2K3p/2p3n1/1b4N1/2p1p1P1/8/3B4 w - - 0 1 moves g4f6 h7g7 f6h5 g7g6 d1c2\ngo depth 8\n"; sleep 5; printf "quit\n") | ./${BASE_PATH}casanchess${EXTENSION_SUFFIX}
