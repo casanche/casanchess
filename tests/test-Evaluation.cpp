@@ -26,7 +26,7 @@ TEST(NNUE, IncrementalMatchesFull) {
 
     int evalFull;
     {
-        // SetFen triggers InitStateAndHistory → full NNUE recompute
+        // SetFen triggers full NNUE recompute
         Board board;
         board.SetFen(POSITION_FEN);
         evalFull = Evaluation::Evaluate(board);
