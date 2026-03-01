@@ -25,8 +25,7 @@
 #include <cstring>
 #include <fstream>
 
-// Global NNUE instance (thread-local for parallel search)
-thread_local NNUE nnue;
+thread_local NNUE nnue; // each thread has its own accumulator state
 
 namespace NNUEConstants {
     constexpr u8 KING_BUCKETS[64] = {

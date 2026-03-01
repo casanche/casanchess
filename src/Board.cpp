@@ -469,6 +469,10 @@ void Board::InitStateAndHistory() {
 
     m_checkCalculated = false;
 
+    SyncNNUE();
+}
+
+void Board::SyncNNUE() {
     if(!UCI_CLASSICAL_EVAL) {
         nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]);
         nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
