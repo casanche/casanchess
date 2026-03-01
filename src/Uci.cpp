@@ -47,7 +47,7 @@ void Uci::Launch() {
             std::cout << "option name ClassicalEval type check default false" << std::endl;
             std::cout << "option name ClearHash type button" << std::endl;
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
-            std::cout << "option name NNUE_Path type string default " << nnue.GetPath() << std::endl;
+            std::cout << "option name NNUE_Path type string default " << NNUE::GetPath() << std::endl;
             std::cout << "option name Ponder type check default false" << std::endl;
             std::cout << "option name SyzygyPath type string default " << Syzygy::DEFAULT_PATH << std::endl;
             std::cout << "option name SyzygyProbeLimit type spin default " << UCI_SYZYGY_PROBE_LIMIT << " min 0 max 7" << std::endl;
@@ -340,7 +340,7 @@ void Uci::SetOption(std::istringstream &stream) {
                 return;
             stream >> token;
 
-            nnue.Load(token);
+            NNUE::Load(token);
         }
         else if (token == "SyzygyPath") {
             stream >> token;
@@ -369,6 +369,5 @@ void Uci::SetOption(std::istringstream &stream) {
 }
 
 void Uci::StartSearch() {
-    m_board.SyncNNUE(); // needed since each thread has its own NNUE instance
     m_search.IterativeDeepening(m_board);
 }
