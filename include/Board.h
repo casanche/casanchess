@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Constants.h"
+#include "NNUE.h"
 #include "ZobristKeys.h"
 
 #include "Fen.h"
@@ -26,8 +27,12 @@ struct BoardHistory {
 class Board {
 public:
     Board();
+    Board(const Board&) = delete;
+    Board& operator=(const Board&) = delete;
+    Board(Board&&) = delete;
+    Board& operator=(Board&&) = delete;
+
     void Init();
-    void SyncNNUE();
 
     u64 Perft(int depth);
     void Divide(int depth);
@@ -54,6 +59,9 @@ public:
 
     // Static Exchange Evaluation
     int SEE(Move move) const;
+
+    // NNUE
+    int NNUEEvaluate() const { return m_nnue.Evaluate(m_activePlayer); }
 
     // Helper methods
     Bitboard AttackersTo(COLOR color, int square, Bitboard blockers) const;
@@ -88,6 +96,7 @@ private:
     void UpdateBitboards();
     void UpdateKingAttackers(COLOR color);
     void InitStateAndHistory();
+    void NNUERefresh() { m_nnue.Inputs_FullUpdate(); }
 
     //Static Exchange Evaluation
     Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) const;
@@ -113,6 +122,8 @@ private:
     //History
     uint m_initialPly;
     BoardHistory m_history[MAX_PLY_HISTORY];
+
+    NNUE m_nnue;
 
     friend class Fen;
     friend class MoveMaker;

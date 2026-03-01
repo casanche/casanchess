@@ -9,7 +9,6 @@ using namespace BitboardUtils;
 #include "Heuristics.h"
 #include "Move.h"
 #include "MoveGenerator.h"
-#include "NNUE.h"
 
 #include <iostream>
 #include <sstream>
@@ -455,13 +454,9 @@ void Board::InitStateAndHistory() {
 
     m_checkCalculated = false;
 
-    SyncNNUE();
-}
-
-void Board::SyncNNUE() {
     if(!UCI_CLASSICAL_EVAL) {
-        nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]);
-        nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
-        nnue.Inputs_FullUpdate();
+        m_nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]);
+        m_nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
+        m_nnue.Inputs_FullUpdate();
     }
 }

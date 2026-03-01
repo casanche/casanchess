@@ -15,7 +15,6 @@ using namespace Evaluation;
 #include "Attacks.h"
 #include "Board.h"
 #include "BitboardUtils.h"
-#include "NNUE.h"
 #include "Uci.h"
 
 namespace Evaluation {
@@ -526,8 +525,7 @@ int Evaluation::Evaluate(const Board& board) {
     if(UCI_CLASSICAL_EVAL) {
         eval = ClassicalEvaluation(board);
     } else {
-        int color = board.ActivePlayer();
-        eval = nnue.Evaluate(color);
+        eval = board.NNUEEvaluate();
     }
 
     return eval;

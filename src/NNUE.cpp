@@ -25,7 +25,8 @@
 #include <cstring>
 #include <fstream>
 
-thread_local NNUE nnue; // each thread has its own accumulator state
+bool NNUE::m_isLoaded = false;
+std::string NNUE::m_filepath = "network-20220625.nnue";
 
 namespace NNUEConstants {
     constexpr u8 KING_BUCKETS[64] = {
@@ -43,7 +44,7 @@ namespace NNUEConstants {
    constexpr int BLACK_PERSPECTIVE_XOR = 56;
 }
 
-NNUE::NNUE() {
+NNUE::NNUE() : m_backupAccumulator(std::make_unique<AccumulatorEntry[]>(MAX_PLY_HISTORY)) {
     m_isLoaded = false;
     m_filepath = "network-20260712.nnue";
 
@@ -93,7 +94,7 @@ void NNUE::Load(std::string filepath) {
 #include "Utils.h"
 Utils::Clock clock_eval;
 
-int NNUE::Evaluate(int color) {
+int NNUE::Evaluate(int color) const {
     //Layer 1
     alignas(32) float o1[ ARCH[L2][ROW] ];
     for(uint i = 0; i < NNUE_SIZE; i++) {

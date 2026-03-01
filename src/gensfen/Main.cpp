@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
     Evaluation::Init(); //after Attacks
     Syzygy::Init(Syzygy::DEFAULT_PATH);
     ZobristKeys::Init();
-    nnue.Load();
+    NNUE::Load();
 
     UCI_CLASSICAL_EVAL = false;
 

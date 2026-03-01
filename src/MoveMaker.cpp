@@ -1,6 +1,5 @@
 #include "MoveMaker.h"
 #include "Board.h"
-#include "NNUE.h"
 #include "Uci.h"
 
 #include <cstring> //for memcpy, delete this
@@ -18,7 +17,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
 
     //Before any change in the board state
     if(update_nnue && !UCI_CLASSICAL_EVAL)
-        nnue.SavePosition(board.m_ply);
+        board.m_nnue.SavePosition(board.m_ply);
 
     //Increase ply
     board.m_ply++;
@@ -90,13 +89,13 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     //NNUE update
     if(update_nnue && !UCI_CLASSICAL_EVAL) {
         if(pieceType != KING && (moveType == NORMAL || moveType == DOUBLE_PUSH || moveType == CAPTURE)) { //Incremental update
-            nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq);
+            board.m_nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq);
 
             if(moveType == CAPTURE) {
-                nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq);
+                board.m_nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq);
             }
         } else {
-            nnue.Inputs_FullUpdate();
+            board.m_nnue.Inputs_FullUpdate();
         }
     }
 
@@ -174,7 +173,7 @@ void MoveMaker::TakeMove(Board& board, Move move) {
 
     //Retrieve NNUE
     if(!UCI_CLASSICAL_EVAL)
-        nnue.RestorePosition(board.m_ply);
+        board.m_nnue.RestorePosition(board.m_ply);
 
     //Asserts
     assert(BoardIntegrityChecker::CheckIntegrity(board));

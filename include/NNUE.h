@@ -2,6 +2,7 @@
 
 #include "Constants.h"
 
+#include <memory>
 #include <string>
 
 const int NNUE_SIZE = 128;
@@ -13,11 +14,11 @@ struct Network;
 class NNUE {
 public:
     NNUE();
-    void Load(std::string filepath = "");
-    bool IsLoaded() const { return m_isLoaded; }
-    std::string GetPath() const { return m_filepath; }
+    static void Load(std::string filepath = "");
+    static bool IsLoaded() { return m_isLoaded; }
+    static std::string GetPath() { return m_filepath; }
 
-    int Evaluate(int color);
+    int Evaluate(int color) const;
 
     void SetPieces(int color, uint64_t& pieces);
     void SavePosition(int ply);
@@ -30,17 +31,18 @@ public:
 
 private:
     //Helpers
-    float Clamp(float n);
-    void ComputeLayer(float* inputLayer, float* outputLayer, float* biases, float* weights, int dimInput, int dimOutput, bool with_ReLU);
+    static float Clamp(float n);
+    static void ComputeLayer(float* inputLayer, float* outputLayer, float* biases, float* weights, int dimInput, int dimOutput, bool with_ReLU);
 
     //Current state
     Bitboard* m_pieces[2];
     alignas(32) float m_accumulator[2][NNUE_SIZE];
     //Backups
-    alignas(32) float m_backupAccumulator[MAX_PLY_HISTORY][2][NNUE_SIZE];
+    struct alignas(32) AccumulatorEntry { float v[2][NNUE_SIZE]; };
+    std::unique_ptr<AccumulatorEntry[]> m_backupAccumulator;
 
-    bool m_isLoaded;
-    std::string m_filepath;
+    static bool m_isLoaded;
+    static std::string m_filepath;
 };
 
 //Network architecture
@@ -83,4 +85,3 @@ struct NetworkStorage {
 };
 
 inline Network m_network;
-extern thread_local NNUE nnue;

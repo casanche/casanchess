@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     Evaluation::Init(); //after Attacks
     Syzygy::Init(Syzygy::DEFAULT_PATH);
     ZobristKeys::Init();
-    nnue.Load();
+    NNUE::Load();
 
     // Parse command line arguments
     std::span<char*> args(argv, argc);
@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
         }
         else if (arg == "-n" && i + 1 < args.size()) {
             // Path to .nnue file
-            nnue.Load(args[i + 1]);
+            NNUE::Load(args[i + 1]);
             ++i; // Skip next argument as it's the path
         }
         else if (arg == "bench") {
