@@ -15,6 +15,7 @@
 
 const int TACTICAL_THRESHOLD = 120;
 const int MAX_NPIECES = 10;
+const int VALIDATION_DEPTH = 4;
 
 struct CurrentPosition {
     Move bestMove = Move();
@@ -205,13 +206,15 @@ void GenSFen::Random(std::string filename, int threadIndex) {
     Board board;
     Search search;
     search.FixDepth(m_depth);
+    Search validationSearch;
+    validationSearch.FixDepth(VALIDATION_DEPTH);
     State state;
     uint64_t threadSeed = SeedForThread(threadIndex);
     RandomPositionGenerator positionGenerator(threadSeed);
 
     for(int n_game = 0; n_game < m_maxGames; n_game++) {
         std::string position;
-        GenerateRandomPosition(board, position, positionGenerator);
+        GenerateRandomPosition(board, position, positionGenerator, validationSearch);
 
         //To avoid overlap in standard output due to multiple threads
         std::stringstream ss;
@@ -268,12 +271,14 @@ void GenSFen::RandomBenchmark(int maxGames) {
     Board board;
     Search search;
     search.FixDepth(m_depth);
+    Search validationSearch;
+    validationSearch.FixDepth(VALIDATION_DEPTH);
     RandomPositionGenerator positionGenerator(SeedForThread(0));
 
     for(int n_game = 1; n_game <= maxGames; n_game++) {
         clock.Start();
         std::string position;
-        int tries = GenerateRandomPosition(board, position, positionGenerator);
+        int tries = GenerateRandomPosition(board, position, positionGenerator, validationSearch);
         time_choose = clock.Elapsed();
         sum_time_choose += time_choose;
 
@@ -348,12 +353,8 @@ bool GenSFen::ValidateRandomPosition(Board& board, Search& search, int scoreFilt
     return valid;
 }
 
-int GenSFen::GenerateRandomPosition(Board& board, std::string& position, RandomPositionGenerator& positionGenerator) {
+int GenSFen::GenerateRandomPosition(Board& board, std::string& position, RandomPositionGenerator& positionGenerator, Search& validationSearch) {
     const int SCORE_FILTER = 250;
-    const int VALIDATION_DEPTH = 4;
-
-    Search validationSearch;
-    validationSearch.FixDepth(VALIDATION_DEPTH);
 
     int tries = 0;
     while(true) {
