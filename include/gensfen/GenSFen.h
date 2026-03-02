@@ -29,7 +29,7 @@ private:
     void Random(std::string filename, int threadIndex);
     void RandomBenchmark(int maxGames);
 
-    int GenerateRandomPosition(Board& board, std::string& position, RandomPositionGenerator& positionGenerator);
+    int GenerateRandomPosition(Board& board, std::string& position, RandomPositionGenerator& positionGenerator, Search& validationSearch);
     bool ValidateRandomPosition(Board& board, Search& search, int scoreFilter);
     bool WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition,
                     int thresholdEval, int thresholdEvalBoth, int tacticalThreshold, uint minPly = 0);
