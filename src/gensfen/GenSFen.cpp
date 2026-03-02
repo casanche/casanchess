@@ -16,6 +16,7 @@
 const int TACTICAL_THRESHOLD = 120;
 const int MAX_NPIECES = 10;
 const int VALIDATION_DEPTH = 4;
+const int LOW_DEPTH_OFFSET = 3;
 
 struct CurrentPosition {
     Move bestMove = Move();
@@ -373,9 +374,9 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position, RandomP
 // - Best move is quiet at low depths (to skip trivial captures)
 // - Evaluation conditions: At least one color has [-200,200]. Both colors have [-800,800].
 bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition, int thresholdEval, int thresholdEvalBoth, int tacticalThreshold, uint minPly) {  
-    search.FixDepth(m_depth-2);
+    search.FixDepth(m_depth-LOW_DEPTH_OFFSET);
     search.IterativeDeepening(board);
-    currentPosition.calculatedDepth = m_depth-2;
+    currentPosition.calculatedDepth = m_depth-LOW_DEPTH_OFFSET;
     currentPosition.bestMove = search.BestMove();
     int eval = Evaluation::Evaluate(board);
     
@@ -404,7 +405,7 @@ bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     }
 
     // Low depth. Check that move is quiet.
-    search.FixDepth(m_depth-2);
+    search.FixDepth(m_depth-LOW_DEPTH_OFFSET);
     search.IterativeDeepening(board);
     eval = Evaluation::Evaluate(board);
     if( (search.BestScore() - eval) > tacticalThreshold
