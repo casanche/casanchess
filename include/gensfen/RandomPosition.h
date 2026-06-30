@@ -15,7 +15,7 @@ struct RandomPositionConfig {
     float advancedPawnBias = 0.15f;    // Allow pawns on 7th rank
     
     // Piece biases
-    float sameBishopsBias = 0.10f;     // Allow both bishops on same color squares
+    float sameBishopsBias = 0.01f;     // Allow both bishops on same color squares
 };
 
 /// Generates random chess positions for NNUE training data.
@@ -37,7 +37,8 @@ private:
                            const RandomPositionConfig& config);
     
     /// Check if a square is valid for placing a piece (non-pawn).
-    bool IsValidPieceSquare(const Board& board, COLOR color, int piece, int square);
+    bool IsValidPieceSquare(const Board& board, COLOR color, int piece, int square,
+                            const RandomPositionConfig& config);
     
     /// Get a random square biased towards the player's side of the board.
     int RandomSquareForColor(COLOR color);
