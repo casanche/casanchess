@@ -39,7 +39,7 @@ std::string RandomPositionGenerator::Generate(Board& board, const RandomPosition
                         if (p == PAWN)
                             valid = IsValidPawnSquare(board, static_cast<COLOR>(c), square, config);
                         else
-                            valid = IsValidPieceSquare(board, static_cast<COLOR>(c), p, square);
+                            valid = IsValidPieceSquare(board, static_cast<COLOR>(c), p, square, config);
                             
                     } while (!valid && tries < 100);
                     
@@ -93,16 +93,20 @@ bool RandomPositionGenerator::IsValidPawnSquare(const Board& board, COLOR color,
     return true;
 }
 
-bool RandomPositionGenerator::IsValidPieceSquare(const Board& board, COLOR color, int piece, int square) {
+bool RandomPositionGenerator::IsValidPieceSquare(const Board& board, COLOR color, int piece, int square,
+                                                 const RandomPositionConfig& config) {
     Bitboard squareBB = SquareBB(square);
     
     // Basic validity: not occupied
     if (squareBB & board.m_allpieces)
         return false;
     
-    // Bishop: check for same-color squares (currently strict, no bias)
-    if (piece == BISHOP && HasBishopOnSameColor(board, color, squareBB))
-        return false;
+    // Bishop: same-color bishop pairs are rare; allow according to configured bias.
+    if (piece == BISHOP && HasBishopOnSameColor(board, color, squareBB)) {
+        const int basisPoints = static_cast<int>(config.sameBishopsBias * 10000.0f);
+        if (basisPoints <= 0 || m_rng.Random(1, 10000) > basisPoints)
+            return false;
+    }
     
     // King position based on game phase (approximated by piece count)
     if (piece == KING) {
