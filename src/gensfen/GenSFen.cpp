@@ -5,11 +5,9 @@
 #include "MoveGenerator.h"
 #include "Uci.h"
 
+#include <filesystem>
 #include <sstream>
 #include <thread>
-
-const std::string OUTPUT_PATH = "../dev/nnue/sfen/random/";
-const std::string BOOK_FILE = "../data/books/book5.epd";
 
 struct CurrentPosition {
     Move bestMove = Move();
@@ -39,24 +37,34 @@ struct State {
     }
 };
 
-GenSFen::GenSFen() : m_rng(0) {
+GenSFen::GenSFen(GenSFenConfig config) : m_config(std::move(config)) {
+    if(m_config.outputDir.empty())
+        m_config.outputDir = "gensfen-output";
+    if(m_config.bookFile.empty())
+        m_config.bookFile = "../data/books/book5.epd";
+
     UCI_OUTPUT = false;
 }
 
 // Supported modes: 'games', 'random', 'random_benchmark' or 'benchmark'
-void GenSFen::Run(const std::string& gensfen_mode, int concurrency) {
+void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth, int maxGames) {
     std::vector<std::thread> threads;
+
+    m_depth = depth;
+    m_maxGames = maxGames > 0 ? maxGames : INFINITE;
 
     if(!concurrency)
         concurrency = std::thread::hardware_concurrency() - 1;
     std::cout << "Concurrency set to: " << std::to_string(concurrency) << std::endl;
 
+    std::filesystem::create_directories(m_config.outputDir);
+
     if(gensfen_mode == "random_benchmark" || gensfen_mode == "benchmark") {
-        RandomBenchmark(100);
+        RandomBenchmark(m_maxGames == INFINITE ? 100 : m_maxGames);
         return;
     }
 
-    void (GenSFen::*function)(std::string);
+    void (GenSFen::*function)(std::string, int);
     if(gensfen_mode == "games")
         function = &GenSFen::Games;
     else if(gensfen_mode == "random")
@@ -67,28 +75,29 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency) {
     }
 
     for(int i = 1; i <= concurrency; i++) {
-        std::string filename = OUTPUT_PATH + "evals_generated_" + std::to_string(i) + ".epd";
-        threads.push_back( std::thread(function, this, filename) );
+        std::string filename = m_config.outputDir + "/evals_generated_" + std::to_string(i) + ".epd";
+        threads.push_back( std::thread(function, this, filename, i - 1) );
     }
     for(auto& th : threads) {
         th.join();
     }
 }
 
-void GenSFen::Games(std::string filename) {
+void GenSFen::Games(std::string filename, int /*threadIndex*/) {
     std::ofstream outputFile;
     outputFile.open(filename);
 
-    BookPositions bookPositions = ReadBook(BOOK_FILE);
+    BookPositions bookPositions = ReadBook(m_config.bookFile);
 
     Board board;
     Search search;
     State state;
+    Utils::PRNG rng(m_config.seed);
 
-    const int maxGames = INFINITE;
+    const int maxGames = m_maxGames;
     for(int n_game = 0; n_game < maxGames; n_game++) {
         //New starting position
-        uint32_t randomIndex = m_rng.Random(0, static_cast<uint32_t>(bookPositions.size())-1);
+        uint32_t randomIndex = rng.Random(0, static_cast<uint32_t>(bookPositions.size())-1);
         std::string position = bookPositions[randomIndex];
         board.SetFen(position);
 
@@ -103,11 +112,11 @@ void GenSFen::Games(std::string filename) {
         bool exitGame;
         do {
             CurrentPosition currentPosition;
-            WriteEvals(board, search, outputFile, currentPosition, 200, 800, 8);
+            WriteEvals(board, search, outputFile, currentPosition, 200, 800, 0, 8);
 
             // Make next move (random or best)
-            bool doRandomMove = board.Ply() < 20 && m_rng.Random(0,100) < 33 && !board.IsCheck();
-            Move nextMove = doRandomMove ? RandomMove(board) : currentPosition.bestMove;
+            bool doRandomMove = board.Ply() < 20 && rng.Random(0,100) < 33 && !board.IsCheck();
+            Move nextMove = doRandomMove ? RandomMove(board, rng) : currentPosition.bestMove;
             board.MakeMove(nextMove);
 
             state.UpdateGame(currentPosition.evalPass, currentPosition.evalFail);
@@ -128,19 +137,22 @@ void GenSFen::Games(std::string filename) {
     outputFile.close();
 }
 
-void GenSFen::Random(std::string filename) {
+void GenSFen::Random(std::string filename, int threadIndex) {
     std::ofstream outputFile;
     outputFile.open(filename);
 
     Board board;
     Search search;
-    search.FixDepth(7);
+    search.FixDepth(m_depth);
     State state;
+    RandomPositionGenerator positionGenerator(m_config.seed + static_cast<uint64_t>(threadIndex + 1));
+    Search validationSearch;
+    validationSearch.FixDepth(1);
 
-    const int maxGames = INFINITE;
+    const int maxGames = m_maxGames;
     for(int n_game = 0; n_game < maxGames; n_game++) {
         std::string position;
-        GenerateRandomPosition(board, position);
+        GenerateRandomPosition(board, position, positionGenerator, validationSearch);
 
         //To avoid overlap in standard output due to multiple threads
         std::stringstream ss;
@@ -153,7 +165,7 @@ void GenSFen::Random(std::string filename) {
         bool exitGame;
         do {
             CurrentPosition currentPosition;
-            WriteEvals(board, search, outputFile, currentPosition, 100, 250, 0);
+            WriteEvals(board, search, outputFile, currentPosition, 100, 250, 0, 0);
 
             board.MakeMove(currentPosition.bestMove);
 
@@ -184,12 +196,15 @@ void GenSFen::RandomBenchmark(int maxGames) {
 
     Board board;
     Search search;
-    search.FixDepth(7);
+    search.FixDepth(m_depth);
+    RandomPositionGenerator positionGenerator(m_config.seed);
+    Search validationSearch;
+    validationSearch.FixDepth(1);
 
     for(int n_game = 1; n_game <= maxGames; n_game++) {
         clock.Start();
         std::string position;
-        int tries = GenerateRandomPosition(board, position);
+        int tries = GenerateRandomPosition(board, position, positionGenerator, validationSearch);
         time_choose = clock.Elapsed();
 
         clock.Start();
@@ -219,51 +234,59 @@ void GenSFen::RandomBenchmark(int maxGames) {
     P("passed: " << passed << " total time " << global_clock.Elapsed() );
 }
 
-int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
-    Search search_depth1;
-    search_depth1.FixDepth(1);
-
+int GenSFen::GenerateRandomPosition(Board& board, std::string& position,
+                                    RandomPositionGenerator& positionGenerator,
+                                    Search& validationSearch) {
     bool validScore = false;
     int tries = 0;
 
     do {
-        position = board.SetFenRandom();
+        position = positionGenerator.Generate(board);
         tries++;
 
-        int nPieces = PopCount(board.AllPieces());
-        if(NoMoves(board) || nPieces <= 6)
-            continue;
-        search_depth1.IterativeDeepening(board);
-        int score_active = search_depth1.BestScore();
-
-        board.MakeNull();
-        if(NoMoves(board))
-            continue;
-        search_depth1.IterativeDeepening(board);
-        int score_inactive = search_depth1.BestScore();
-
-        bool evalPass = (abs(score_active) < 66) || (abs(score_inactive) < 66);
-        bool evalPassBoth = abs(score_active) < 150 && abs(score_inactive) < 150;
-        validScore = evalPass && evalPassBoth;
-        if(validScore)
-            board.TakeNull();
+        validScore = ValidateRandomPosition(board, validationSearch, 66);
     } while(!validScore);
 
     return tries;
+}
+
+bool GenSFen::ValidateRandomPosition(Board& board, Search& search, int scoreFilter) {
+    int nPieces = PopCount(board.AllPieces());
+    if(NoMoves(board) || nPieces <= 6)
+        return false;
+
+    search.FixDepth(1);
+    search.IterativeDeepening(board);
+    int score_active = search.BestScore();
+
+    board.MakeNull();
+    if(NoMoves(board)) {
+        board.TakeNull();
+        return false;
+    }
+
+    search.IterativeDeepening(board);
+    int score_inactive = search.BestScore();
+    board.TakeNull();
+
+    bool evalPass = (abs(score_active) < scoreFilter) || (abs(score_inactive) < scoreFilter);
+    bool evalPassBoth = abs(score_active) < 150 && abs(score_inactive) < 150;
+    return evalPass && evalPassBoth;
 }
 
 // Write evals if:
 // - Board not in check
 // - Best move is quiet at low depths (to skip trivial captures)
 // - Evaluation conditions: At least one color has [-200,200]. Both colors have [-800,800].
-void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition, int thresholdEval, int thresholdEvalBoth, uint minPly) {
+bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition,
+                         int thresholdEval, int thresholdEvalBoth, int /*tacticalThreshold*/, uint minPly) {
     search.FixDepth(5);
     search.IterativeDeepening(board);
     currentPosition.calculatedDepth = 5;
     currentPosition.bestMove = search.BestMove();
     
     if(board.Ply() < minPly || board.IsCheck() || !search.BestMove().IsQuiet())
-        return;
+        return false;
 
     search.FixDepth(7);
     search.IterativeDeepening(board);
@@ -280,7 +303,7 @@ void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     // Check that enemy move is possible
     if(NoMoves(board) || board.IsCheck()) {
         board.TakeNull();
-        return;
+        return false;
     }
 
     // Low depth. Check that move is quiet.
@@ -288,7 +311,7 @@ void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     search.IterativeDeepening(board);
     if(!search.BestMove().IsQuiet()) {
         board.TakeNull();
-        return;
+        return false;
     }
 
     // Normal depth
@@ -302,7 +325,7 @@ void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     if(!evalPass || !evalPassSoft) {
         currentPosition.evalFail++;
         board.TakeNull();
-        return;
+        return false;
     }
     currentPosition.evalPass++;
 
@@ -311,6 +334,7 @@ void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     outputFile << fenString << ";" << eval[WHITE]/100. << ";" << eval[BLACK]/100. << std::endl;
 
     board.TakeNull();
+    return true;
 }
 
 bool GenSFen::NoMoves(Board& board) {
@@ -318,9 +342,9 @@ bool GenSFen::NoMoves(Board& board) {
     return moves.empty();
 }
 
-Move GenSFen::RandomMove(Board& board) {
+Move GenSFen::RandomMove(Board& board, Utils::PRNG& rng) {
     MoveList moves = MoveGenerator::GenerateMoves(board);
-    return MoveGenerator::RandomMove(moves);
+    return MoveGenerator::RandomMove(moves, rng);
 }
 
 BookPositions GenSFen::ReadBook(const std::string& bookPath) {

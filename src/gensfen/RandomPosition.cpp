@@ -104,7 +104,8 @@ bool RandomPositionGenerator::IsValidPieceSquare(const Board& board, COLOR color
     // Bishop: same-color bishop pairs are rare; allow according to configured bias.
     if (piece == BISHOP && HasBishopOnSameColor(board, color, squareBB)) {
         const int basisPoints = static_cast<int>(config.sameBishopsBias * 10000.0f);
-        if (basisPoints <= 0 || m_rng.Random(1, 10000) > basisPoints)
+        const u32 allowedThreshold = basisPoints > 0 ? static_cast<u32>(basisPoints) : 0U;
+        if (allowedThreshold == 0U || m_rng.Random(1, 10000) > allowedThreshold)
             return false;
     }
     
