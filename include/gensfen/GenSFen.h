@@ -39,6 +39,9 @@ private:
     BookPositions ReadBook(const std::string& bookPath);
     Move RandomMove(Board& board, Utils::PRNG& rng);
 
+    uint64_t SeedForThread(int threadIndex) const;
+    bool WriteRunMetadata(const std::string& mode, int concurrency, int requestedMaxGames) const;
+
     int m_depth = 7;
     int m_maxGames = INFINITE;
     GenSFenConfig m_config;
