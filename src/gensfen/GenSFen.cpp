@@ -5,6 +5,7 @@
 #include "MoveGenerator.h"
 #include "Uci.h"
 
+#include <ctime>
 #include <filesystem>
 #include <sstream>
 #include <thread>
@@ -74,6 +75,12 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth, i
         return;
     }
 
+    if(!WriteRunMetadata(gensfen_mode, concurrency, maxGames)) {
+        std::cerr << "Error: Cannot write run metadata in output directory '"
+                  << m_config.outputDir << "'." << std::endl;
+        return;
+    }
+
     for(int i = 1; i <= concurrency; i++) {
         std::string filename = m_config.outputDir + "/evals_generated_" + std::to_string(i) + ".epd";
         threads.push_back( std::thread(function, this, filename, i - 1) );
@@ -83,7 +90,7 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth, i
     }
 }
 
-void GenSFen::Games(std::string filename, int /*threadIndex*/) {
+void GenSFen::Games(std::string filename, int threadIndex) {
     std::ofstream outputFile;
     outputFile.open(filename);
 
@@ -92,7 +99,7 @@ void GenSFen::Games(std::string filename, int /*threadIndex*/) {
     Board board;
     Search search;
     State state;
-    Utils::PRNG rng(m_config.seed);
+    Utils::PRNG rng(SeedForThread(threadIndex));
 
     const int maxGames = m_maxGames;
     for(int n_game = 0; n_game < maxGames; n_game++) {
@@ -145,7 +152,7 @@ void GenSFen::Random(std::string filename, int threadIndex) {
     Search search;
     search.FixDepth(m_depth);
     State state;
-    RandomPositionGenerator positionGenerator(m_config.seed + static_cast<uint64_t>(threadIndex + 1));
+    RandomPositionGenerator positionGenerator(SeedForThread(threadIndex));
     Search validationSearch;
     validationSearch.FixDepth(1);
 
@@ -359,4 +366,34 @@ BookPositions GenSFen::ReadBook(const std::string& bookPath) {
     bookFile.close();
 
     return bookPositions;
+}
+
+uint64_t GenSFen::SeedForThread(int threadIndex) const {
+    return m_config.seed + static_cast<uint64_t>(threadIndex + 1);
+}
+
+bool GenSFen::WriteRunMetadata(const std::string& mode, int concurrency, int requestedMaxGames) const {
+    const std::filesystem::path metadataPath = std::filesystem::path(m_config.outputDir) / "run_metadata.txt";
+
+    std::ofstream metadata(metadataPath);
+    if(!metadata.is_open())
+        return false;
+
+    metadata << "timestamp_unix=" << static_cast<long long>(std::time(nullptr)) << '\n';
+    metadata << "mode=" << mode << '\n';
+    metadata << "concurrency=" << concurrency << '\n';
+    metadata << "depth=" << m_depth << '\n';
+    metadata << "max_games_requested=" << requestedMaxGames << '\n';
+    metadata << "max_games_effective=" << (m_maxGames == INFINITE ? "infinite" : std::to_string(m_maxGames)) << '\n';
+    metadata << "seed_base=" << m_config.seed << '\n';
+    metadata << "book_file=" << (mode == "games" ? m_config.bookFile : "-") << '\n';
+
+    if(mode == "games" || mode == "random") {
+        for(int i = 0; i < concurrency; i++) {
+            metadata << "thread_" << i << ".seed=" << SeedForThread(i)
+                     << " file=evals_generated_" << (i + 1) << ".epd\n";
+        }
+    }
+
+    return true;
 }
