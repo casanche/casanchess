@@ -62,6 +62,7 @@ public:
 
     // NNUE
     int NNUEEvaluate() const { return m_nnue.Evaluate(m_activePlayer); }
+    void NNUERefresh() { m_nnue.Inputs_FullUpdate(); }
 
     // Helper methods
     Bitboard AttackersTo(COLOR color, int square, Bitboard blockers) const;
@@ -96,7 +97,6 @@ private:
     void UpdateBitboards();
     void UpdateKingAttackers(COLOR color);
     void InitStateAndHistory();
-    void NNUERefresh() { m_nnue.Inputs_FullUpdate(); }
 
     //Static Exchange Evaluation
     Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) const;
