@@ -16,6 +16,11 @@ struct GenSFenConfig {
     std::string outputDir;
     std::string bookFile;
     uint64_t seed = 0;
+
+    int WRITE_EVALS_GAMES_SINGLE = 200;
+    int WRITE_EVALS_GAMES_BOTH = 800;
+    int WRITE_EVALS_RANDOM_SINGLE = 160;
+    int WRITE_EVALS_RANDOM_BOTH = 600;
 };
 
 class GenSFen {
