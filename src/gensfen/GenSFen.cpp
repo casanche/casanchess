@@ -119,7 +119,7 @@ void GenSFen::Games(std::string filename, int threadIndex) {
         bool exitGame;
         do {
             CurrentPosition currentPosition;
-            WriteEvals(board, search, outputFile, currentPosition, 200, 800, 0, 8);
+            WriteEvals(board, search, outputFile, currentPosition, m_config.WRITE_EVALS_GAMES_SINGLE, m_config.WRITE_EVALS_GAMES_BOTH, 0, 8);
 
             // Make next move (random or best)
             bool doRandomMove = board.Ply() < 20 && rng.Random(0,100) < 33 && !board.IsCheck();
@@ -172,7 +172,7 @@ void GenSFen::Random(std::string filename, int threadIndex) {
         bool exitGame;
         do {
             CurrentPosition currentPosition;
-            WriteEvals(board, search, outputFile, currentPosition, 100, 250, 0, 0);
+            WriteEvals(board, search, outputFile, currentPosition, m_config.WRITE_EVALS_RANDOM_SINGLE, m_config.WRITE_EVALS_RANDOM_BOTH, 0, 0);
 
             board.MakeMove(currentPosition.bestMove);
 
@@ -393,6 +393,14 @@ bool GenSFen::WriteRunMetadata(const std::string& mode, int concurrency, int req
             metadata << "thread_" << i << ".seed=" << SeedForThread(i)
                      << " file=evals_generated_" << (i + 1) << ".epd\n";
         }
+    }
+
+    if(mode == "games") {
+        metadata << "write_evals_games_single=" << m_config.WRITE_EVALS_GAMES_SINGLE << '\n';
+        metadata << "write_evals_games_both=" << m_config.WRITE_EVALS_GAMES_BOTH << '\n';
+    } else if(mode == "random") {
+        metadata << "write_evals_random_single=" << m_config.WRITE_EVALS_RANDOM_SINGLE << '\n';
+        metadata << "write_evals_random_both=" << m_config.WRITE_EVALS_RANDOM_BOTH << '\n';
     }
 
     return true;
