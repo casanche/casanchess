@@ -341,6 +341,10 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
 
             NNUE::Load(token);
+
+            // Changing the NNUE file invalidates the current accumulator and hash entries
+            m_board.NNUERefresh();
+            m_search.ClearSearch(true);
         }
         else if (token == "SyzygyPath") {
             stream >> token;
