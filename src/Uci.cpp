@@ -17,8 +17,8 @@
 namespace {
     const std::string ENGINE_NAME = "Casanchess";
     const std::string AUTHOR = "Carlos Sanchez Mayordomo";
-    const std::string VERSION_MAJOR = "0";
-    const std::string VERSION_MINOR = "9";
+    const std::string VERSION_MAJOR = "1";
+    const std::string VERSION_MINOR = "0";
     const std::string VERSION_PATCH = "0";
 }
 
