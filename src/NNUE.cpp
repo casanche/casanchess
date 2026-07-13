@@ -43,7 +43,7 @@ namespace NNUEConstants {
 
 NNUE::NNUE() {
     m_isLoaded = false;
-    m_filepath = "network-20220625.nnue";
+    m_filepath = "network-20260712.nnue";
 
     for(int i = 0; i < NNUE_SIZE; i++) {
         m_accumulator[0][i] = 0;
