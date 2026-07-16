@@ -783,11 +783,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
                 estimatedScore = standPat + DELTA_MARGIN_RISKY + seeValue;
             }
 
-            if(estimatedScore < alpha) {
-                if(estimatedScore > bestScore)
-                    bestScore = estimatedScore;
+            if(estimatedScore < alpha)
                 continue;
-            }
         }
         
         D( BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(board); );
