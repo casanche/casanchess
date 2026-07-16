@@ -155,8 +155,7 @@ void Search::IterativeDeepening(Board &board, bool fullClear) {
         AspirationWindow(board, m_depth, m_bestScore);
 
         // Stop search if limits are reached within the loop
-        if(m_stop)
-            break;
+        if(m_stop) break;
 
         // Update counters
         m_elapsedTime = ElapsedTime();
@@ -233,7 +232,7 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
 
     int score = RootMax(board, depth, alpha, beta);
 
-    for(int researches = 1; (score <= alpha || score >= beta); researches++) {
+    for(int researches = 1; !m_stop && (score <= alpha || score >= beta); researches++) {
         D( m_debug.Increment("AspirationWindow: Out of bounds: Researches: " + std::to_string(researches) ); );
 
         // Asymmetrical incremental aspiration
@@ -262,6 +261,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     assert(depth > 0);
 
     D( m_debug.Increment("RootMax: _: Hit") );
+
+    m_nodes++;
 
     Move bestMove;
     int score;
@@ -294,7 +295,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         }
 
         board.MakeMove(move);
-        m_ply++; m_nodes++;
+        m_ply++;
 
         // -------- Principal Variation Search (PVS) -----------
         // PV move: full window
@@ -312,6 +313,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         board.TakeMove(move);
         m_ply--;
 
+        if(m_stop) break;
+
         if(score > alpha) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update: BestMove (score > alpha)") );
             alpha = score;
@@ -323,11 +326,6 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         // Not useful to store in TT due to aspiration window
         if(score >= beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
-            break;
-        }
-
-        if(m_stop || TimeOver()) {
-            m_stop = true;
             break;
         }
     }
@@ -353,11 +351,13 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     D( m_debug.Increment("NegaMax: _: Entering function") );
 
+    m_nodes++;
+    m_nodesTimeCheck++;
+
     const bool isPV = (beta - alpha) != 1;
     m_pv.ClearPly(m_ply);
 
     // --------- Termination checks -----------
-    m_nodesTimeCheck++;
     if( m_stop || NodeLimit() || TimeOver() ) {
         m_stop = true;
         return 0;
@@ -600,7 +600,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
 
         board.MakeMove(move);
-        m_ply++; m_nodes++;
+        m_ply++;
 
         // -------- Principal Variation Search (PVS) -----------
         int fullDepth = depth - 1 + extension + localExtension;
@@ -624,6 +624,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         board.TakeMove(move);
         m_ply--;
+
+        if(m_stop) return 0;
 
         if(score > bestScore) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update: BestMove") );
@@ -675,6 +677,15 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     D( m_debug.Increment("Quiescence: _: Hits"); );
     D( if(m_plyqs <= 2 || m_plyqs % 5 == 0) m_debug.Increment("Quiescence: QPly " + std::format("{:03}", m_plyqs)) );
+
+    m_nodes++;
+    m_nodesTimeCheck++;
+
+    // Termination checks
+    if( m_stop || NodeLimit() || TimeOver() ) {
+        m_stop = true;
+        return 0;
+    }
 
     // Prevent infinite recursion in rare cases (unlikely to occur)
     if (m_plyqs >= MAX_QS_PLIES) {
@@ -783,13 +794,15 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
         board.MakeMove(move);
 
-        m_ply++; m_plyqs++; m_nodes++; m_selPly = std::max(m_selPly, m_ply);
+        m_ply++; m_plyqs++; m_selPly = std::max(m_selPly, m_ply);
         D( m_debug.Increment("Quiescence: MakeMove (QPly > 0)") );
 
         int score = -QuiescenceSearch(board, -beta, -alpha);
         
         board.TakeMove(move);
         m_ply--; m_plyqs--;
+
+        if(m_stop) return 0;
 
         D( BoardIdentity aft = BoardIntegrityChecker::GenerateBoardIdentity(board); );
         D( assert(bef == aft) );
