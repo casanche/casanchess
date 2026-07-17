@@ -658,7 +658,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // Store score in transposition table
     if(bestMove.MoveType() != 0) {
-        bool alphaWithinBounds = (alpha > alphaOriginal);
+        bool alphaWithinBounds = (bestScore > alphaOriginal);
         alphaWithinBounds ? D( m_debug.Increment("NegaMax: AlphaBeta: Exact") )
                           : D( m_debug.Increment("NegaMax: AlphaBeta: UpperBound") );
         TTENTRY_TYPE type = alphaWithinBounds ? TTENTRY_TYPE::EXACT
@@ -783,11 +783,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
                 estimatedScore = standPat + DELTA_MARGIN_RISKY + seeValue;
             }
 
-            if(estimatedScore < alpha) {
-                if(estimatedScore > bestScore)
-                    bestScore = estimatedScore;
+            if(estimatedScore < alpha)
                 continue;
-            }
         }
         
         D( BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(board); );
