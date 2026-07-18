@@ -122,3 +122,45 @@ jobs:
         BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
 
         echo bench | ./${BASE_PATH}casanchess${EXTENSION_SUFFIX}
+
+    - name: Smoke Test - UCI
+      working-directory: ./build
+      run: |
+        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
+        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
+        
+        ENGINE_BIN="./${BASE_PATH}casanchess${EXTENSION_SUFFIX}"
+
+        timeout 30s bash -c "
+        (
+          # Boot
+          echo 'uci'
+          echo 'setoption name Hash value 32'
+          echo 'isready'
+          sleep 1
+          
+          # 1) Startpos go movetime
+          echo 'position startpos'
+          echo 'go movetime 500'
+          sleep 1
+
+          # New game / Clear state
+          echo 'ucinewgame'
+          echo 'isready'
+          sleep 1
+
+          # 2) Startpos go nodes
+          echo 'position startpos'
+          echo 'go nodes 50000'
+          sleep 1
+          
+          # 3) FEN go inifinite and stop
+          echo 'position fen 8/3P3k/n2K3p/2p3n1/1b4N1/2p1p1P1/8/3B4 w - - 0 1 moves g4f6 h7g7 f6h5 g7g6 d1c2'
+          echo 'go infinite'
+          sleep 2
+          echo 'stop'
+          sleep 1
+          
+          echo 'quit'
+        ) | $ENGINE_BIN
+        "
