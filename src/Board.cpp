@@ -323,7 +323,7 @@ bool Board::IsRepetitionDraw(int searchPly) {
         if(ZKey() == m_history[m_ply - i].zkey) rep++;
 
         // 2-repetitions are enough within the search
-        if(rep == 2 && searchPly > i) return true;
+        if(rep == 2 && searchPly >= i) return true;
 
         // 3-repetitions are needed in real game
         if(rep == 3) return true;
