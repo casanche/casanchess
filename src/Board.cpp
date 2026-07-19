@@ -148,68 +148,64 @@ void Board::ShowMoves() {
 // Simulates all recaptures on the target square using least valuable attacker first.
 //
 // Example: White Pawn takes Black Knight, Black Pawn recaptures
-//   scores[0] = +300 (knight value)
-//   scores[1] = 100 - 300 = -200 (pawn value minus previous)
-//   Negamax: scores[0] = +200 (net: knight gained, pawn lost)
+//   gain[0] = 300 (Black Knight captured by White)
+//   gain[1] = 100 (White Pawn captured by Black)
 //
-// Returns: Material gain/loss in centipawns (positive = good for side to move)
-int Board::SEE(Move move) {
-    COLOR color = ActivePlayer();
-    COLOR enemyColor = InactivePlayer();
+//   Minimax evaluation (bottom-up):
+//   depth 1: gain[0] -= max(0, gain[1]) -> 300 - max(0, 100) = 200
+//   Result: +200 (Net: Knight gained, Pawn lost).
+int Board::SEE(Move move) const {
     MoveData moveData = move.Data();
 
-    //List of scores to be filled
-    const int MAX_CAPTURES = 24;
-    int scores[MAX_CAPTURES];
-    int numCapture = 0;
+    // Array to store the captured piece value at each depth
+    int gain[32];
+    int depth = 0;
 
-    //Direct attackers to the square
-    Bitboard attackers = XRayAttackersTo(color, moveData.toSq) | XRayAttackersTo(enemyColor, moveData.toSq);
+    // Piece value of the captured piece
+    gain[0] = SEE::MATERIAL_VALUES[moveData.capturedType];
 
-    //Initial capture
-    attackers ^= SquareBB(moveData.fromSq);
-    scores[numCapture] = SEE::MATERIAL_VALUES[moveData.capturedType];
-    int pieceValue = SEE::MATERIAL_VALUES[moveData.pieceType]; //what is actually on the square
-
-    // switch the active player
-    color = (COLOR)!color;
-    enemyColor = (COLOR)!enemyColor;
-
-    //the main loop, where all the captures are simulated
-    while(attackers) {
-        Bitboard activeAttackers = attackers & Piece(color, ALL_PIECES);
-        if(!activeAttackers) break;
-
-        //get the Least Valuable Attacker
-        PIECE_TYPE pieceType = NO_PIECE;
-        Bitboard LVA = LeastValuableAttacker(activeAttackers, color, pieceType);
-        attackers ^= LVA;
-
-        //if king... do smth
-
-        //fill an array of scores / current-piece-on-square
-        numCapture++;
-        assert(numCapture <= MAX_CAPTURES);
-        scores[numCapture] = pieceValue - scores[numCapture-1];
-        pieceValue = SEE::MATERIAL_VALUES[pieceType];
-
-        // switch the active player
-        color = (COLOR)!color;
-        enemyColor = (COLOR)!enemyColor;
-    }
-
-    // add hidden pieces
-    //another options is to check for bishops, rooks and queen in the moving direction?? (don't do for kings and knights)
-
-    //retrieve best score
-    while(numCapture > 0) {
-        if(scores[numCapture] > -scores[numCapture-1]) { //scores[numCapture-1] > -scores[numCapture]
-            scores[numCapture-1] = -scores[numCapture];
+    // Our piece that captures
+    PIECE_TYPE attackingPiece = moveData.pieceType;
+    if(move.IsPromotion()) {
+        switch(move.PromotionType()) {
+            case PROMOTION_QUEEN:  attackingPiece = QUEEN;  break;
+            case PROMOTION_KNIGHT: attackingPiece = KNIGHT; break;
+            case PROMOTION_ROOK:   attackingPiece = ROOK;   break;
+            case PROMOTION_BISHOP: attackingPiece = BISHOP; break;
         }
-        numCapture--;
     }
 
-    return scores[0];
+    // Remove the attacker from the original square
+    Bitboard occupied = m_allpieces ^ SquareBB(moveData.fromSq);
+    COLOR sideToMove = InactivePlayer();
+
+    // Keep iterating until there are no more attackers on the target square
+    while(true) {
+        Bitboard attackers = AttackersTo((COLOR)!sideToMove, moveData.toSq, occupied) & occupied;
+
+        if(!attackers) break;
+
+        PIECE_TYPE lvaPiece;
+        Bitboard lvaBitboard = LeastValuableAttacker(attackers, sideToMove, lvaPiece);
+
+        gain[depth + 1] = SEE::MATERIAL_VALUES[attackingPiece];
+
+        // New piece at target square
+        attackingPiece = lvaPiece;
+
+        // Remove the LVA from the original square
+        occupied ^= lvaBitboard;
+        sideToMove = (COLOR)!sideToMove;
+
+        depth++;
+    }
+
+    // Evaluate sequence from depth to 0, negamax style
+    for(int i = depth; i > 0; i--) {
+        gain[i - 1] -= std::max(0, gain[i]); // Don't capture if the gain is negative
+    }
+
+    return gain[0];
 }
 
 //Attackers
@@ -365,35 +361,7 @@ int Board::SquareToIndex(std::string square) const {
     return index;
 }
 
-Bitboard Board::XRayAttackersTo(COLOR color, int square) {
-    Bitboard attackers = ZERO;
-
-    COLOR enemyColor = (COLOR)!color;
-
-    //Non-sliding
-    Bitboard pawnAttackers = AttacksPawns(color, square) & Piece(enemyColor, PAWN);
-    attackers |= pawnAttackers;
-    attackers |= AttacksKnights(square) & Piece(enemyColor, KNIGHT);
-    attackers |= AttacksKing(square) & Piece(enemyColor, KING);
-
-    //Eliminate enemy king for sliding calculation
-    Bitboard blockers = m_allpieces ^ Piece(color, KING); //will be attacked after check
-
-    //Bishop
-    pawnAttackers |= AttacksPawns(enemyColor, square) & Piece(color, PAWN); //add all pawns (TEST!)
-    Bitboard diagonalPieces = Piece(enemyColor, BISHOP) | Piece(enemyColor, QUEEN);
-    Bitboard diagonalBlockers = blockers ^ (pawnAttackers | diagonalPieces);
-    attackers |= AttacksSliding(BISHOP, square, diagonalBlockers) & diagonalPieces;
-
-    //Rook
-    Bitboard straightPieces = Piece(enemyColor, ROOK) | Piece(enemyColor, QUEEN);
-    Bitboard straightBlockers = blockers ^ straightPieces;
-    attackers |= AttacksSliding(ROOK, square, straightBlockers) & straightPieces;
-
-    return attackers;
-}
-
-Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) {
+Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) const {
     assert(attackers);
     for(PIECE_TYPE ipiece = PAWN; ipiece <= KING; ++ipiece) {
         Bitboard pieceAttackers = attackers & Piece(color, ipiece);

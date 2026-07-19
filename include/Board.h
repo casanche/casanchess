@@ -53,7 +53,7 @@ public:
     void TakeNull() { MoveMaker::TakeNull(*this); }
 
     // Static Exchange Evaluation
-    int SEE(Move move);
+    int SEE(Move move) const;
 
     // Helper methods
     Bitboard AttackersTo(COLOR color, int square, Bitboard blockers) const;
@@ -66,7 +66,6 @@ public:
     bool IsRepetitionDraw(int searchPly = 0);
     void Mirror();
     int SquareToIndex(std::string square) const;
-    Bitboard XRayAttackersTo(COLOR color, int square);
 
     //Getters
     inline COLOR ActivePlayer() const       { return m_activePlayer; }
@@ -91,7 +90,7 @@ private:
     void InitStateAndHistory();
 
     //Static Exchange Evaluation
-    Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType);
+    Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) const;
 
     //State
     COLOR m_activePlayer;

@@ -56,6 +56,20 @@ TEST(SEE, QueenTakesDefendedPawn) {
     EXPECT_EQ(board.SEE(move), -950);
 }
 
+// Bishop and pawn aligned. Pawn captures knight, bishop x-ray behind pawn.
+//       p
+//     n
+//   P
+// B
+TEST(SEE, XRayBlockedByPawn) {
+    Board board;
+    board.SetFen("3k4/8/4p3/3n4/2P5/1B6/8/3K4 w - - 0 1");
+    
+    Move move(C4, D5, PAWN, CAPTURE);
+    move.SetCapturedType(KNIGHT);
+    EXPECT_EQ(board.SEE(move), 350);
+}
+
 // ==========
 // == Board ==
 // ==========
