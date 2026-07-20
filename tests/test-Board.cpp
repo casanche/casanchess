@@ -70,6 +70,34 @@ TEST(SEE, XRayBlockedByPawn) {
     EXPECT_EQ(board.SEE(move), 350);
 }
 
+TEST(SEE, PromotionRecapture_EarlyStop) {
+    Board board;
+    board.SetFen("3r4/2P2n2/4Nk2/8/8/8/8/K7 w - - 0 1");
+    
+    Move move(E6, D8, KNIGHT, CAPTURE);
+    move.SetCapturedType(ROOK);
+
+    // The SEE algorithm will see that after Nxd8 Nxd8, the pawn on c7 can recapture
+    // and promote to a queen (unfavourable for black).
+    // Therefore, black does not take the attacking piece.
+    // (net gain for white: +rook).
+    EXPECT_EQ(board.SEE(move), 500);
+}
+
+TEST(SEE, PromotionRecapture_FullSequence) {
+    Board board;
+    board.SetFen("Q2r4/2P2n2/5k2/b7/8/8/8/K7 w - - 0 1");
+    
+    Move move(A8, D8, QUEEN, CAPTURE);
+    move.SetCapturedType(ROOK);
+
+    // The SEE algorithm will see that after Qxd8 Nxd8, the pawn on c7 can recapture
+    // and promote to a queen. But this time recapturing is favourable for black.
+    // Therefore, black takes the attacking piece.
+    // (net gain for white: +rook -queen +knight +(queen-pawn) -queen).
+    EXPECT_EQ(board.SEE(move), -300);
+}
+
 // ==========
 // == Board ==
 // ==========
