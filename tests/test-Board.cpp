@@ -70,7 +70,6 @@ TEST(SEE, XRayBlockedByPawn) {
     EXPECT_EQ(board.SEE(move), 350);
 }
 
-// Enpassant
 TEST(SEE, EnPassant) {
     Board board;
     board.SetFen("3n3k/8/8/3Pp3/8/8/8/K3R3 w - e6 0 1");
@@ -78,6 +77,20 @@ TEST(SEE, EnPassant) {
     Move move(D5, E6, PAWN, ENPASSANT);
     move.SetCapturedType(PAWN);
     EXPECT_EQ(board.SEE(move), 100);
+}
+
+TEST(SEE, PromotionInRecapture) {
+    Board board;
+    board.SetFen("3rk3/2P2n2/4N3/8/8/8/8/K7 w - - 0 1");
+    
+    Move move(E6, D8, KNIGHT, CAPTURE);
+    move.SetCapturedType(ROOK);
+
+    // If promotions in recapture were not handled, the engine would think that
+    // after Nxd8 Nxd8, the pawn on c7 could recepture favorably (+400).
+    // With the promotion handled correctly, recapturing with the pawn loses
+    // a Queen and the engine aborts the sequence earlier (rook vs knight, +150).
+    EXPECT_EQ(board.SEE(move), 150);
 }
 
 // ==========
