@@ -182,6 +182,13 @@ int Board::SEE(Move move) const {
     Bitboard occupied = m_allpieces ^ SquareBB(moveData.fromSq);
     COLOR sideToMove = InactivePlayer();
 
+    // Enpassant special case
+    if(moveData.moveType == ENPASSANT) {
+        int capturedPawnSq = moveData.toSq + (ActivePlayer() == WHITE ? -8 : 8);
+        // Move the attacker pawn to the target square and remove the captured pawn
+        occupied ^= (SquareBB(moveData.toSq) | SquareBB(capturedPawnSq));
+    }
+
     // Keep iterating until there are no more attackers on the target square
     while(true) {
         Bitboard attackers = AttackersTo((COLOR)!sideToMove, moveData.toSq, occupied) & occupied;
