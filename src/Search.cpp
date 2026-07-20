@@ -740,17 +740,10 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     MoveList moves = inCheck ? MoveGenerator::GenerateEvasionMoves(board)
                              : MoveGenerator::GenerateTacticalMoves(board);
 
-    // Checkmate or stalemate
-    if( moves.empty() ) {
-        if(inCheck) {
-            D( m_debug.Increment("Quiescence: EmptyMoves: Checkmate") );
-            return -MATESCORE_MAX + m_ply; // Checkmate
-        }
-        // Generate all the moves to verify stalemate
-        else if( MoveGenerator::GenerateMoves(board).size() == 0 ) {
-            D( m_debug.Increment("Quiescence: EmptyMoves: Stalemate") );
-            return DRAW_SCORE(m_ply); // Stalemate
-        }
+    // Checkmate (ignore stalemate)
+    if( moves.empty() && inCheck ) {
+        D( m_debug.Increment("Quiescence: EmptyMoves: Checkmate") );
+        return -MATESCORE_MAX + m_ply;
     }
 
     // Different move ordering for efficiency
