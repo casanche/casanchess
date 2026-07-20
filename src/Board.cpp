@@ -313,16 +313,21 @@ bool Board::IsCheckAnyColor() {
 }
 
 bool Board::IsRepetitionDraw(int searchPly) {
-    int rep = 0;
+    int rep = 1;
 
-    int imax = std::max(searchPly, (int)m_fiftyrule);
-    int ply = m_ply - m_initialPly;
+    int imax = (int)m_fiftyrule; // Logical limit
+    int ply = m_ply - m_initialPly; // Physical limit
 
     int i = 4;
     while(i <= imax && i <= ply) {
         if(ZKey() == m_history[m_ply - i].zkey) rep++;
-        if(rep == 1 && searchPly > i) return true;
-        if(rep == 2) return true;
+
+        // 2-repetitions are enough within the search
+        if(rep == 2 && searchPly >= i) return true;
+
+        // 3-repetitions are needed in real game
+        if(rep == 3) return true;
+
         i += 2;
     }
     return false;
