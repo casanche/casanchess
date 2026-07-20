@@ -193,6 +193,11 @@ int Board::SEE(Move move) const {
         // New piece at target square
         attackingPiece = lvaPiece;
 
+        // Promotions during recapture
+        if (attackingPiece == PAWN && (Rank(moveData.toSq) == RANK1 || Rank(moveData.toSq) == RANK8)) {
+            attackingPiece = QUEEN;
+        }
+
         // Remove the LVA from the original square
         occupied ^= lvaBitboard;
         sideToMove = (COLOR)!sideToMove;
