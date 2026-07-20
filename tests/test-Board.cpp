@@ -70,6 +70,15 @@ TEST(SEE, XRayBlockedByPawn) {
     EXPECT_EQ(board.SEE(move), 350);
 }
 
+TEST(SEE, EnPassant) {
+    Board board;
+    board.SetFen("3n3k/8/8/3Pp3/8/8/8/K3R3 w - e6 0 1");
+    
+    Move move(D5, E6, PAWN, ENPASSANT);
+    move.SetCapturedType(PAWN);
+    EXPECT_EQ(board.SEE(move), 100);
+}
+
 TEST(SEE, PromotionRecapture_EarlyStop) {
     Board board;
     board.SetFen("3r4/2P2n2/4Nk2/8/8/8/8/K7 w - - 0 1");
