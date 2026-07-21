@@ -166,6 +166,8 @@ int Board::SEE(Move move) const {
 
     // Our piece that captures
     PIECE_TYPE attackingPiece = moveData.pieceType;
+
+    // Special case: promotions
     if(move.IsPromotion()) {
         switch(move.PromotionType()) {
             case PROMOTION_QUEEN:  attackingPiece = QUEEN;  break;
@@ -173,6 +175,7 @@ int Board::SEE(Move move) const {
             case PROMOTION_ROOK:   attackingPiece = ROOK;   break;
             case PROMOTION_BISHOP: attackingPiece = BISHOP; break;
         }
+        gain[0] += SEE::MATERIAL_VALUES[attackingPiece] - SEE::MATERIAL_VALUES[PAWN];
     }
 
     // Remove the attacker from the original square
@@ -196,6 +199,7 @@ int Board::SEE(Move move) const {
         // Promotions during recapture
         if (attackingPiece == PAWN && (Rank(moveData.toSq) == RANK1 || Rank(moveData.toSq) == RANK8)) {
             attackingPiece = QUEEN;
+            gain[depth + 1] += SEE::MATERIAL_VALUES[QUEEN] - SEE::MATERIAL_VALUES[PAWN];
         }
 
         // Remove the LVA from the original square
