@@ -752,7 +752,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     for(auto move : moves) {
 
-        if(!inCheck && move.MoveType() == CAPTURE) {
+        if(!inCheck && move.IsCapture() && !move.IsPromotion()) {
             const int seeValue = Scorer::SEEFromTacticalScore( move.Score() );
 
             // --- Static SEE Pruning ---
