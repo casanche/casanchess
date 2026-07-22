@@ -147,6 +147,8 @@ void Board::ShowMoves() {
 // Evaluates a capture sequence to determine if it wins or loses material.
 // Simulates all recaptures on the target square using least valuable attacker first.
 //
+// It works as well for normal moves, en-passant and promotions.
+//
 // Example: White Pawn takes Black Knight, Black Pawn recaptures
 //   gain[0] = 300 (Black Knight captured by White)
 //   gain[1] = 100 (White Pawn captured by Black)
@@ -182,7 +184,7 @@ int Board::SEE(Move move) const {
     Bitboard occupied = m_allpieces ^ SquareBB(moveData.fromSq);
     COLOR sideToMove = InactivePlayer();
 
-    // Enpassant special case
+    // Special case: en-passant
     if(moveData.moveType == ENPASSANT) {
         int capturedPawnSq = moveData.toSq + (ActivePlayer() == WHITE ? -8 : 8);
         // Move the attacker pawn to the target square and remove the captured pawn
