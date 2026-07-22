@@ -373,6 +373,7 @@ namespace {
 
                 if(toBitboard) {
                     Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::ENPASSANT);
+                    move.SetCapturedType(PAWN);
                     context.AddMove(move);
                 }
             }

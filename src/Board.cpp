@@ -147,6 +147,8 @@ void Board::ShowMoves() {
 // Evaluates a capture sequence to determine if it wins or loses material.
 // Simulates all recaptures on the target square using least valuable attacker first.
 //
+// It works as well for normal moves, en-passant and promotions.
+//
 // Example: White Pawn takes Black Knight, Black Pawn recaptures
 //   gain[0] = 300 (Black Knight captured by White)
 //   gain[1] = 100 (White Pawn captured by Black)
@@ -166,6 +168,8 @@ int Board::SEE(Move move) const {
 
     // Our piece that captures
     PIECE_TYPE attackingPiece = moveData.pieceType;
+
+    // Special case: promotions
     if(move.IsPromotion()) {
         switch(move.PromotionType()) {
             case PROMOTION_QUEEN:  attackingPiece = QUEEN;  break;
@@ -173,11 +177,19 @@ int Board::SEE(Move move) const {
             case PROMOTION_ROOK:   attackingPiece = ROOK;   break;
             case PROMOTION_BISHOP: attackingPiece = BISHOP; break;
         }
+        gain[0] += SEE::MATERIAL_VALUES[attackingPiece] - SEE::MATERIAL_VALUES[PAWN];
     }
 
     // Remove the attacker from the original square
     Bitboard occupied = m_allpieces ^ SquareBB(moveData.fromSq);
     COLOR sideToMove = InactivePlayer();
+
+    // Special case: en-passant
+    if(moveData.moveType == ENPASSANT) {
+        int capturedPawnSq = moveData.toSq + (ActivePlayer() == WHITE ? -8 : 8);
+        // Move the attacker pawn to the target square and remove the captured pawn
+        occupied ^= (SquareBB(moveData.toSq) | SquareBB(capturedPawnSq));
+    }
 
     // Keep iterating until there are no more attackers on the target square
     while(true) {
@@ -192,6 +204,12 @@ int Board::SEE(Move move) const {
 
         // New piece at target square
         attackingPiece = lvaPiece;
+
+        // Promotions during recapture
+        if (attackingPiece == PAWN && (Rank(moveData.toSq) == RANK1 || Rank(moveData.toSq) == RANK8)) {
+            attackingPiece = QUEEN;
+            gain[depth + 1] += SEE::MATERIAL_VALUES[QUEEN] - SEE::MATERIAL_VALUES[PAWN];
+        }
 
         // Remove the LVA from the original square
         occupied ^= lvaBitboard;
