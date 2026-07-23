@@ -46,6 +46,9 @@ u64 Board::Perft(int depth) {
     if(depth == 1) return moves.size();
 
     for(auto move : moves) {
+
+        // TODO: dev
+        assert( IsLegal(move) );
         
         //Integrity check: before
         D( BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(*this); );
@@ -330,6 +333,36 @@ bool Board::IsCheckAnyColor() {
     return check_active || check_inactive;
 }
 
+bool Board::IsLegal(Move move) const {
+    COLOR color = ActivePlayer();
+
+    int fromSq = move.FromSq();
+    int toSq = move.ToSq();
+    MOVE_TYPE moveType = move.MoveType();
+    PIECE_TYPE pieceType = move.PieceType();
+
+    // Special case: castling
+    if(moveType == CASTLING) {
+        return true;
+    }
+
+    // Simulation of the pieces after the move
+    Bitboard blockers = (m_allpieces ^ SquareBB(fromSq)) | SquareBB(toSq);
+
+    // King movements
+    if(pieceType == KING) {
+        return !AttackersTo(color, toSq, blockers);
+    }
+
+    // Special case: en-passant
+    if(moveType == ENPASSANT) {
+        int captureSq = toSq + (color == WHITE ? -8 : 8);
+        blockers ^= SquareBB(captureSq);
+    }
+
+    return !IsKingExposed(blockers, toSq);
+}
+
 bool Board::IsRepetitionDraw(int searchPly) {
     int rep = 1;
 
@@ -465,4 +498,25 @@ void Board::InitStateAndHistory() {
         nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
         nnue.Inputs_FullUpdate();
     }
+}
+
+bool Board::IsKingExposed(Bitboard blockers, int toSq) const {
+    COLOR color = ActivePlayer();
+    COLOR enemyColor = (COLOR)!color;
+    int kingSq = BitscanForward( GetPieces(color, KING) );
+
+    // Mask to ignore captured enemy pieces
+    Bitboard ignore = ~SquareBB(toSq);
+
+    // Straight
+    Bitboard enemyStraight = ( GetPieces(enemyColor, ROOK) | GetPieces(enemyColor, QUEEN) ) & ignore;
+    if(enemyStraight && AttacksSliding(ROOK, kingSq, blockers) & enemyStraight)
+        return true;
+
+    // Diagonal
+    Bitboard enemyDiagonal = ( GetPieces(enemyColor, BISHOP) | GetPieces(enemyColor, QUEEN) ) & ignore;
+    if(enemyDiagonal && AttacksSliding(BISHOP, kingSq, blockers) & enemyDiagonal)
+        return true;
+
+    return false;
 }

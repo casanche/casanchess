@@ -63,6 +63,7 @@ public:
     bool IsAttacked(COLOR color, int square) const;
     bool IsCheck();
     bool IsCheckAnyColor();
+    bool IsLegal(Move move) const;
     bool IsRepetitionDraw(int searchPly = 0);
     void Mirror();
     int SquareToIndex(std::string square) const;
@@ -91,6 +92,9 @@ private:
 
     //Static Exchange Evaluation
     Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) const;
+
+    // IsLegal helpers
+    bool IsKingExposed(Bitboard blockers, int toSq) const;
 
     //State
     COLOR m_activePlayer;
