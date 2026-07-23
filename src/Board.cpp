@@ -38,17 +38,25 @@ void Board::Init() {
 }
 
 u64 Board::Perft(int depth) {
-    u64 nodes = 0;
+    if(depth == 0) return 1;
 
     MoveList moves = MoveGenerator::GenerateMoves(*this);
 
-    if(depth == 0) return 1;
-    if(depth == 1) return moves.size();
+    // Bulk counting at depth 1
+    if(depth == 1) {
+        u64 nodes = 0;
+        for(auto move : moves) {
+            if( IsLegal(move) ) {
+                nodes++;
+            }
+        }
+        return nodes;
+    }
+
+    u64 nodes = 0;
 
     for(auto move : moves) {
-
-        // TODO: dev
-        assert( IsLegal(move) );
+        if( !IsLegal(move) ) continue;
         
         //Integrity check: before
         D( BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(*this); );
@@ -334,25 +342,23 @@ bool Board::IsCheckAnyColor() {
 }
 
 bool Board::IsLegal(Move move) const {
-    COLOR color = ActivePlayer();
-
-    int fromSq = move.FromSq();
-    int toSq = move.ToSq();
     MOVE_TYPE moveType = move.MoveType();
-    PIECE_TYPE pieceType = move.PieceType();
+    assert(move.MoveType());
 
     // Special case: castling
-    if(moveType == CASTLING) {
-        return true;
-    }
+    if(moveType == CASTLING) return true;
+
+    COLOR color = ActivePlayer();
+    int fromSq = move.FromSq();
+    int toSq = move.ToSq();
+    PIECE_TYPE pieceType = move.PieceType();
 
     // Simulation of the pieces after the move
     Bitboard blockers = (m_allpieces ^ SquareBB(fromSq)) | SquareBB(toSq);
 
     // King movements
-    if(pieceType == KING) {
+    if(pieceType == KING)
         return !AttackersTo(color, toSq, blockers);
-    }
 
     // Special case: en-passant
     if(moveType == ENPASSANT) {

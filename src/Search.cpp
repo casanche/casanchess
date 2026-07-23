@@ -279,6 +279,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     int moveNumber = 0;
 
     for(auto move : moves) {
+        if( !board.IsLegal(move) ) continue;
+
         moveNumber++;
         bool isPV = (moveNumber == 1);
 
@@ -524,18 +526,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     D( m_debug.Increment("NegaMax: _: GenerateMoves") );
 
-    // --------- Check for checkmate and stalemate -----------
-    if( moves.empty() ) {
-        if(inCheck) {
-            D( m_debug.Increment("NegaMax: EmptyMoves: Checkmate") );
-            return -MATESCORE_MAX + m_ply; // Checkmate
-        }
-        else {
-            D( m_debug.Increment("NegaMax: EmptyMoves: Stalemate") );
-            return DRAW_SCORE(m_ply); // Stalemate
-        }
-    }
-
     //----- One-reply extension -------
     if( moves.size() == 1 ) {
         D( m_debug.Increment("NegaMax: Extension: One-reply") );
@@ -550,7 +540,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     int moveNumber = 0;
 
     for(auto move : moves) {
-        assert(move.MoveType());
+        if( !board.IsLegal(move) ) continue;
 
         moveNumber++;
         bool childPV = (moveNumber == 1);
@@ -656,6 +646,18 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     } // End move loop
 
+    // --------- Check for checkmate and stalemate -----------
+    if( moveNumber == 0 ) {
+        if(inCheck) {
+            D( m_debug.Increment("NegaMax: NoMoves: Checkmate") );
+            return -MATESCORE_MAX + m_ply; // Checkmate
+        }
+        else {
+            D( m_debug.Increment("NegaMax: NoMoves: Stalemate") );
+            return DRAW_SCORE(m_ply); // Stalemate
+        }
+    }
+
     // Store score in transposition table
     if(bestMove.MoveType() != 0) {
         bool alphaWithinBounds = (bestScore > alphaOriginal);
@@ -740,17 +742,16 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     MoveList moves = inCheck ? MoveGenerator::GenerateEvasionMoves(board)
                              : MoveGenerator::GenerateTacticalMoves(board);
 
-    // Checkmate (ignore stalemate)
-    if( moves.empty() && inCheck ) {
-        D( m_debug.Increment("Quiescence: EmptyMoves: Checkmate") );
-        return -MATESCORE_MAX + m_ply;
-    }
-
     // Different move ordering for efficiency
     inCheck ? SortEvasions(board, moves)
             : SortTactical(board, moves);
 
+    int moveNumber = 0;
+
     for(auto move : moves) {
+        if( !board.IsLegal(move) ) continue;
+
+        moveNumber++;
 
         if(!inCheck && move.IsCapture() && !move.IsPromotion()) {
             const int seeValue = Scorer::SEEFromTacticalScore( move.Score() );
@@ -799,6 +800,12 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
         if(score > alpha)
             alpha = score;
+    }
+
+    // Checkmate (ignore stalemate)
+    if( inCheck && moveNumber == 0 ) {
+        D( m_debug.Increment("Quiescence: NoMoves: Checkmate") );
+        return -MATESCORE_MAX + m_ply;
     }
 
     return bestScore;
