@@ -754,14 +754,6 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
         if(!inCheck && move.IsCapture() && !move.IsPromotion()) {
             const int seeValue = Scorer::SEEFromTacticalScore( move.Score() );
-
-            // --- Static SEE Pruning ---
-            // Quick filter to discard tactically hopeless captures
-            const int SEE_PRUNING_THRESHOLD = -250;
-            if(seeValue < SEE_PRUNING_THRESHOLD) {
-                D( m_debug.Increment("Quiescence: Pruning: SEE << 0") );
-                continue;
-            }
             
             // --- Delta Pruning ---
             // Calculate a heuristic score for futility pruning. Depending on the SEE:
