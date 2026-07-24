@@ -693,12 +693,25 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         return Evaluation::Evaluate(board);
     }
 
+    // Probe transposition table.
+    // Only non-PV nodes: PV nodes require the most accurate score possible.
+    TTEntry* ttEntry = Hash::tt.Probe(board.ZKey(), 0);
     const bool isPV = (beta - alpha) != 1;
-    int bestScore = -INFINITE_SCORE;
-    bool inCheck = board.IsCheck();
+    if(ttEntry && !isPV) {
+        int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
+        if( ttEntry->type == TTENTRY_TYPE::EXACT
+            || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+            || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
+        ) {
+            D( m_debug.Increment("Quiescence: TT Hit") );
+            return score;
+        }
+    }
 
     // Stand pat: static evaluation of current position
     int standPat = 0;
+    int bestScore = -INFINITE_SCORE;
+    bool inCheck = board.IsCheck();
     if(!inCheck) {
         // Probe evaluation cache first (modifies standPat if hit)
         const bool cacheHit = Hash::evalCache.Probe(board.ZKey(), standPat);
@@ -718,20 +731,6 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             alpha = standPat;
         }
         bestScore =  standPat;
-    }
-
-    // Probe transposition table.
-    // Only non-PV nodes: PV nodes require the most accurate score possible.
-    TTEntry* ttEntry = Hash::tt.Probe(board.ZKey(), 0);
-    if(ttEntry && !isPV) {
-        int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
-        if( ttEntry->type == TTENTRY_TYPE::EXACT
-            || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-            || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
-        ) {
-            D( m_debug.Increment("Quiescence: TT Hit") );
-            return score;
-        }
     }
 
     // Generate captures.
