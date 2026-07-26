@@ -13,8 +13,8 @@ constexpr u64 EVALCACHE_ENTRIES = 1 << 19;
 // == Transposition table ==
 // =========================
 
-// Alpha node: the true eval is at most equal to the score (true <= score) UPPER_BOUND
-// Beta node: the true eval is at least equal to the score (true >= score) LOWER_BOUND
+// Alpha node (from a fail-low): the true eval is at most equal to the score (truth <= score) UPPER_BOUND
+// Beta node (from a fail-high): the true eval is at least equal to the score (truth >= score) LOWER_BOUND
 enum class TTENTRY_TYPE : u8 { NONE, EXACT, LOWER_BOUND, UPPER_BOUND };
 
 // 32(zkey) + 32(move) + 16(score) + 8(depth) + 2(type) + 6(age) + 32(padding) = 128 bits per entry

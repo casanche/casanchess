@@ -3,6 +3,7 @@
 #include "Board.h"
 #include "Constants.h"
 #include "Debug.h"
+#include "Hash.h"
 #include "Heuristics.h"
 #include "Move.h"
 #include "PV.h"
@@ -11,6 +12,8 @@
 #include <vector>
 
 const int MAX_ROOTMOVES = 256;
+
+using BOUND_TYPE = TTENTRY_TYPE;
 
 // Search limits from UCI
 struct Limits {
@@ -67,12 +70,13 @@ private:
     int QuiescenceSearch(Board &board, int alpha, int beta);
 
     // IterativeDeepening methods
-    void UciOutput(std::string PV);
+    void UciOutput(std::string PV, int score, BOUND_TYPE bound = BOUND_TYPE::EXACT);
 
     // NegaMax methods
     int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
 
-    // Limits
+    // Limits and internal calculations
+    int CalculateNPS() { return static_cast<int>(1000 * m_nodes / (m_elapsedTime+1)); }
     bool TimeOver();
     bool NodeLimit() { return m_nodes >= m_forcedNodes; };
 

@@ -158,13 +158,8 @@ void Search::IterativeDeepening(Board &board, bool fullClear) {
         // Stop search if limits are reached within the loop
         if(m_stop) break;
 
-        // Update counters
-        m_elapsedTime = ElapsedTime();
-        m_nps = static_cast<int>(1000 * m_nodes / (m_elapsedTime+1));
-
         // PV
-        if(UCI_OUTPUT)
-            UciOutput(m_pv.PVString());
+        UciOutput(m_pv.PVString(), m_bestScore);
 
         // Stop search if we used half of the allocated time, since
         // next iteration will likely use more than the allocated time
@@ -183,16 +178,25 @@ void Search::IterativeDeepening(Board &board, bool fullClear) {
     }
 }
 
-void Search::UciOutput(std::string PV) {
+void Search::UciOutput(std::string PV, int score, BOUND_TYPE bound) {
+    if(!UCI_OUTPUT) return;
+
+    m_elapsedTime = ElapsedTime();
+    m_nps = CalculateNPS();
+
     std::cout << "info depth " << m_depth;
     std::cout << " seldepth " << m_selPly;
-    if(IsMateValue(m_bestScore)) {
-        int mateScore = (m_bestScore > 0) ?  MATESCORE_MAX - m_bestScore + 1
-                                          : -MATESCORE_MAX - m_bestScore - 1;
+
+    if(IsMateValue(score)) {
+        int mateScore = (score > 0) ?  MATESCORE_MAX - score + 1
+                                    : -MATESCORE_MAX - score - 1;
         std::cout << " score mate " << mateScore / 2; //return mate in moves, not in plies
     } else {
-        std::cout << " score cp " << m_bestScore;
+        std::cout << " score cp " << score;
     }
+    if(bound == BOUND_TYPE::LOWER_BOUND) std::cout << " lowerbound";
+    if(bound == BOUND_TYPE::UPPER_BOUND) std::cout << " upperbound";
+
     std::cout << " time " << m_elapsedTime;
     std::cout << " nodes " << m_nodes;
     std::cout << " nps " << m_nps;
@@ -235,6 +239,11 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
 
     for(int researches = 1; !m_stop && (score <= alpha || score >= beta); researches++) {
         D( m_debug.Increment("AspirationWindow: Out of bounds: Researches: " + std::to_string(researches) ); );
+
+        // Display fail-low info
+        if(score <= alpha) {
+            UciOutput(m_pv.PVString(), score, BOUND_TYPE::UPPER_BOUND);
+        }
 
         // Asymmetrical incremental aspiration
         window = window * ASPIRATION_WINDOW_MULTIPLIER;
@@ -287,19 +296,20 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         if(DEBUG_SEARCH_TREE)
             P( "RootMax: " << move.Notation() );
 
+        // Display the root move under analysis and update the counters
         if(UCI_OUTPUT && m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
-            // UCI: show the root move under analysis and update the counters
             m_elapsedTime = ElapsedTime();
-            m_nps = static_cast<int>(1000 * m_nodes / (m_elapsedTime+1));
+            m_nps = CalculateNPS();
 
             std::cout << "info depth " << m_depth
                       << " currmovenumber " << moveNumber
                       << " currmove " << move.Notation()
                       << " time " << m_elapsedTime
                       << " nodes " << m_nodes
-                      << " nps " << m_nps
-                      << " tbhits " << m_tbHits
-                      << std::endl;
+                      << " nps " << m_nps;
+            if(m_tbHits)
+                std::cout << " tbhits " << m_tbHits;
+            std::cout << std::endl;
         }
 
         board.MakeMove(move);
@@ -340,6 +350,12 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             alpha = score;
 
             m_pv.Update(m_ply, move);
+
+            if(m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
+                BOUND_TYPE bound = (score >= beta) ? BOUND_TYPE::LOWER_BOUND
+                                                   : BOUND_TYPE::EXACT;
+                UciOutput(m_pv.PVString(), score, bound);
+            }
         }
     }
 
