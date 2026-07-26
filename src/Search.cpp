@@ -277,6 +277,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
     SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
 
+    bool inCheck = board.IsCheck();
+
     int moveNumber = 0;
 
     for(auto move : moves) {
@@ -295,20 +297,37 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             }
         }
 
+        // -------- Late Move Reductions (root) ----------
+        // Reduce depth of less-promising moves
+        int reduction = 0;
+        if( !TURNOFF_LMR
+              && moveNumber > 1     // Never reduce the first move
+              && depth >= 2         // Avoid negative depths
+              && !inCheck           // Evasions not reduced
+        ) {
+            reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, false);
+        }
+
         board.MakeMove(move);
         m_ply++;
 
         // -------- Principal Variation Search (PVS) -----------
         // PV move: full window
         // Other moves: zero window
+        int fullDepth = depth - 1;
+        int reducedDepth = std::max(0, fullDepth - reduction);
         if(isPV)
-            score = -NegaMax(board, depth-1, -beta, -alpha);
+            score = -NegaMax(board, fullDepth, -beta, -alpha);
         else {
-            score = -NegaMax(board, depth-1, -alpha-1, -alpha);
+            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha);
+
+            // Reduced search failed high: re-search with full depth
+            if(reduction && score > alpha)
+                score = -NegaMax(board, fullDepth, -alpha-1, -alpha);
 
             // Score within window: new PV found! Re-search with full window
             if(score > alpha && score < beta)
-                score = -NegaMax(board, depth-1, -beta, -alpha);
+                score = -NegaMax(board, fullDepth, -beta, -alpha);
         }
 
         board.TakeMove(move);
