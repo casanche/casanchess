@@ -73,7 +73,7 @@ private:
     void UciOutput(std::string PV, int score, BOUND_TYPE bound = BOUND_TYPE::EXACT);
 
     // NegaMax methods
-    int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
+    int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV, bool isRoot);
 
     // Limits and internal calculations
     int CalculateNPS() { return static_cast<int>(1000 * m_nodes / (m_elapsedTime+1)); }

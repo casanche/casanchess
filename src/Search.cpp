@@ -289,6 +289,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     if(!m_bestMove.MoveType() && !moves.empty())
         m_bestMove = moves[0]; // Life jacket if first move at depth 1 is not completed
 
+    bool inCheck = board.IsCheck();
+
     int moveNumber = 0;
 
     for(auto move : moves) {
@@ -315,20 +317,40 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             std::cout << std::endl;
         }
 
+        // -------- Late Move Reductions (root) ----------
+        // Reduce depth of less-promising moves
+        int reduction = 0;
+        if( !TURNOFF_LMR
+              && moveNumber > 1     // Never reduce the first move
+              && depth >= 2         // Avoid negative depths
+              && !inCheck           // Evasions not reduced
+        ) {
+            reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, false, true);
+
+            reduction -= 2;
+            reduction = std::clamp(reduction, 0, 4);
+        }
+
         board.MakeMove(move);
         m_ply++;
 
         // -------- Principal Variation Search (PVS) -----------
         // PV move: full window
         // Other moves: zero window
+        int fullDepth = depth - 1;
+        int reducedDepth = std::max(0, fullDepth - reduction);
         if(isPV)
-            score = -NegaMax(board, depth-1, -beta, -alpha);
+            score = -NegaMax(board, fullDepth, -beta, -alpha);
         else {
-            score = -NegaMax(board, depth-1, -alpha-1, -alpha);
+            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha);
+
+            // Reduced search failed high: re-search with full depth
+            if(reduction && score > alpha)
+                score = -NegaMax(board, fullDepth, -alpha-1, -alpha);
 
             // Score within window: new PV found! Re-search with full window
             if(score > alpha && score < beta)
-                score = -NegaMax(board, depth-1, -beta, -alpha);
+                score = -NegaMax(board, fullDepth, -beta, -alpha);
         }
 
         board.TakeMove(move);
@@ -630,7 +652,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
               && depth >= 2         // Avoid negative depths
               && !inCheck           // Not in check
         ) {
-            reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, isPV);
+            reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, isPV, false);
         }
 
         board.MakeMove(move);
@@ -897,7 +919,7 @@ void Search::AllocateLimits(Board &board, const Limits& limits) {
 }
 
 // Late Move Reductions: reduce the search depth for less-promising moves.
-int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV) {
+int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV, bool isRoot) {
     assert(moveScore  >= 0 && moveScore  <= LOG_TABLE_SIZE - 1);
     assert(depth      >= 0 && depth      <= LOG_TABLE_SIZE - 1);
     assert(moveNumber >= 0 && moveNumber <= LOG_TABLE_SIZE - 1);
@@ -943,6 +965,9 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     }
 
     reduction = lmr_value / MULT_FACTOR;
-    reduction = std::clamp(reduction, 0, 4);
-    return reduction;
+
+    if(isRoot)
+        reduction -= 2;
+
+    return std::clamp(reduction, 0, 4);
 }
