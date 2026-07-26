@@ -345,6 +345,13 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         D( m_debug.Increment("RootMax: AlphaBeta: Exact") );
         Hash::tt.Store(board.ZKey(), bestScore, TTENTRY_TYPE::EXACT, bestMove, depth, m_ply, m_searchCount);
     }
+    else if(!m_stop && bestMove.MoveType() != 0) {
+        bool failLow = (bestScore <= alphaOriginal);
+        D( m_debug.Increment("RootMax: AlphaBeta: " + std::string(failLow ? "UpperBound" : "LowerBound")) );
+        TTENTRY_TYPE type = failLow ? TTENTRY_TYPE::UPPER_BOUND
+                                    : TTENTRY_TYPE::LOWER_BOUND;
+        Hash::tt.Store(board.ZKey(), bestScore, type, bestMove, depth, m_ply, m_searchCount);
+    }
 
     return bestScore;
 }
