@@ -285,13 +285,19 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         if(DEBUG_SEARCH_TREE)
             P( "RootMax: " << move.Notation() );
 
-        if(UCI_OUTPUT) {
-            //Uci output: show the root move number under analysis
-            if(m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
-                std::cout << "info currmovenumber " << moveNumber;
-                std::cout << " currmove " << move.Notation();
-                std::cout << std::endl;
-            }
+        if(UCI_OUTPUT && m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
+            // UCI: show the root move under analysis and update the counters
+            m_elapsedTime = ElapsedTime();
+            m_nps = static_cast<int>(1000 * m_nodes / (m_elapsedTime+1));
+
+            std::cout << "info depth " << m_depth
+                      << " currmovenumber " << moveNumber
+                      << " currmove " << move.Notation()
+                      << " time " << m_elapsedTime
+                      << " nodes " << m_nodes
+                      << " nps " << m_nps
+                      << " tbhits " << m_tbHits
+                      << std::endl;
         }
 
         board.MakeMove(move);
