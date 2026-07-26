@@ -82,9 +82,12 @@ namespace {
         }
     }
 
-    void RateTactical(Board &board, MoveList &moves) {
+    void RateTactical(Board &board, MoveList &moves, Move hashMove) {
+        // Hash > Promotions > Captures
         for(auto& move : moves) {
-            if(move.MoveType() == PROMOTION_CAPTURE) {
+            if(move == hashMove) {
+                move.SetScore(Scorer::HASH);
+            } else if(move.MoveType() == PROMOTION_CAPTURE) {
                 move.SetScore(Scorer::TACTICAL_PROMOTION_CAPTURE);
             } else if(move.MoveType() == PROMOTION) {
                 move.SetScore(Scorer::TACTICAL_PROMOTION_NORMAL);
@@ -95,13 +98,16 @@ namespace {
         }
     }
 
-    void RateEvasions([[maybe_unused]] Board &board, MoveList &moves) {
-        // Captures > Other moves
+    void RateEvasions([[maybe_unused]] Board &board, MoveList &moves, Move hashMove) {
+        // Hash > Captures > Other moves
         for(auto& move : moves) {
-            if(move.CapturedType())
+            if(move == hashMove) {
+                move.SetScore(Scorer::HASH);
+            } else if(move.CapturedType()) {
                 move.SetScore(Scorer::EVASION_CAPTURE);
-            else
+            } else {
                 move.SetScore(Scorer::EVASION_NORMAL);
+            }
         }
     }
 
@@ -124,12 +130,12 @@ void Sorting::SortMoves(Board &board, MoveList& moves, TT& tt, const Heuristics 
     std::ranges::sort(moves, ByScore);
 }
 
-void Sorting::SortEvasions(Board &board, MoveList& moves) {
-    RateEvasions(board, moves);
+void Sorting::SortEvasions(Board &board, MoveList& moves, Move hashMove) {
+    RateEvasions(board, moves, hashMove);
     std::ranges::sort(moves, ByScore);
 }
 
-void Sorting::SortTactical(Board &board, MoveList& moves) {
-    RateTactical(board, moves);
+void Sorting::SortTactical(Board &board, MoveList& moves, Move hashMove) {
+    RateTactical(board, moves, hashMove);
     std::ranges::sort(moves, ByScore);
 }
