@@ -322,17 +322,17 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             bestMove = move;
         }
 
+        // Not useful to store in TT due to aspiration window
+        if(score >= beta) {
+            D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
+            break;
+        }
+
         if(score > alpha) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
 
             m_pv.Update(m_ply, move, score);
-        }
-
-        // Not useful to store in TT due to aspiration window
-        if(score >= beta) {
-            D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
-            break;
         }
     }
 
