@@ -361,7 +361,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     m_nodesTimeCheck++;
 
     const bool isPV = (beta - alpha) != 1;
-    m_pv.ClearPly(m_ply);
+    if(isPV)
+        m_pv.ClearPly(m_ply);
 
     // --------- Termination checks -----------
     if( m_stop || NodeLimit() || TimeOver() ) {
