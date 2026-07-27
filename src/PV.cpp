@@ -16,7 +16,7 @@ void PV::ClearPly(int ply) {
     m_pvLength[ply] = 0;
 }
 
-void PV::Update(int ply, Move move, [[maybe_unused]] int score) {
+void PV::Update(int ply, Move move) {
     m_pvTable[ply][0] = move;
 
     const int childPly = ply + 1;

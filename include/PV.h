@@ -12,7 +12,7 @@ public:
     void ClearTable();
     void ClearPly(int ply);
 
-    void Update(int ply, Move move, int score);
+    void Update(int ply, Move move);
 
     Move PonderMove() const;
     std::string PVString() const;
