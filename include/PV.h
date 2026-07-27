@@ -18,9 +18,9 @@ public:
     std::string PVString() const;
 
 private:
-    using PVLine = std::array<Move, MAX_PLY>;
-    using PVTable = std::array<PVLine, MAX_PLY>;
+    using PVLine = std::array<Move, MAX_PLY + 1>;
+    using PVTable = std::array<PVLine, MAX_PLY + 1>; // +1 to allow safe read of childPly
 
     PVTable m_pvTable;
-    std::array<int, MAX_PLY> m_pvLength;
+    std::array<int, MAX_PLY + 1> m_pvLength;
 };
