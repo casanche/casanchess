@@ -5,18 +5,18 @@ PV::PV() {
 }
 
 void PV::ClearTable() {
-    for(int i = 0; i < MAX_PLY; ++i) {
+    for(int i = 0; i <= MAX_PLY; ++i) {
         ClearPly(i);
     }
 }
 
 // Clear the PV for the current ply
 void PV::ClearPly(int ply) {
-    assert(ply >= 0 && ply < MAX_PLY);
+    assert(ply >= 0 && ply <= MAX_PLY);
     m_pvLength[ply] = 0;
 }
 
-void PV::Update(int ply, Move move, [[maybe_unused]] int score) {
+void PV::Update(int ply, Move move) {
     m_pvTable[ply][0] = move;
 
     const int childPly = ply + 1;

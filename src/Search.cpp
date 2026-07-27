@@ -326,7 +326,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             alpha = score;
             bestMove = move;
 
-            m_pv.Update(m_ply, move, score);
+            m_pv.Update(m_ply, move);
         }
 
         // Not useful to store in TT due to aspiration window
@@ -361,7 +361,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     m_nodesTimeCheck++;
 
     const bool isPV = (beta - alpha) != 1;
-    m_pv.ClearPly(m_ply);
+    if(isPV)
+        m_pv.ClearPly(m_ply);
 
     // --------- Termination checks -----------
     if( m_stop || NodeLimit() || TimeOver() ) {
@@ -657,7 +658,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update: Alpha") );
             alpha = score;
  
-            m_pv.Update(m_ply, move, score);
+            m_pv.Update(m_ply, move);
         }
 
     } // End move loop
