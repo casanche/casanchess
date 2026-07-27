@@ -65,8 +65,8 @@ bool BoardIntegrityChecker::CheckIntegrity(const Board& board) {
     return bitboardIntegrity &&
         (board.Piece(WHITE, PAWN) & (MaskRank[RANK1] | MaskRank[RANK8])) == 0 &&
         (board.Piece(BLACK, PAWN) & (MaskRank[RANK1] | MaskRank[RANK8])) == 0 &&
-        PopCount( board.Piece(WHITE, KING) ) == 1 &&
-        PopCount( board.Piece(BLACK, KING) ) == 1 &&
+        OnlyOne( board.Piece(WHITE, KING) ) &&
+        OnlyOne( board.Piece(BLACK, KING) ) &&
         PopCount( board.Piece(WHITE, PAWN) ) <= 8 &&
         PopCount( board.Piece(BLACK, PAWN) ) <= 8 &&
         PopCount( board.EnPassantSquare() ) <= 1 &&

@@ -36,6 +36,11 @@ int BitboardUtils::ResetLsb(Bitboard &b) {
     return index;
 }
 
+//Returns true if the bitboard has only one bit set
+bool BitboardUtils::OnlyOne(Bitboard b) {
+    return std::has_single_bit(b);
+}
+
 //Returns a bitboard with the LSB only
 Bitboard BitboardUtils::IsolateLsb(Bitboard b) {
 	return b & (~b + 1);

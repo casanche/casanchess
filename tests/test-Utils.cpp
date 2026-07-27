@@ -56,6 +56,11 @@ TEST(BitboardUtils, PopCount) {
     EXPECT_EQ(PopCount((u64)0x4000000000010),2);
     EXPECT_EQ(PopCount((u64)0x9102289248220842),16);
 }
+TEST(BitboardUtils, OnlyOne) {
+    EXPECT_TRUE( OnlyOne((u64)0x4000000000000) );
+    EXPECT_FALSE( OnlyOne((u64)0x4000000000010) );
+    EXPECT_FALSE( OnlyOne(ZERO) );
+}
 TEST(BitboardUtils, ResetLsb) {
     Bitboard b = 0x3102289248220840;
     EXPECT_EQ(ResetLsb(b), 6); //index returned

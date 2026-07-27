@@ -45,6 +45,7 @@ namespace BitboardUtils {
     int BitscanReverse(Bitboard b);
     int PopCount(Bitboard b);
     int ResetLsb(Bitboard &b);
+    bool OnlyOne(Bitboard b);
 
     Bitboard IsolateLsb(Bitboard b);
     inline void RemoveLsb(Bitboard &b) { b &= (b - 1); };

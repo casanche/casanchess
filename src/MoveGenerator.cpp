@@ -119,7 +119,7 @@ namespace {
                 Bitboard pinnedCandidates = lineBetween & context.ownPieces;
 
                 // We got a match! Fill the state
-                if(PopCount(pinnedCandidates) == 1) {
+                if(OnlyOne(pinnedCandidates)) {
                     int pinnedSquare = BitscanForward(pinnedCandidates);
                     pinnedPieces |= pinnedCandidates;
                     pinnedPushMask[pinnedSquare] = lineBetween;
