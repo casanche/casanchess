@@ -6,7 +6,7 @@
 
 const int NNUE_SIZE = 128;
 const int NNUE_FEATURES = 32*64*5*2; //kingBuckets * square * pieceType * color
-const int CONVERSION_FACTOR = __INT16_MAX__ / 3;
+const int CONVERSION_FACTOR = INFINITE_I16 / 3;
 
 struct Network;
 

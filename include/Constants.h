@@ -15,21 +15,16 @@ using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
 using Bitboard = uint64_t;
-#define INFINITE __INT_MAX__
-#define INFINITE_U64 __UINT64_MAX__
-#define INFINITE_I16 __INT16_MAX__
 
-#ifdef _MSC_VER
-    #define __INT_MAX__ INT_MAX
-    #define __UINT64_MAX__ ULLONG_MAX
-    #define __INT16_MAX__ SHRT_MAX
-#endif
+constexpr int INFINITE = std::numeric_limits<int>::max();
+constexpr u64 INFINITE_U64 = std::numeric_limits<u64>::max();
+constexpr i16 INFINITE_I16 = std::numeric_limits<i16>::max();
 
-const int INFINITE_SCORE = INFINITE_I16 - 1024;
-const int MATESCORE_MAX = INFINITE_SCORE - 1024;
-const int MATESCORE_MIN = MATESCORE_MAX - 1024;
-const int TBWIN = MATESCORE_MIN - 1;
-const int WINSCORE = TBWIN - 1024;
+constexpr i16 INFINITE_SCORE = INFINITE_I16 - 1024;
+constexpr i16 MATESCORE_MAX = INFINITE_SCORE - 1024;
+constexpr i16 MATESCORE_MIN = MATESCORE_MAX - 1024;
+constexpr i16 TBWIN = MATESCORE_MIN - 1;
+constexpr i16 WINSCORE = TBWIN - 1024;
 
 constexpr int MAX_DEPTH = 128;
 const int MAX_PLY = 256;
