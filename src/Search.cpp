@@ -759,22 +759,23 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
         if(!inCheck && move.IsCapture() && !move.IsPromotion()) {
             const int seeValue = Scorer::SEEFromTacticalScore( move.Score() );
+
+            // Prune negative SEE captures
+            if(seeValue < 0) {
+                D( m_debug.Increment("Quiescence: Pruning SEE < 0") );
+                continue;
+            }
             
             // --- Delta Pruning ---
-            // Calculate a heuristic score for futility pruning. Depending on the SEE:
-            //  - For safe captures (SEE >= 0): an optimistic score using the maximum potential gain to represent the move impact.
-            //  - For sacrifices    (SEE  < 0): a realistic estimate using the material cost to determine if the sacrifice is affordable.
-            int estimatedScore;
-            if(seeValue >= 0) {
-                const int DELTA_MARGIN_SAFE = 90;
-                estimatedScore = standPat + DELTA_MARGIN_SAFE + SEE::MATERIAL_VALUES[move.CapturedType()];
-            } else {
-                const int DELTA_MARGIN_RISKY = 0;
-                estimatedScore = standPat + DELTA_MARGIN_RISKY + seeValue;
-            }
+            // For SEE >= 0 captures
+            // Use an optimistic score using the maximum potential gain to represent the move impact.
+            const int DELTA_MARGIN_SAFE = 90;
+            int estimatedScore = standPat + DELTA_MARGIN_SAFE + SEE::MATERIAL_VALUES[move.CapturedType()];
 
-            if(estimatedScore < alpha)
+            if(estimatedScore < alpha) {
+                D( m_debug.Increment("Quiescence: Pruning SEE >= 0: estimatedScore < alpha") );
                 continue;
+            }
         }
         
         D( BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(board); );
