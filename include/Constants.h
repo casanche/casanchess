@@ -7,14 +7,14 @@
 #include <iostream>
 #include <limits>
 
-typedef unsigned int uint;
-typedef int8_t i8;
-typedef uint8_t u8;
-typedef int16_t i16;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef uint64_t Bitboard;
+using uint = unsigned int;
+using i8 = int8_t;
+using u8 = uint8_t;
+using i16 = int16_t;
+using u16 = uint16_t;
+using u32 = uint32_t;
+using u64 = uint64_t;
+using Bitboard = uint64_t;
 #define INFINITE __INT_MAX__
 #define INFINITE_U64 __UINT64_MAX__
 #define INFINITE_I16 __INT16_MAX__

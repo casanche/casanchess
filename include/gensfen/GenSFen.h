@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-typedef std::vector<std::string> BookPositions;
+using BookPositions = std::vector<std::string>;
 struct CurrentPosition;
 
 class GenSFen {
