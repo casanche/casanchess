@@ -238,9 +238,9 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
         // Asymmetrical incremental aspiration
         window = window * ASPIRATION_WINDOW_MULTIPLIER;
         if(score <= alpha) {
-            alpha = bestScore - window;
+            alpha = score - window;
         } else if(score >= beta) {
-            beta = bestScore + window;
+            beta = score + window;
         }
 
         if(researches == 4 || IsWinValue(score)) {
