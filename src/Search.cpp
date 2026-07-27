@@ -265,10 +265,11 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     m_nodes++;
 
     Move bestMove;
+    int bestScore = -INFINITE_SCORE;
+    int alphaOriginal = alpha; // Save the original alpha for TT logic
     int score;
 
     m_pv.ClearPly(m_ply);
-    int alphaOriginal = alpha; // Save the original alpha for TT logic
 
     MoveList moves = MoveGenerator::GenerateMoves(board);
 
@@ -321,12 +322,10 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
         if(m_stop) break;
 
-        if(score > alpha) {
-            D( m_debug.Increment("RootMax: AlphaBeta: Update: BestMove (score > alpha)") );
-            alpha = score;
+        if(score > bestScore) {
+            D( m_debug.Increment("RootMax: AlphaBeta: Update BestMove (score > bestScore)") );
+            bestScore = score;
             bestMove = move;
-
-            m_pv.Update(m_ply, move);
         }
 
         // Not useful to store in TT due to aspiration window
@@ -334,19 +333,26 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
             break;
         }
+
+        if(score > alpha) {
+            D( m_debug.Increment("RootMax: AlphaBeta: Update Alpha (score > alpha)") );
+            alpha = score;
+
+            m_pv.Update(m_ply, move);
+        }
     }
 
     // Store "exact" score in transposition table if search finished within search bounds
-    bool outOfLimits = alpha <= alphaOriginal || alpha >= beta;
-    if(!m_stop && !outOfLimits) {
+    bool withinBounds = (bestScore > alphaOriginal) && (bestScore < beta);
+    if(!m_stop && withinBounds) {
         m_bestMove = bestMove;
-        m_bestScore = alpha;
+        m_bestScore = bestScore;
 
         D( m_debug.Increment("RootMax: AlphaBeta: Exact") );
-        Hash::tt.Store(board.ZKey(), m_bestScore, TTENTRY_TYPE::EXACT, m_bestMove, depth, m_ply, m_searchCount);
+        Hash::tt.Store(board.ZKey(), bestScore, TTENTRY_TYPE::EXACT, bestMove, depth, m_ply, m_searchCount);
     }
 
-    return alpha;
+    return bestScore;
 }
 
 // Negamax search: core recursive alpha-beta search.
@@ -635,13 +641,13 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(m_stop) return 0;
 
         if(score > bestScore) {
-            D( m_debug.Increment("NegaMax: AlphaBeta: Update: BestMove") );
+            D( m_debug.Increment("NegaMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
             bestMove = move;
         }
 
         if(score >= beta) {
-            D( m_debug.Increment("NegaMax: AlphaBeta: Cutoff") );
+            D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
             Hash::tt.Store(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount);
 
@@ -655,7 +661,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
 
         if(score > alpha) {
-            D( m_debug.Increment("NegaMax: AlphaBeta: Update: Alpha") );
+            D( m_debug.Increment("NegaMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
  
             m_pv.Update(m_ply, move);
@@ -665,11 +671,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // Store score in transposition table
     if(bestMove.MoveType() != 0) {
-        bool alphaWithinBounds = (bestScore > alphaOriginal);
-        alphaWithinBounds ? D( m_debug.Increment("NegaMax: AlphaBeta: Exact") )
-                          : D( m_debug.Increment("NegaMax: AlphaBeta: UpperBound") );
-        TTENTRY_TYPE type = alphaWithinBounds ? TTENTRY_TYPE::EXACT
-                                              : TTENTRY_TYPE::UPPER_BOUND;
+        bool withinBounds = (bestScore > alphaOriginal);
+        D( m_debug.Increment("NegaMax: AlphaBeta: " + std::string(withinBounds ? "Exact" : "UpperBound")) );
+        TTENTRY_TYPE type = withinBounds ? TTENTRY_TYPE::EXACT
+                                         : TTENTRY_TYPE::UPPER_BOUND;
         Hash::tt.Store(board.ZKey(), bestScore, type, bestMove, depth, m_ply, m_searchCount);
     }
 
