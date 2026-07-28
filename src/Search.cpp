@@ -331,6 +331,9 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         // Not useful to store in TT due to aspiration window
         if(score >= beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
+
+            Hash::tt.Store(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount);
+
             break;
         }
 
