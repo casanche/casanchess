@@ -140,6 +140,7 @@ set(ENGINE_SOURCES
     src/MoveScorer.cpp
     src/NNUE.cpp
     src/PV.cpp
+    src/RootMoves.cpp
     src/Search.cpp
     src/Syzygy.cpp
     src/Uci.cpp

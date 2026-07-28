@@ -101,7 +101,7 @@ void Search::ClearSearch(bool fullClear) {
     m_tbHits = 0;
 
     // Root moves
-    m_rootMovesCount = 0;
+    m_rootMoves.Clear();
 
     // Time management
     m_elapsedTime = 0;
@@ -148,16 +148,8 @@ void Search::IterativeDeepening(Board &board, bool fullClear) {
     D( m_debug.Increment("IterativeDeepening: _: Start") );
     m_searchCount++;
 
-    // Generate root moves
-    MoveList rootMoves = MoveGenerator::GenerateMoves(board);
-    m_rootMovesCount = 0;
-    SortMoves(board, rootMoves, Hash::tt, m_heuristics, m_ply);
-    for(auto move : rootMoves) {
-        m_rootMoves[m_rootMovesCount].move = move;
-        m_rootMoves[m_rootMovesCount].score = -INFINITE_SCORE;
-        m_rootMoves[m_rootMovesCount].previousScore = -INFINITE_SCORE;
-        m_rootMovesCount++;
-    }
+    m_rootMoves.Generate(board, Hash::tt, m_heuristics);
+    D( P("Number of moves in root position: " << m_rootMoves.Size()) );
 
     for(m_depth = 1; m_depth <= m_maxDepth; m_depth++) {
         assert(m_ply == 0);
@@ -179,15 +171,13 @@ void Search::IterativeDeepening(Board &board, bool fullClear) {
         if(UCI_OUTPUT)
             UciOutput(m_pv.PVString());
 
+        m_rootMoves.Sort();
+        m_rootMoves.Print();
+
         // Stop search if we used half of the allocated time, since
         // next iteration will likely use more than the allocated time
         if(m_elapsedTime > (m_allocatedTime / 2)) //check
             break;
-
-        for(int i = 0; i < m_rootMovesCount; i++) {
-            m_rootMoves[i].previousScore = m_rootMoves[i].score;
-        }
-        std::stable_sort(m_rootMoves.begin(), m_rootMoves.begin() + m_rootMovesCount);
 
         if(DEBUG_PRINT_STATISTICS && m_depth == m_maxDepth)
             D( m_debug.Print() );
@@ -290,15 +280,13 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
     m_pv.ClearPly(m_ply);
 
-    MoveList moves = MoveGenerator::GenerateMoves(board);
-
-    D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
-
-    SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
+    m_rootMoves.StorePrevious();
 
     int moveNumber = 0;
 
-    for(auto move : moves) {
+    for(const auto& rootMove : m_rootMoves) {
+        Move move = rootMove.move;
+
         moveNumber++;
         bool isPV = (moveNumber == 1);
 
@@ -341,6 +329,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
         if(m_stop) break;
 
+        m_rootMoves.Update(moveNumber, score);
+
         if(score > bestScore) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
@@ -350,6 +340,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         // Not useful to store in TT due to aspiration window
         if(score >= beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
+            m_rootMoves.PromoteToTop(moveNumber);
             break;
         }
 

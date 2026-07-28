@@ -6,21 +6,9 @@
 #include "Heuristics.h"
 #include "Move.h"
 #include "PV.h"
+#include "RootMoves.h"
 #include "Utils.h"
 
-#include <array>
-
-const int MAX_ROOTMOVES = 256;
-
-struct RootMove {
-    int score;
-    int previousScore;
-    Move move;
-
-    bool operator>(const RootMove& other) const {
-        return score > other.score;
-    }
-};
 
 // Search limits from UCI
 struct Limits {
@@ -92,6 +80,7 @@ private:
     // --- Private variables ---
 
     // Search state
+    RootMoves m_rootMoves;
     PV m_pv;
     int m_bestScore; // Best score found so far for the current search
     Move m_bestMove; // Best move found so far for the current search
@@ -106,10 +95,6 @@ private:
     int m_ply; // Distance from root
     int m_plyqs; // Distance within the Quiescence Search
     int m_selPly; // Maximum ply reached (UCI reporting)
-
-    // Root moves
-    std::array<RootMove, MAX_MOVES> m_rootMoves;
-    int m_rootMovesCount;
 
     // Limits
     Limits m_limits;
