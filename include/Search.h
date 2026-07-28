@@ -8,9 +8,19 @@
 #include "PV.h"
 #include "Utils.h"
 
-#include <vector>
+#include <array>
 
 const int MAX_ROOTMOVES = 256;
+
+struct RootMove {
+    int score;
+    int previousScore;
+    Move move;
+
+    bool operator>(const RootMove& other) const {
+        return score > other.score;
+    }
+};
 
 // Search limits from UCI
 struct Limits {
@@ -96,6 +106,10 @@ private:
     int m_ply; // Distance from root
     int m_plyqs; // Distance within the Quiescence Search
     int m_selPly; // Maximum ply reached (UCI reporting)
+
+    // Root moves
+    std::array<RootMove, MAX_MOVES> m_rootMoves;
+    int m_rootMovesCount;
 
     // Limits
     Limits m_limits;

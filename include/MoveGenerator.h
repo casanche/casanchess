@@ -9,11 +9,9 @@
 class Board;
 struct MoveGenContext;
 
-const int MAX_MOVES_RESERVE = 256;
-
 class MoveList {
 private:
-    std::array<Move, MAX_MOVES_RESERVE> m_moves;
+    std::array<Move, MAX_MOVES> m_moves;
     size_t m_count = 0;
 
 public:
@@ -27,7 +25,7 @@ public:
     const_iterator end()   const { return m_moves.data() + m_count; }
 
     void add(const Move& move) {
-        assert(m_count < MAX_MOVES_RESERVE);
+        assert(m_count < MAX_MOVES);
         m_moves[m_count++] = move;
     }
     void clear() { m_count = 0; }

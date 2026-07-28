@@ -34,6 +34,7 @@ const int WINSCORE = TBWIN - 1024;
 constexpr int MAX_DEPTH = 128;
 const int MAX_PLY = 256;
 const int MAX_PLY_HISTORY = 2048;
+const int MAX_MOVES = 256;
 
 namespace SEE{
     constexpr int MATERIAL_VALUES[8] = {0, 100, 350, 350, 500, 1050, 0}; // [PIECE]

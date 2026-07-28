@@ -100,6 +100,9 @@ void Search::ClearSearch(bool fullClear) {
     m_nps = 0;
     m_tbHits = 0;
 
+    // Root moves
+    m_rootMovesCount = 0;
+
     // Time management
     m_elapsedTime = 0;
     m_stop = false;
@@ -145,6 +148,17 @@ void Search::IterativeDeepening(Board &board, bool fullClear) {
     D( m_debug.Increment("IterativeDeepening: _: Start") );
     m_searchCount++;
 
+    // Generate root moves
+    MoveList rootMoves = MoveGenerator::GenerateMoves(board);
+    m_rootMovesCount = 0;
+    SortMoves(board, rootMoves, Hash::tt, m_heuristics, m_ply);
+    for(auto move : rootMoves) {
+        m_rootMoves[m_rootMovesCount].move = move;
+        m_rootMoves[m_rootMovesCount].score = -INFINITE_SCORE;
+        m_rootMoves[m_rootMovesCount].previousScore = -INFINITE_SCORE;
+        m_rootMovesCount++;
+    }
+
     for(m_depth = 1; m_depth <= m_maxDepth; m_depth++) {
         assert(m_ply == 0);
         assert(m_plyqs == 0);
@@ -169,6 +183,11 @@ void Search::IterativeDeepening(Board &board, bool fullClear) {
         // next iteration will likely use more than the allocated time
         if(m_elapsedTime > (m_allocatedTime / 2)) //check
             break;
+
+        for(int i = 0; i < m_rootMovesCount; i++) {
+            m_rootMoves[i].previousScore = m_rootMoves[i].score;
+        }
+        std::stable_sort(m_rootMoves.begin(), m_rootMoves.begin() + m_rootMovesCount);
 
         if(DEBUG_PRINT_STATISTICS && m_depth == m_maxDepth)
             D( m_debug.Print() );
