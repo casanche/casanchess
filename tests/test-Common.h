@@ -1,5 +1,4 @@
-#ifndef _TEST_COMMON
-#define _TEST_COMMON
+#pragma once
 
 #include "Attacks.h"
 #include "Evaluation.h"
@@ -51,5 +50,3 @@ namespace TestCommon {
     EPDPosition ReadEPDLine(std::string line);
 
 }
-
-#endif //_TEST_COMMON

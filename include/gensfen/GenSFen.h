@@ -1,5 +1,4 @@
-#ifndef GENSFEN_H
-#define GENSFEN_H
+#pragma once
 
 #include "Board.h"
 #include "Search.h"
@@ -33,5 +32,3 @@ private:
 
     Utils::PRNG m_rng;
 };
-
-#endif //GENSFEN_H
