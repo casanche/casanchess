@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cassert>
-#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <limits>
@@ -139,18 +138,8 @@ constexpr Bitboard EastMask[8] = {
 
 //Logarithm lookup table
 constexpr int LOG_TABLE_SIZE = 512;
-constexpr int LOG_TABLE_SCALE = 100;
-
-std::array<u16, LOG_TABLE_SIZE> generate_log_table() {
-    std::array<u16, LOG_TABLE_SIZE> table{};
-    table[0] = 0;
-    for(size_t i = 1; i < LOG_TABLE_SIZE; ++i) {
-        table[i] = static_cast<u16>( LOG_TABLE_SCALE * std::log(static_cast<double>( i )) );
-    }
-    return table;
-}
-
-const std::array<u16, LOG_TABLE_SIZE> LogTable = generate_log_table();
+constexpr int LOG_TABLE_SCALE = 100; // Scale factor to integer conversion
+extern const std::array<u16, LOG_TABLE_SIZE> LogTable;
 
 //Casts
 constexpr int CastInt(double value) {

@@ -22,9 +22,9 @@ namespace Sorting {
 class KillerHeuristics {
 public:
     void Clear() {
-        for(int i = 0; i < HEURISTICS_MAX_PLY; i++) {
-            m_killers[i][0] = Move();
-            m_killers[i][1] = Move();
+        for(auto& plyKillers : m_killers) {
+            plyKillers[0] = Move();
+            plyKillers[1] = Move();
         }
     }
     void Update(const Move& killer, int ply) {
@@ -45,24 +45,14 @@ private:
     Move m_killers[HEURISTICS_MAX_PLY][2]; //[PLY][SLOT]
 };
 
-//Loop over all elements of the history table, to perform operations
-#define LoopHistoryTable(stmt) \
-    for(COLOR color : {WHITE, BLACK}) { \
-        for(int from = 0; from < 64; from++) { \
-            for (int to = 0; to < 64; to++) { \
-                stmt; \
-            } \
-        } \
-    }
-
 class HistoryHeuristics {
 public:
     void Age() {
-        LoopHistoryTable(m_history[color][from][to] /= 8);
+        ApplyToAll([](int& historyValue) { historyValue /= 8; });
         m_maxValue /= 8;
     }
     void Clear() {
-        LoopHistoryTable(m_history[color][from][to] = 0);
+        ApplyToAll([](int& historyValue) { historyValue = 0; });
         m_maxValue = 0;
     }
     void GoodHistory(const Move& move, COLOR color, int depth) {
@@ -78,6 +68,17 @@ public:
         return m_maxValue;
     }
 private:
+    template<typename Func>
+    void ApplyToAll(Func operation) {
+        for(auto& colorTable : m_history) {
+            for(auto& fromTable : colorTable) {
+                for(int& historyValue : fromTable) {
+                    operation(historyValue);
+                }
+            }
+        }
+    }
+
     int Bonus(int depth) const {
         int bonus = depth * depth;
         return std::min(MAX_BONUS, bonus);
@@ -88,8 +89,8 @@ private:
         }
     }
 
-    int m_history[2][64][64]; //[COLOR][SQUARE_FROM][SQUARE_TO]
-    int m_maxValue;
+    int m_history[2][64][64] = {}; //[COLOR][SQUARE_FROM][SQUARE_TO]
+    int m_maxValue = 0;
 };
 
 struct Heuristics {
