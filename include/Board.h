@@ -63,7 +63,7 @@ public:
     bool IsAttacked(COLOR color, int square) const;
     bool IsCheck();
     bool IsCheckAnyColor();
-    bool IsRepetitionDraw(int searchPly = 0);
+    bool IsRepetitionDraw() const;
     void Mirror();
     int SquareToIndex(std::string square) const;
 

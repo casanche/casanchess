@@ -330,24 +330,19 @@ bool Board::IsCheckAnyColor() {
     return check_active || check_inactive;
 }
 
-bool Board::IsRepetitionDraw(int searchPly) {
-    int rep = 1;
+// Detects a position repetition within a search (same Zobrist Key)
+bool Board::IsRepetitionDraw() const {
+    const int rule_limit = (int)m_fiftyrule;
+    const int ply_limit = m_ply - m_initialPly;
 
-    int imax = (int)m_fiftyrule; // Logical limit
-    int ply = m_ply - m_initialPly; // Physical limit
+    const int limit = std::min(rule_limit, ply_limit);
 
-    int i = 4;
-    while(i <= imax && i <= ply) {
-        if(ZKey() == m_history[m_ply - i].zkey) rep++;
-
-        // 2-repetitions are enough within the search
-        if(rep == 2 && searchPly >= i) return true;
-
-        // 3-repetitions are needed in real game
-        if(rep == 3) return true;
-
-        i += 2;
+    for(int i = 4; i <= limit; i += 2) {
+        if(m_history[m_ply - i].zkey == ZKey()) {
+            return true;
+        }
     }
+
     return false;
 }
 
