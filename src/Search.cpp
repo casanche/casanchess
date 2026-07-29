@@ -770,8 +770,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     for(auto move : moves) {
 
-        if(!inCheck && move.IsCapture() && !move.IsPromotion() && move != hashMove) {
-            const int seeValue = Scorer::SEEFromTacticalScore( move.Score() );
+        if(!inCheck && move.IsCapture() && !move.IsPromotion()) {
+            const int seeValue = (move == hashMove) ? board.SEE(move)
+                                                    : Scorer::SEEFromTacticalScore( move.Score() );
 
             // Prune negative SEE captures
             if(seeValue < 0) {
