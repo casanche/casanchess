@@ -4,7 +4,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#include <format>
 #include <iostream>
 #include <limits>
 
@@ -59,12 +58,8 @@ constexpr Bitboard SquareBB(int square) {
     return ONE << square;
 }
 
-void P(const auto& x) {
-    std::cout << std::format("{}\n", x);
-}
-void PL(const auto& x) {
-    std::cout << std::format("{} ", x);
-}
+#define P(x) std::cout << x << std::endl;
+#define PL(x) std::cout << x << " " << std::flush;
 
 enum SQUARES {
     A1=0,  B1, C1, D1, E1, F1, G1, H1,
