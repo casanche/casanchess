@@ -30,8 +30,8 @@ void Convert(std::string ifilename, std::string ofilename) {
         for(uint row = 0; row < ARCH[L1][ROW]; row++) {
             float decimal = GetNumber(ifile);
             int converted_value = CastInt(decimal * CONVERSION_FACTOR);
-            assert(std::abs(converted_value) < __INT16_MAX__);
-            if(std::abs(converted_value) >= __INT16_MAX__)
+            assert(std::abs(converted_value) < INFINITE_I16);
+            if(std::abs(converted_value) >= INFINITE_I16)
                 std::cout << "Watch out! Int16 overflow (" << decimal << ")" << std::endl;
             nnue_storage->w1[row * ARCH[L1][COL] + col] = (int16_t)(converted_value);
         }

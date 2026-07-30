@@ -65,8 +65,9 @@ const bool TURNOFF_FUTILITY = false;
 const int UCI_OUTPUT_CURRMOVE_MINTIME = 1000; //ms
 
 // Draw contempt to discourage premature draws
-#define DRAW_SCORE(ply) (ply & 1 ? 10 : -10)
-
+constexpr int DrawScore(int ply) {
+    return (ply & 1) ? 10 : -10;
+}
 
 // Called once when the UCI interface starts up.
 Search::Search() {
@@ -379,11 +380,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // --------- Draw detection: repetition and 50-move rule -----------
     if(board.FiftyRule() >= 100) {
         D( m_debug.Increment("NegaMax: Draw: FiftyRule") );
-        return DRAW_SCORE(m_ply);
+        return DrawScore(m_ply);
     }
     if(board.IsRepetitionDraw()) {
         D( m_debug.Increment("NegaMax: Draw: Repetition") );
-        return DRAW_SCORE(m_ply);
+        return DrawScore(m_ply);
     }
 
     //---------- Mate distance pruning -------------
@@ -445,7 +446,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             score = -TBWIN + m_ply;
             bound = TTENTRY_TYPE::UPPER_BOUND;
         } else {
-            score = DRAW_SCORE(m_ply);
+            score = DrawScore(m_ply);
             bound = TTENTRY_TYPE::EXACT;
         }
 
@@ -545,7 +546,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
         else {
             D( m_debug.Increment("NegaMax: EmptyMoves: Stalemate") );
-            return DRAW_SCORE(m_ply); // Stalemate
+            return DrawScore(m_ply); // Stalemate
         }
     }
 

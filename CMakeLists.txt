@@ -128,6 +128,7 @@ set(ENGINE_SOURCES
     src/Attacks.cpp
     src/BitboardUtils.cpp
     src/Board.cpp
+    src/Constants.cpp
     src/Debug.cpp
     src/Evaluation.cpp
     src/Fen.cpp

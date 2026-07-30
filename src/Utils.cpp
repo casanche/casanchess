@@ -19,7 +19,7 @@ namespace Utils {
     }
 
     //Clock
-    typedef std::chrono::high_resolution_clock HighResClock;
+    using HighResClock = std::chrono::high_resolution_clock;
     
     void Clock::Start() {
         m_start = HighResClock::now();

@@ -1,5 +1,4 @@
-#ifndef GENSFEN_H
-#define GENSFEN_H
+#pragma once
 
 #include "Board.h"
 #include "Search.h"
@@ -9,7 +8,7 @@
 #include <string>
 #include <vector>
 
-typedef std::vector<std::string> BookPositions;
+using BookPositions = std::vector<std::string>;
 struct CurrentPosition;
 
 class GenSFen {
@@ -33,5 +32,3 @@ private:
 
     Utils::PRNG m_rng;
 };
-
-#endif //GENSFEN_H
