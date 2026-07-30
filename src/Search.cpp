@@ -381,7 +381,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         D( m_debug.Increment("NegaMax: Draw: FiftyRule") );
         return DRAW_SCORE(m_ply);
     }
-    if(board.IsRepetitionDraw(m_ply)) {
+    if(board.IsRepetitionDraw()) {
         D( m_debug.Increment("NegaMax: Draw: Repetition") );
         return DRAW_SCORE(m_ply);
     }

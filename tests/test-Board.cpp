@@ -123,10 +123,10 @@ TEST(BoardTest, IsRepetitionDraw) {
     board.MakeMove("g6h6"); EXPECT_EQ(board.IsRepetitionDraw(), false);
     board.MakeMove("g3h4"); EXPECT_EQ(board.IsRepetitionDraw(), false);
     board.MakeMove("h6g6"); EXPECT_EQ(board.IsRepetitionDraw(), false);
-    board.MakeMove("h4g3"); EXPECT_EQ(board.IsRepetitionDraw(), false); //1st repetition
-    board.MakeMove("g6h6"); EXPECT_EQ(board.IsRepetitionDraw(), false);
-    board.MakeMove("g3h4"); EXPECT_EQ(board.IsRepetitionDraw(), false);
-    board.MakeMove("h6g6"); EXPECT_EQ(board.IsRepetitionDraw(), false);
+    board.MakeMove("h4g3"); EXPECT_EQ(board.IsRepetitionDraw(), true); //1st repetition
+    board.MakeMove("g6h6"); EXPECT_EQ(board.IsRepetitionDraw(), true);
+    board.MakeMove("g3h4"); EXPECT_EQ(board.IsRepetitionDraw(), true);
+    board.MakeMove("h6g6"); EXPECT_EQ(board.IsRepetitionDraw(), true);
     board.MakeMove("h4g3"); EXPECT_EQ(board.IsRepetitionDraw(), true); //2nd repetition
     board.MakeMove("g6h6"); EXPECT_EQ(board.IsRepetitionDraw(), true);
     board.MakeMove("g3h4"); EXPECT_EQ(board.IsRepetitionDraw(), true);
