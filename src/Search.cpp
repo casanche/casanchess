@@ -243,7 +243,7 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
         // Display lowerbound / upperbound info
         BOUND_TYPE bound = (score <= alpha) ? BOUND_TYPE::UPPER_BOUND
                                             : BOUND_TYPE::LOWER_BOUND;
-        UciOutput(m_pv.PVString(), score, bound);
+        UciOutput(m_bestMove.Notation(), score, bound);
 
         // Asymmetrical incremental aspiration
         window = window * ASPIRATION_WINDOW_MULTIPLIER;
