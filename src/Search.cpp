@@ -709,15 +709,21 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // Probe transposition table.
     // Only non-PV nodes: PV nodes require the most accurate score possible.
     TTEntry* ttEntry = Hash::tt.Probe(board.ZKey(), 0);
+    Move hashMove; // For move ordering
     const bool isPV = (beta - alpha) != 1;
-    if(ttEntry && !isPV) {
-        int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
-        if( ttEntry->type == TTENTRY_TYPE::EXACT
-            || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-            || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
-        ) {
-            D( m_debug.Increment("Quiescence: TT Hit") );
-            return score;
+    if(ttEntry) {
+        D( m_debug.Increment("Quiescence: TT Hit: Exists") );
+        hashMove = ttEntry->bestMove;
+
+        if(!isPV) {
+            int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
+            if( ttEntry->type == TTENTRY_TYPE::EXACT
+                || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+                || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
+            ) {
+                D( m_debug.Increment("Quiescence: TT Hit: Return score") );
+                return score;
+            }
         }
     }
 
@@ -759,13 +765,14 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
 
     // Different move ordering for efficiency
-    inCheck ? SortEvasions(board, moves)
-            : SortTactical(board, moves);
+    inCheck ? SortEvasions(board, moves, hashMove)
+            : SortTactical(board, moves, hashMove);
 
     for(auto move : moves) {
 
         if(!inCheck && move.IsCapture() && !move.IsPromotion()) {
-            const int seeValue = Scorer::SEEFromTacticalScore( move.Score() );
+            const int seeValue = (move == hashMove) ? board.SEE(move)
+                                                    : Scorer::SEEFromTacticalScore( move.Score() );
 
             // Prune negative SEE captures
             if(seeValue < 0) {

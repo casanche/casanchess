@@ -26,9 +26,9 @@ namespace Scorer {
     u8 ScoreFromSEE(int see);
 
     // Tactical positions
-    constexpr int TACTICAL_PROMOTION_CAPTURE = 255;
-    constexpr int TACTICAL_PROMOTION_NORMAL = 254;
-    constexpr int TACTICAL_MAX = 253;
+    constexpr int TACTICAL_PROMOTION_CAPTURE = 254;
+    constexpr int TACTICAL_PROMOTION_NORMAL = 253;
+    constexpr int TACTICAL_MAX = 252;
     constexpr int TACTICAL_MIN = 1;
     u8 TacticalScoreFromSEE(int see);
     int SEEFromTacticalScore(u8 score);
