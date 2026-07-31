@@ -65,8 +65,10 @@ public:
     // Scorer methods
     bool IsNegativeCapture() const { return Scorer::IsNegativeCapture(this->Score()); };
 
+    // Static methods
+    static std::string IndexToNotation(int index);
+
 private:
-    std::string IndexToNotation(int index) const;
     std::string PieceTypeToNotation(PIECE_TYPE pieceType) const;
     std::string DescriptiveNotation() const;
 

@@ -11,7 +11,7 @@ namespace Utils {
     }
 
     //PRNG_64
-    PRNG_64::PRNG_64(int seed) :
+    PRNG_64::PRNG_64(uint64_t seed) :
         m_mersenne(seed ? seed : m_device()) {}
 
     uint64_t PRNG_64::Random() {

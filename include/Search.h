@@ -120,4 +120,6 @@ private:
     // Debug
     bool m_debugMode; // UCI debug mode
     SearchDebug m_debug;
+
+    friend class GenSFen;
 };

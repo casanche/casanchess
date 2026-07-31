@@ -26,7 +26,7 @@
 #include <fstream>
 
 bool NNUE::m_isLoaded = false;
-std::string NNUE::m_filepath = "network-20220625.nnue";
+std::string NNUE::m_filepath = "network-20260712.nnue";
 
 namespace NNUEConstants {
     constexpr u8 KING_BUCKETS[64] = {

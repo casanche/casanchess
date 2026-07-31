@@ -7,8 +7,10 @@
 
 #include <ctime>
 #include <filesystem>
+#include <syncstream>
 #include <sstream>
 #include <thread>
+
 
 struct CurrentPosition {
     Move bestMove = Move();
@@ -54,11 +56,21 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth, i
     m_depth = depth;
     m_maxGames = maxGames > 0 ? maxGames : INFINITE;
 
+    // Set seed to random if not provided
+    if(m_config.seed == 0) {
+        Utils::PRNG_64 rng(0);
+        m_config.seed = rng.Random();
+    }
+
     if(!concurrency)
         concurrency = std::thread::hardware_concurrency() - 1;
     std::cout << "Concurrency set to: " << std::to_string(concurrency) << std::endl;
 
-    std::filesystem::create_directories(m_config.outputDir);
+    // Output directory
+    std::filesystem::path timestampPath(m_config.outputDir);
+    timestampPath /= std::format("{}/{}_{:%Y%m%d}", gensfen_mode, gensfen_mode, Utils::DateTime::Now());
+    std::filesystem::create_directories(timestampPath);
+    m_config.outputDir = timestampPath.string();
 
     if(gensfen_mode == "random_benchmark" || gensfen_mode == "benchmark") {
         RandomBenchmark(m_maxGames == INFINITE ? 100 : m_maxGames);
@@ -75,7 +87,7 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth, i
         return;
     }
 
-    if(!WriteRunMetadata(gensfen_mode, concurrency, maxGames)) {
+    if(!WriteRunMetadata(gensfen_mode, concurrency)) {
         std::cerr << "Error: Cannot write run metadata in output directory '"
                   << m_config.outputDir << "'." << std::endl;
         return;
@@ -91,57 +103,159 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int depth, i
 }
 
 void GenSFen::Games(std::string filename, int threadIndex) {
-    std::ofstream outputFile;
-    outputFile.open(filename);
+    std::ofstream outputFile(filename);
+    if(!outputFile.is_open()) {
+        std::cerr << "Error: Cannot open output file '" << filename << "'." << std::endl;
+        return;
+    }
 
     BookPositions bookPositions = ReadBook(m_config.bookFile);
+    if(bookPositions.empty()) {
+        std::cerr << "Error: Book file '" << m_config.bookFile << "' is empty or cannot be read." << std::endl;
+        return;
+    }
 
     Board board;
     Search search;
-    State state;
     Utils::PRNG rng(SeedForThread(threadIndex));
 
-    const int maxGames = m_maxGames;
-    for(int n_game = 0; n_game < maxGames; n_game++) {
+    while(m_gamesPlayed.fetch_add(1) < m_maxGames) {
+        int n_game = m_gamesPlayed.load();
+
         //New starting position
-        uint32_t randomIndex = rng.Random(0, static_cast<uint32_t>(bookPositions.size())-1);
-        std::string position = bookPositions[randomIndex];
-        board.SetFen(position);
+        uint32_t randomIndex = rng.Random(0, static_cast<uint32_t>(bookPositions.size()) - 1);
+        std::string startingFen = bookPositions[randomIndex];
+        board.SetFen(startingFen);
 
-        //To avoid overlap in standard output due to multiple threads
-        std::stringstream ss;
-        ss << "thread: " << std::this_thread::get_id()
-           << " game " << std::to_string(n_game)
-           << ", " << position << ", ";
+        const uint initialPly = board.Ply();
 
-        //Game Loop
-        state.NewGame();
-        bool exitGame;
-        do {
-            CurrentPosition currentPosition;
-            WriteEvals(board, search, outputFile, currentPosition, m_config.WRITE_EVALS_GAMES_SINGLE, m_config.WRITE_EVALS_GAMES_BOTH, 0, 8);
+        std::vector<SavedPosition> savedPositions;
+        savedPositions.reserve(512);
 
-            // Make next move (random or best)
-            bool doRandomMove = board.Ply() < 20 && rng.Random(0,100) < 33 && !board.IsCheck();
-            Move nextMove = doRandomMove ? RandomMove(board, rng) : currentPosition.bestMove;
+        int gameResult = 0;
+        int adjWinCounter = 0;
+        int adjDrawCounter = 0;
+
+        bool exitGame = false;
+        while(!exitGame) {
+            COLOR color = board.ActivePlayer();
+            int playedPlies = board.Ply() - initialPly;
+            bool softRandomize = playedPlies < m_config.SOFT_RANDOMIZE_PLIES;
+
+            SearchIteration(board, search);
+
+            Move bestMove = search.BestMove();
+            int score = search.BestScore();
+
+            Move nextMove = bestMove;
+
+            // Soft-randomize in the first plies.
+            // Meaning: randomly choose between the top 3 moves
+            if(softRandomize) {
+                MoveList moves = GenSFen::SortGoodMoves(board, search);
+                if(moves.size() >= 3)
+                    nextMove = moves[rng.Random(0, 2)];
+            } else {
+                // Save the evaluation if meets the criteria
+                SaveEvals(board, search, savedPositions);
+            }
+
+            // P("fen: " << board.GetFen() << ", playedPlies: " << playedPlies << ", nextMove: " << nextMove.Notation() << ", score: " << score << ", bestMove: " << bestMove.Notation() << ", softRandomize: " << softRandomize);
+
+            // Hard-randomize in the first plies.
+            // Meaning: randomly choose between all the moves
+            // ...
+            // bool doRandomMove = board.Ply() < 20 && rng.Random(0,100) < 33 && !board.IsCheck();
+            // Move nextMove = doRandomMove ? RandomMove(board, rng) : currentPosition.bestMove;
+
             board.MakeMove(nextMove);
 
-            state.UpdateGame(currentPosition.evalPass, currentPosition.evalFail);
+            // Checkmate or stalemate
+            if(NoMoves(board)) {
+                if(board.IsCheck()) {
+                    gameResult = board.ActivePlayer() == WHITE ? -1 : 1;
+                } else {
+                    gameResult = 0;
+                }
+                exitGame = true;
+                break;
+            }
 
-            int nPieces = PopCount(board.AllPieces());
-            exitGame = (NoMoves(board) || nPieces <= 6 || board.Ply() > 200 || board.IsRepetitionDraw() || state.consecutiveFailedEvals >= 10);
-        } while(!exitGame);
+            // Draw
+            if(board.FiftyRule() >= 100 || board.IsRepetitionDraw()) {
+                gameResult = 0;
+                exitGame = true;
+                break;
+            }
 
-        state.FinishGame();
-        ss << "writtenEvals: " << state.gameWrittenEvals
-           << ", consecutive fails: " << state.consecutiveFailedEvals
-           << ", totalWrittenEvals: " << state.totalWrittenEvals
-           << std::endl;
-        std::cout << ss.str();
+            // Adjudication Wins
+            int scoreWhitePOV = color == WHITE ? score : -score;
+            if(std::abs(score) >= m_config.ADJUDICATION_THRESHOLD_WIN) {
+                adjWinCounter++;
+                if(adjWinCounter >= m_config.ADJUDICATION_PLIES_WIN) {
+                    gameResult = scoreWhitePOV > 0 ? 1 : -1;
+                    exitGame = true;
+                    break;
+                }
+            } else {
+                adjWinCounter = 0;
+            }
 
-    } //games
+            // Adjudication Draws
+            if(std::abs(score) <= m_config.ADJUDICATION_THRESHOLD_DRAW) {
+                adjDrawCounter++;
+                if(adjDrawCounter >= m_config.ADJUDICATION_PLIES_DRAW) {
+                    gameResult = 0;
+                    exitGame = true;
+                    break;
+                }
+            } else {
+                adjDrawCounter = 0;
+            }
 
-    outputFile.close();
+            // Stuck
+            if(board.Ply() > m_config.MAX_PLIES) {
+                gameResult = 0;
+                exitGame = true;
+                break;
+            }
+        } // Game Finished
+
+        // Collect game global metrics
+        int gameLength = board.Ply();
+        int pawnCount = PopCount(board.Piece(WHITE, PAWN) | board.Piece(BLACK, PAWN));
+        int heavyPiecesCount = PopCount(board.AllPieces()) - pawnCount - 2; // Exclude kings
+
+        // Write to temporary buffer
+        std::stringstream ss;
+        for(const auto& savedPosition : savedPositions) {
+            ss << savedPosition.fen << ";"
+               << "bm " << savedPosition.bestMove << ";"
+               << "ev " << savedPosition.eval << ";"
+               << "r " << gameResult << ";"
+               << "l " << gameLength << ";"
+               << "pC " << pawnCount << ";"
+               << "PC " << heavyPiecesCount
+               << "\n";
+        }
+
+        // Write to file. Each thread write to its own file
+        outputFile << ss.view();
+
+        // Logs to standard output (multi-thread safe)
+        std::osyncstream syncedLog(std::cout);
+        syncedLog << "thread: " << std::this_thread::get_id()
+                  << " game " << n_game
+                  << " starting fen: " << startingFen
+                  << " saved positions: " << savedPositions.size()
+                  << " result " << gameResult
+                  << " length " << gameLength
+                  << " pC " << pawnCount
+                  << " PC " << heavyPiecesCount
+                  << " adjWinCounter " << adjWinCounter
+                  << " adjDrawCounter " << adjDrawCounter
+                  << "\n";
+    }
 }
 
 void GenSFen::Random(std::string filename, int threadIndex) {
@@ -161,6 +275,8 @@ void GenSFen::Random(std::string filename, int threadIndex) {
         std::string position;
         GenerateRandomPosition(board, position, positionGenerator, validationSearch);
 
+        std::vector<SavedPosition> savedPositions;
+
         //To avoid overlap in standard output due to multiple threads
         std::stringstream ss;
         ss << "thread: " << std::this_thread::get_id()
@@ -172,7 +288,7 @@ void GenSFen::Random(std::string filename, int threadIndex) {
         bool exitGame;
         do {
             CurrentPosition currentPosition;
-            WriteEvals(board, search, outputFile, currentPosition, m_config.WRITE_EVALS_RANDOM_SINGLE, m_config.WRITE_EVALS_RANDOM_BOTH, 0, 0);
+            SaveEvals(board, search, savedPositions);
 
             board.MakeMove(currentPosition.bestMove);
 
@@ -281,67 +397,33 @@ bool GenSFen::ValidateRandomPosition(Board& board, Search& search, int scoreFilt
     return evalPass && evalPassBoth;
 }
 
-// Write evals if:
+// Save evals if:
 // - Board not in check
-// - Best move is quiet at low depths (to skip trivial captures)
-// - Evaluation conditions: At least one color has [-200,200]. Both colors have [-800,800].
-bool GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition,
-                         int thresholdEval, int thresholdEvalBoth, int /*tacticalThreshold*/, uint minPly) {
-    search.FixDepth(5);
-    search.IterativeDeepening(board);
-    currentPosition.calculatedDepth = 5;
-    currentPosition.bestMove = search.BestMove();
-    
-    if(board.Ply() < minPly || board.IsCheck() || !search.BestMove().IsQuiet())
+// - Best move is quiet at low depths (to skip captures and highly tactical positions)
+bool GenSFen::SaveEvals(Board& board, Search& search, std::vector<SavedPosition>& savedPositions) {
+    if(board.IsCheck()
+        || !search.BestMove().IsQuiet()
+        || IsWinValue(search.BestScore())
+    )
         return false;
 
-    search.FixDepth(7);
-    search.IterativeDeepening(board);
-    currentPosition.calculatedDepth = 7;
-    currentPosition.bestMove = search.BestMove();
+    int score = search.BestScore();
+    int scoreWhitePOV = board.ActivePlayer() == WHITE ? score : -score;
 
-    int eval[2]; //COLOR
-    COLOR color = board.ActivePlayer();
-    eval[color] = search.BestScore();
+    // Save evals to struct
+    SavedPosition savedPosition;
+    savedPosition.fen = board.GetFen();
+    savedPosition.bestMove = search.BestMove().Notation();
+    savedPosition.eval = scoreWhitePOV;
+    savedPositions.push_back(savedPosition);
 
-    // Enemy move
-    board.MakeNull();
-
-    // Check that enemy move is possible
-    if(NoMoves(board) || board.IsCheck()) {
-        board.TakeNull();
-        return false;
-    }
-
-    // Low depth. Check that move is quiet.
-    search.FixDepth(5);
-    search.IterativeDeepening(board);
-    if(!search.BestMove().IsQuiet()) {
-        board.TakeNull();
-        return false;
-    }
-
-    // Normal depth
-    search.FixDepth(7);
-    search.IterativeDeepening(board);
-    eval[1-color] = search.BestScore();
-
-    // Eval conditions
-    int evalPass = abs(eval[WHITE]) < thresholdEval || abs(eval[BLACK]) < thresholdEval;
-    int evalPassSoft = abs(eval[WHITE]) < thresholdEvalBoth && abs(eval[BLACK]) < thresholdEvalBoth;
-    if(!evalPass || !evalPassSoft) {
-        currentPosition.evalFail++;
-        board.TakeNull();
-        return false;
-    }
-    currentPosition.evalPass++;
-
-    // Write evals to file
-    std::string fenString = board.GetSimplifiedFen();
-    outputFile << fenString << ";" << eval[WHITE]/100. << ";" << eval[BLACK]/100. << std::endl;
-
-    board.TakeNull();
     return true;
+}
+
+void GenSFen::SearchIteration(Board& board, Search& search) {
+    // search.FixDepth(depth);
+    search.FixNodes(m_config.FIXED_NODES);
+    search.IterativeDeepening(board);
 }
 
 bool GenSFen::NoMoves(Board& board) {
@@ -352,6 +434,21 @@ bool GenSFen::NoMoves(Board& board) {
 Move GenSFen::RandomMove(Board& board, Utils::PRNG& rng) {
     MoveList moves = MoveGenerator::GenerateMoves(board);
     return MoveGenerator::RandomMove(moves, rng);
+}
+
+MoveList GenSFen::SortGoodMoves(Board& board, Search & search) {
+    MoveList allMoves = MoveGenerator::GenerateMoves(board);
+    MoveList goodMoves;
+
+    Sorting::SortMoves(board, allMoves, Hash::tt, search.m_heuristics, 0);
+
+    for(const Move move : allMoves) {
+        if(!Scorer::IsNegativeCapture(move.Score())) {
+            goodMoves.add(move);
+        }
+    }
+
+    return goodMoves;
 }
 
 BookPositions GenSFen::ReadBook(const std::string& bookPath) {
@@ -372,35 +469,51 @@ uint64_t GenSFen::SeedForThread(int threadIndex) const {
     return m_config.seed + static_cast<uint64_t>(threadIndex + 1);
 }
 
-bool GenSFen::WriteRunMetadata(const std::string& mode, int concurrency, int requestedMaxGames) const {
+bool GenSFen::WriteRunMetadata(const std::string& mode, int concurrency) const {
     const std::filesystem::path metadataPath = std::filesystem::path(m_config.outputDir) / "run_metadata.txt";
 
     std::ofstream metadata(metadataPath);
     if(!metadata.is_open())
         return false;
 
-    metadata << "timestamp_unix=" << static_cast<long long>(std::time(nullptr)) << '\n';
+    // Commands
     metadata << "mode=" << mode << '\n';
+    metadata << "nodes=" << m_config.FIXED_NODES << '\n';
+    metadata << "max_games=" << (m_maxGames == INFINITE ? "infinite" : std::to_string(m_maxGames)) << '\n';
+    metadata << "seed=" << m_config.seed << '\n';
     metadata << "concurrency=" << concurrency << '\n';
-    metadata << "depth=" << m_depth << '\n';
-    metadata << "max_games_requested=" << requestedMaxGames << '\n';
-    metadata << "max_games_effective=" << (m_maxGames == INFINITE ? "infinite" : std::to_string(m_maxGames)) << '\n';
-    metadata << "seed_base=" << m_config.seed << '\n';
-    metadata << "book_file=" << (mode == "games" ? m_config.bookFile : "-") << '\n';
+    metadata << '\n';
 
+    // Metadata
+    metadata << "timestamp_unix=" << static_cast<long long>(std::time(nullptr)) << '\n';
+    metadata << '\n';
+    
+    // Input data
+    metadata << "# Input data" << '\n';
+    metadata << "book_file=" << (mode == "games" ? m_config.bookFile : "-") << '\n';
+    metadata << '\n';
+
+    // Behavior
+    metadata << "# Behavior" << '\n';
+    metadata << "soft_randomize_plies=" << m_config.SOFT_RANDOMIZE_PLIES << '\n';
+    metadata << '\n';
+
+    // Adjudication
+    metadata << "# Adjudication" << '\n';
+    metadata << "adj_threshold_win=" << m_config.ADJUDICATION_THRESHOLD_WIN << '\n';
+    metadata << "adj_threshold_draw=" << m_config.ADJUDICATION_THRESHOLD_DRAW << '\n';
+    metadata << "adj_plies_win=" << m_config.ADJUDICATION_PLIES_WIN << '\n';
+    metadata << "adj_plies_draw=" << m_config.ADJUDICATION_PLIES_DRAW << '\n';
+    metadata << "adj_max_plies=" << m_config.MAX_PLIES << '\n';
+    metadata << '\n';
+
+    // Threads
+    metadata << "# Threads" << '\n';
     if(mode == "games" || mode == "random") {
         for(int i = 0; i < concurrency; i++) {
             metadata << "thread_" << i << ".seed=" << SeedForThread(i)
                      << " file=evals_generated_" << (i + 1) << ".epd\n";
         }
-    }
-
-    if(mode == "games") {
-        metadata << "write_evals_games_single=" << m_config.WRITE_EVALS_GAMES_SINGLE << '\n';
-        metadata << "write_evals_games_both=" << m_config.WRITE_EVALS_GAMES_BOTH << '\n';
-    } else if(mode == "random") {
-        metadata << "write_evals_random_single=" << m_config.WRITE_EVALS_RANDOM_SINGLE << '\n';
-        metadata << "write_evals_random_both=" << m_config.WRITE_EVALS_RANDOM_BOTH << '\n';
     }
 
     return true;

@@ -1,5 +1,6 @@
 #include "Fen.h"
 #include "Board.h"
+#include "Move.h"
 
 #include <cassert>
 #include <sstream>
@@ -121,6 +122,42 @@ std::string Fen::GetSimplifiedFen(const Board& board) {
             }
         } //file
     } //rank
+
+    return buffer;
+}
+
+// Complete FEN string
+std::string Fen::GetFen(const Board& board) {
+    std::string buffer = GetSimplifiedFen(board);
+
+    // Active player
+    buffer += board.ActivePlayer() == WHITE ? " w" : " b";
+
+    // Castling rights
+    std::string castling = "";
+    u8 castlingRights = board.CastlingRights();
+    if(castlingRights & CASTLING_K) castling += "K";
+    if(castlingRights & CASTLING_Q) castling += "Q";
+    if(castlingRights & CASTLING_k) castling += "k";
+    if(castlingRights & CASTLING_q) castling += "q";
+    if(castling.empty()) castling = "-";
+    buffer += " " + castling;
+
+    // En passant square
+    buffer += " ";
+    if(board.EnPassantSquare()) {
+        int epSquare = BitscanForward(board.EnPassantSquare());
+        // IndexToNotation
+        buffer += Move::IndexToNotation(epSquare);
+    } else {
+        buffer += "-";
+    }
+
+    // Fifty-move rule
+    buffer += " " + std::to_string((int)board.FiftyRule());
+
+    // Move number
+    buffer += " " + std::to_string(board.Ply());
 
     return buffer;
 }

@@ -19,7 +19,7 @@ namespace Utils {
     //Pseudo-Random Number Generator for 64-bitwords
     class PRNG_64 {
     public:
-        PRNG_64(int seed = 0);
+        PRNG_64(uint64_t seed = 0);
         uint64_t Random();
     private:
         std::random_device m_device;
@@ -36,6 +36,14 @@ namespace Utils {
         int64_t ElapsedNanoseconds();
     private:
         std::chrono::high_resolution_clock::time_point m_start;
+    };
+
+    // Datetime utility
+    class DateTime {
+    public:
+        static std::chrono::system_clock::time_point Now() {
+            return std::chrono::system_clock::now();
+        }
     };
 
 } //namespace Utils
