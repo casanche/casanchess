@@ -304,6 +304,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             m_nps = CalculateNPS();
 
             std::cout << "info depth " << m_depth
+                      << " seldepth " << m_selPly
                       << " currmovenumber " << moveNumber
                       << " currmove " << move.Notation()
                       << " time " << m_elapsedTime
