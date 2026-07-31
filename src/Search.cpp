@@ -967,7 +967,7 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     reduction = lmr_value / MULT_FACTOR;
 
     if(isRoot)
-        reduction -= 2;
+        reduction -= 1;
 
     return std::clamp(reduction, 0, 4);
 }
