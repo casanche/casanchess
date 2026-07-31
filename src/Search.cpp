@@ -62,7 +62,7 @@ const int NULLMOVE_REDUCTION_FACTOR = 3;
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
 
-const int UCI_OUTPUT_CURRMOVE_MINTIME = 1000; //ms
+const int UCI_OUTPUT_ROOTMAX_MINTIME = 1000; //ms
 
 // Draw contempt to discourage premature draws
 constexpr int DrawScore(int ply) {
@@ -158,13 +158,8 @@ void Search::IterativeDeepening(Board &board, bool fullClear) {
         // Stop search if limits are reached within the loop
         if(m_stop) break;
 
-        // Update counters
-        m_elapsedTime = ElapsedTime();
-        m_nps = static_cast<int>(1000 * m_nodes / (m_elapsedTime+1));
-
         // PV
-        if(UCI_OUTPUT)
-            UciOutput(m_pv.PVString());
+        UciOutput(m_pv.PVString(), m_bestScore);
 
         // Stop search if we used half of the allocated time, since
         // next iteration will likely use more than the allocated time
@@ -183,16 +178,25 @@ void Search::IterativeDeepening(Board &board, bool fullClear) {
     }
 }
 
-void Search::UciOutput(std::string PV) {
+void Search::UciOutput(std::string PV, int score, BOUND_TYPE bound) {
+    m_elapsedTime = ElapsedTime();
+    m_nps = CalculateNPS();
+
+    if(!UCI_OUTPUT) return;
+
     std::cout << "info depth " << m_depth;
     std::cout << " seldepth " << m_selPly;
-    if(IsMateValue(m_bestScore)) {
-        int mateScore = (m_bestScore > 0) ?  MATESCORE_MAX - m_bestScore + 1
-                                          : -MATESCORE_MAX - m_bestScore - 1;
+
+    if(IsMateValue(score)) {
+        int mateScore = (score > 0) ?  MATESCORE_MAX - score + 1
+                                    : -MATESCORE_MAX - score - 1;
         std::cout << " score mate " << mateScore / 2; //return mate in moves, not in plies
     } else {
-        std::cout << " score cp " << m_bestScore;
+        std::cout << " score cp " << score;
     }
+    if(bound == BOUND_TYPE::LOWER_BOUND) std::cout << " lowerbound";
+    if(bound == BOUND_TYPE::UPPER_BOUND) std::cout << " upperbound";
+
     std::cout << " time " << m_elapsedTime;
     std::cout << " nodes " << m_nodes;
     std::cout << " nps " << m_nps;
@@ -236,6 +240,11 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
     for(int researches = 1; !m_stop && (score <= alpha || score >= beta); researches++) {
         D( m_debug.Increment("AspirationWindow: Out of bounds: Researches: " + std::to_string(researches) ); );
 
+        // Display lowerbound / upperbound info
+        BOUND_TYPE bound = (score <= alpha) ? BOUND_TYPE::UPPER_BOUND
+                                            : BOUND_TYPE::LOWER_BOUND;
+        UciOutput(m_bestMove.Notation(), score, bound);
+
         // Asymmetrical incremental aspiration
         window = window * ASPIRATION_WINDOW_MULTIPLIER;
         if(score <= alpha) {
@@ -273,10 +282,12 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     m_pv.ClearPly(m_ply);
 
     MoveList moves = MoveGenerator::GenerateMoves(board);
-
     D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
     SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
+
+    if(!m_bestMove.MoveType() && !moves.empty())
+        m_bestMove = moves[0]; // Life jacket if first move at depth 1 is not completed
 
     int moveNumber = 0;
 
@@ -287,19 +298,21 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         if(DEBUG_SEARCH_TREE)
             P( "RootMax: " << move.Notation() );
 
-        if(UCI_OUTPUT && m_elapsedTime > UCI_OUTPUT_CURRMOVE_MINTIME) {
-            // UCI: show the root move under analysis and update the counters
+        // Display the root move under analysis and update the counters
+        if(UCI_OUTPUT && m_elapsedTime > UCI_OUTPUT_ROOTMAX_MINTIME) {
             m_elapsedTime = ElapsedTime();
-            m_nps = static_cast<int>(1000 * m_nodes / (m_elapsedTime+1));
+            m_nps = CalculateNPS();
 
             std::cout << "info depth " << m_depth
+                      << " seldepth " << m_selPly
                       << " currmovenumber " << moveNumber
                       << " currmove " << move.Notation()
                       << " time " << m_elapsedTime
                       << " nodes " << m_nodes
-                      << " nps " << m_nps
-                      << " tbhits " << m_tbHits
-                      << std::endl;
+                      << " nps " << m_nps;
+            if(m_tbHits)
+                std::cout << " tbhits " << m_tbHits;
+            std::cout << std::endl;
         }
 
         board.MakeMove(move);
@@ -332,6 +345,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         // Not useful to store in TT due to aspiration window
         if(score >= beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
+            m_bestMove = move;
+
             break;
         }
 
@@ -339,17 +354,22 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
 
+            m_bestMove = move;
+            m_bestScore = score;
+
             m_pv.Update(m_ply, move);
+
+            if(m_elapsedTime > UCI_OUTPUT_ROOTMAX_MINTIME)
+                UciOutput(m_pv.PVString(), score, BOUND_TYPE::LOWER_BOUND);
         }
     }
 
     // Store "exact" score in transposition table if search finished within search bounds
     bool withinBounds = (bestScore > alphaOriginal) && (bestScore < beta);
     if(!m_stop && withinBounds) {
-        m_bestMove = bestMove;
-        m_bestScore = bestScore;
+        assert(bestMove == m_bestMove && bestScore == m_bestScore);
+        D( m_debug.Increment("RootMax: AlphaBeta: TT Store Exact") );
 
-        D( m_debug.Increment("RootMax: AlphaBeta: Exact") );
         Hash::tt.Store(board.ZKey(), bestScore, TTENTRY_TYPE::EXACT, bestMove, depth, m_ply, m_searchCount);
     }
 
