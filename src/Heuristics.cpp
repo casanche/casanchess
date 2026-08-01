@@ -104,7 +104,8 @@ namespace {
             if(move == hashMove) {
                 move.SetScore(Scorer::HASH);
             } else if(move.CapturedType()) {
-                move.SetScore(Scorer::EVASION_CAPTURE);
+                int see = board.SEE(move);
+                move.SetScore( Scorer::TacticalScoreFromSEE(see) );
             } else {
                 move.SetScore(Scorer::EVASION_NORMAL);
             }

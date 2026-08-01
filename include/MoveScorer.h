@@ -34,7 +34,6 @@ namespace Scorer {
     int SEEFromTacticalScore(u8 score);
 
     // Check evasion positions
-    constexpr int EVASION_CAPTURE = 1;
     constexpr int EVASION_NORMAL = 0;
 
     // Single methods
