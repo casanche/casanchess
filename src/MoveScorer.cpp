@@ -7,7 +7,6 @@ namespace Scorer {
     constexpr int SEE_RANGE = SEE_MAX * 2;
 
     constexpr int TACTICAL_RANGE = TACTICAL_MAX - TACTICAL_MIN;
-    constexpr int TACTICAL_NEUTRALCAPTURE = (TACTICAL_MIN + TACTICAL_MAX) / 2; // Equivalent to SEE = 0 for tactical scores
 }
 
 u8 Scorer::ScoreFromHistory(int minScore, int maxScore, int historyValue, int historyMax) {   

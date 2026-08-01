@@ -78,7 +78,7 @@ namespace {
             int historyValue = heuristics.history.Get(move, board.ActivePlayer());
             int historyMax = heuristics.history.MaxValue();
             int score = Scorer::ScoreFromHistory(Scorer::HISTORY_MIN, Scorer::HISTORY_MAX, historyValue, historyMax);
-            move.SetScore(score);
+            move.SetScore( static_cast<u8>(score) );
         }
     }
 

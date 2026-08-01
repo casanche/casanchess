@@ -36,9 +36,9 @@ endif()
 if(MSVC)
     message(STATUS "Compiler: MSVC")
     set(COMPILER_OPTIONS
-        /W4 /EHsc /arch:AVX2
-        $<$<CONFIG:RELEASE>:/O2 /GL /fp:fast /DNDEBUG>
-        $<$<CONFIG:RELWITHDEBINFO>:/O2 /GL /fp:fast /DNDEBUG /Zi>
+        /W4 /EHsc /arch:AVX2 /MP
+        $<$<CONFIG:RELEASE>:/O2 /fp:fast /DNDEBUG>
+        $<$<CONFIG:RELWITHDEBINFO>:/O2 /fp:fast /DNDEBUG /Zi>
         $<$<CONFIG:DEBUG>:/Od /DDEBUG /Zi>
     )
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
