@@ -5,68 +5,8 @@ on:
     branches: [ "master", "*/**" ]
 
 jobs:
-  build:
+  build_and_test:
     runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # RELEASE - Linux
-          - os: ubuntu-latest
-            build_type: Release
-            compiler: g++
-          - os: ubuntu-latest
-            build_type: Release
-            compiler: clang++
-          # RELEASE - Windows
-          - os: windows-latest
-            build_type: Release
-            compiler: cl
-          - os: windows-2025
-            build_type: Release
-            compiler: g++
-          # DEBUG
-          - os: ubuntu-latest
-            build_type: Debug
-            compiler: g++
-    
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup dependencies (Linux)
-      if: ${{ runner.os == 'Linux' }}
-      shell: bash
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake
-        g++ --version
-        cmake --version
-
-    - name: Configure with CMake
-      run: >
-        cmake -B build
-        -S ${{ github.workspace }}
-        ${{ runner.os == 'Windows' && matrix.compiler == 'g++' && '-G Ninja' || '' }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
-        -DENABLE_STATIC=ON
-        -DBUILD_TESTS=ON
-        -DBUILD_TESTS_EXTRA=ON
-        -DBUILD_EXECUTABLES_EXTRA=ON
-        
-    - name: Build
-      run: cmake --build build --config ${{ matrix.build_type }} --parallel
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.compiler }}-artifacts
-        path: build/
-        retention-days: 1
-
-  test:
-    runs-on: ${{ matrix.os }}
-    needs: build
     defaults:
       run:
         shell: bash
@@ -92,13 +32,33 @@ jobs:
           - os: ubuntu-latest
             build_type: Debug
             compiler: g++
-          
+    
     steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.compiler }}-artifacts
-        path: build/
+    - uses: actions/checkout@v7
+
+    - name: Setup dependencies (Linux)
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake
+        ${{ matrix.compiler }} --version
+        cmake --version
+
+    - name: Configure with CMake
+      run: >
+        cmake -B build
+        -S .
+        ${{ runner.os == 'Windows' && matrix.compiler == 'g++' && '-G Ninja' || '' }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+        -DENABLE_STATIC=ON
+        -DBUILD_TESTS=ON
+        -DBUILD_TESTS_EXTRA=ON
+        -DBUILD_EXECUTABLES_EXTRA=ON
+        
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }} --parallel
         
     - name: Fix permissions (Linux)
       if: ${{ runner.os == 'Linux' }}
@@ -133,7 +93,6 @@ jobs:
 
         timeout 30s bash -c "
         (
-          # Boot
           echo 'uci'
           echo 'setoption name Hash value 32'
           echo 'isready'
@@ -164,3 +123,13 @@ jobs:
           echo 'quit'
         ) | $ENGINE_BIN
         "
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.compiler }}-engine
+        path: |
+          build/casanchess*
+          build/Release/casanchess*
+          build/*.nnue
+        retention-days: 2
