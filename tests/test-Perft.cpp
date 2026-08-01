@@ -13,13 +13,34 @@ int main(int argc, char** argv) {
     return RUN_ALL_TESTS();
 }
 
-//MoveGenerator
+// =========================
+// ===== MoveGenerator =====
+// =========================
 TEST(MoveGenerator, StartingPosition) {
     Board board;
     MoveList moves = MoveGenerator::GenerateMoves(board);
     EXPECT_EQ(moves.size(), 20);
 }
+TEST(MoveGenerator, EnpassantBlocker) {
+    Board board;
+    board.SetFen("k3r3/8/8/3Pp3/8/8/8/4K3 w - e6 0 1");
+    MoveList moves = MoveGenerator::GenerateMoves(board);
 
+    bool hasEnpassant = false;
+    for(const auto move : moves) {
+        if(move.MoveType() == ENPASSANT) {
+            hasEnpassant = true;
+            break;
+        }
+    }
+
+    EXPECT_TRUE(hasEnpassant); // dxe6ep should be included
+    EXPECT_EQ(moves.size(), 7);
+}
+
+// =================
+// ===== Perft =====
+// =================
 //https://www.chessprogramming.org/Perft_Results
 TEST(Perft, StartingPosition) {
     Board board;
