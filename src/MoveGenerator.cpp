@@ -365,8 +365,9 @@ namespace {
                 int fromSq = BitscanForward( FromBitboard(toBitboard) );
                 Bitboard enemyPawn = RSouth(board.EnPassantSquare());
 
-                //Check legality
-                Bitboard blockers = context.allPieces ^ SquareBB(fromSq) ^ enemyPawn; //remove the own and enemy pawns
+                // Check legality
+                // For blockers: move our pawn and remove the enemy pawn
+                Bitboard blockers = (context.allPieces ^ SquareBB(fromSq) ^ enemyPawn) | toBitboard;
                 int kingSquare = BitscanForward( board.Piece(context.color,KING) );
                 if(board.AttackersTo(context.color, kingSquare, blockers) & ~enemyPawn) //any attackers that are not the enemy pawn?
                     continue;
