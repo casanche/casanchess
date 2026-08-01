@@ -30,7 +30,7 @@ constexpr int MAX_PLY = 256;
 constexpr int MAX_PLY_HISTORY = 2048;
 
 namespace SEE{
-    constexpr int MATERIAL_VALUES[8] = {0, 100, 350, 350, 500, 1050, 0}; // [PIECE]
+    constexpr int MATERIAL_VALUES[8] = {0, 100, 350, 350, 500, 1050, 20000}; // [PIECE]
 }
 
 enum COLOR { WHITE, BLACK, NO_COLOR };
