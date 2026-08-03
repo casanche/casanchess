@@ -325,7 +325,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
               && depth >= 2         // Avoid negative depths
               && !inCheck           // Evasions not reduced
         ) {
-            reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, false, true);
+            reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, true, true);
 
             reduction -= 2;
             reduction = std::clamp(reduction, 0, 4);
