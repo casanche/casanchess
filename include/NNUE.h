@@ -4,9 +4,23 @@
 
 #include <string>
 
-const int NNUE_SIZE = 128;
-const int NNUE_FEATURES = 32*64*5*2; //kingBuckets * square * pieceType * color
-const int CONVERSION_FACTOR = INFINITE_I16 / 3;
+constexpr int NNUE_SIZE = 128;
+constexpr int NNUE_FEATURES = 32*64*5*2; //kingBuckets * square * pieceType * color
+
+namespace NNUEConstants {
+    constexpr int BLACK_PERSPECTIVE_XOR = 56;
+    constexpr int CONVERSION_FACTOR = INFINITE_I16 / 3;
+    constexpr u8 KING_BUCKETS[64] = {
+        0, 1, 2, 3, 4, 5, 6, 7,
+        8, 9,10,11,12,13,14,15,
+       16,16,17,17,18,18,19,19,
+       20,20,21,21,22,22,23,23,
+       24,24,25,25,26,26,27,27,
+       24,24,25,25,26,26,27,27,
+       28,28,29,29,30,30,31,31,
+       28,28,29,29,30,30,31,31
+   };
+}
 
 struct Network;
 

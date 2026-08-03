@@ -89,14 +89,27 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
 
     //NNUE update
     if(update_nnue && !UCI_CLASSICAL_EVAL) {
-        if(pieceType != KING && (moveType == NORMAL || moveType == DOUBLE_PUSH || moveType == CAPTURE)) { //Incremental update
-            nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq);
+        bool isKing = (pieceType == KING);
+        bool bucketChanged = false;
+
+        if(isKing) {
+            int fromSq_POV = (color == WHITE) ? fromSq : fromSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
+            int toSq_POV = (color == WHITE) ? toSq : toSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
+            bucketChanged = NNUEConstants::KING_BUCKETS[fromSq_POV] != NNUEConstants::KING_BUCKETS[toSq_POV];
+        }
+
+        // Full update
+        if( move.IsPromotion() || moveType == ENPASSANT || moveType == CASTLING || (isKing && bucketChanged) ) {
+            nnue.Inputs_FullUpdate();
+        }
+        // Incremental update
+        else {
+            if(!isKing)
+                nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq);
 
             if(moveType == CAPTURE) {
                 nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq);
             }
-        } else {
-            nnue.Inputs_FullUpdate();
         }
     }
 
