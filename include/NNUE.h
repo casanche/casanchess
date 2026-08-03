@@ -31,30 +31,33 @@ public:
     bool IsLoaded() const { return m_isLoaded; }
     std::string GetPath() const { return m_filepath; }
 
-    int Evaluate(int color);
+    int Evaluate(int color, int ply);
 
     void SetPieces(int color, uint64_t& pieces);
-    void SavePosition(int ply);
-    void RestorePosition(int ply);
+    // void SavePosition(int ply);
+    // void RestorePosition(int ply);
 
-    void Inputs_FullUpdate();
-    void Inputs_AddPiece(int color, int pieceType, int square);
-    void Inputs_RemovePiece(int color, int pieceType, int square);
-    void Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq);
+    void Inputs_FullUpdate(int ply);
+    void Inputs_AddPiece(int color, int pieceType, int square, int ply);
+    void Inputs_RemovePiece(int color, int pieceType, int square, int ply);
+    void Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int ply);
+
+    void CopyAccumulator(int fromPly, int toPly);
 
 private:
     //Helpers
     float Clamp(float n);
+
+    //Compute
     void ComputeLayer(float* inputLayer, float* outputLayer, float* biases, float* weights, int dimInput, int dimOutput, bool with_ReLU);
 
     //Current state
     Bitboard* m_pieces[2];
-    alignas(32) float m_accumulator[2][NNUE_SIZE];
-    //Backups
-    alignas(32) float m_backupAccumulator[MAX_PLY_HISTORY][2][NNUE_SIZE];
 
     bool m_isLoaded;
     std::string m_filepath;
+    
+    alignas(32) float m_accumulator[MAX_PLY_HISTORY][2][NNUE_SIZE]; // [PLY][COLOR][NNUE_SIZE]
 };
 
 //Network architecture

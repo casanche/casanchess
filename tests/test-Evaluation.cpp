@@ -6,7 +6,7 @@
 using namespace TestCommon;
 #include <gtest/gtest.h>
 
-TEST(NNUE, IncrementalMatchesFull) {
+TEST(NNUE, Incremental_vs_FullUpdate) {
     Board board;
     
     // Sequence covering all NNUE update paths:
@@ -24,9 +24,30 @@ TEST(NNUE, IncrementalMatchesFull) {
     board.MakeMove("e7e6");
     board.MakeMove("e1g1"); // castling
     
+    // Test MakeMove
     int evalIncremental = Evaluation::Evaluate(board);
-    nnue.Inputs_FullUpdate();
+    nnue.Inputs_FullUpdate(board.Ply());
     int evalFull = Evaluation::Evaluate(board);
-    
+    EXPECT_EQ(evalIncremental, evalFull);
+
+    // Test TakeMove
+    board.TakeMove();
+    evalIncremental = Evaluation::Evaluate(board);
+    nnue.Inputs_FullUpdate(board.Ply());
+    evalFull = Evaluation::Evaluate(board);
+    EXPECT_EQ(evalIncremental, evalFull);
+
+    // Test MakeNull
+    board.MakeNull();
+    evalIncremental = Evaluation::Evaluate(board);
+    nnue.Inputs_FullUpdate(board.Ply());
+    evalFull = Evaluation::Evaluate(board);
+    EXPECT_EQ(evalIncremental, evalFull);
+
+    // Test TakeNull
+    board.TakeNull();
+    evalIncremental = Evaluation::Evaluate(board);
+    nnue.Inputs_FullUpdate(board.Ply());
+    evalFull = Evaluation::Evaluate(board);
     EXPECT_EQ(evalIncremental, evalFull);
 }
