@@ -34,9 +34,11 @@ NNUE::NNUE() {
     m_isLoaded = false;
     m_filepath = "network-20260712.nnue";
 
-    for(int i = 0; i < NNUE_SIZE; i++) {
-        m_accumulator[0][i] = 0;
-        m_accumulator[1][i] = 0;
+    for(int ply = 0; ply < MAX_PLY_HISTORY; ply++) {
+        for(int i = 0; i < NNUE_SIZE; i++) {
+            m_accumulator[ply][0][i] = 0;
+            m_accumulator[ply][1][i] = 0;
+        }
     }
 }
 
@@ -80,14 +82,18 @@ void NNUE::Load(std::string filepath) {
 #include "Utils.h"
 Utils::Clock clock_eval;
 
-int NNUE::Evaluate(int color) {
+int NNUE::Evaluate(int color, int ply) {
     //Layer 1
     alignas(32) float o1[ ARCH[L2][ROW] ];
+
+    float* acc_active = m_accumulator[ply][color];
+    float* acc_inactive = m_accumulator[ply][1-color];
+
     for(uint i = 0; i < NNUE_SIZE; i++) {
-        o1[i            ] = Clamp(m_accumulator[color][i]);
+        o1[i] = Clamp(acc_active[i]);
     }
     for(uint i = 0; i < NNUE_SIZE; i++) {
-        o1[i + NNUE_SIZE] = Clamp(m_accumulator[1-color][i]);
+        o1[i + NNUE_SIZE] = Clamp(acc_inactive[i]);
     }
 
     //Layers 2,3,4
@@ -102,35 +108,38 @@ int NNUE::Evaluate(int color) {
     return CastInt(o4[0] * 100);
 }
 
-void NNUE::SavePosition(int ply) {
-    std::memcpy(&m_backupAccumulator[ply], &m_accumulator, sizeof(m_accumulator));
-}
+// void NNUE::SavePosition(int ply) {
+//     std::memcpy(&m_backupAccumulator[ply], &m_accumulator, sizeof(m_accumulator));
+// }
 
-void NNUE::RestorePosition(int ply) {
-    std::memcpy(&m_accumulator, &m_backupAccumulator[ply], sizeof(m_backupAccumulator[ply]));
-}
+// void NNUE::RestorePosition(int ply) {
+//     std::memcpy(&m_accumulator, &m_backupAccumulator[ply], sizeof(m_backupAccumulator[ply]));
+// }
 
 void NNUE::SetPieces(int color, uint64_t& pieces) {
     m_pieces[color] = &pieces;
 }
 
-void NNUE::Inputs_FullUpdate() {
+void NNUE::Inputs_FullUpdate(int ply) {
+    float* acc_w = m_accumulator[ply][0];
+    float* acc_b = m_accumulator[ply][1];
+
     for(int i=0; i < NNUE_SIZE; i++) {
-        m_accumulator[0][i] = m_network.b1[i];
-        m_accumulator[1][i] = m_network.b1[i];
+        acc_w[i] = m_network.b1[i];
+        acc_b[i] = m_network.b1[i];
     }
 
     for(int color = WHITE; color <= BLACK; color++) {
         for(int pieceType = PAWN; pieceType <= QUEEN; pieceType++) {
             Bitboard bitboard = m_pieces[color][pieceType];
             for(int square : BitboardIterator(bitboard)) {
-                Inputs_AddPiece(color, pieceType-1, square);
+                Inputs_AddPiece(color, pieceType-1, square, ply);
             }
         }
     }
 }
 
-void NNUE::Inputs_AddPiece(int color, int pieceType, int square) {
+void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply) {
     const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
     const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
@@ -149,13 +158,16 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square) {
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
 
+    float* acc_w = m_accumulator[ply][0];
+    float* acc_b = m_accumulator[ply][1];
+
     for(int i = 0; i < NNUE_SIZE; i++) {
-        m_accumulator[0][i] += m_network.w1[NNUE_SIZE * feature_w + i];
-        m_accumulator[1][i] += m_network.w1[NNUE_SIZE * feature_b + i];
+        acc_w[i] += m_network.w1[NNUE_SIZE * feature_w + i];
+        acc_b[i] += m_network.w1[NNUE_SIZE * feature_b + i];
     }
 }
 
-void NNUE::Inputs_RemovePiece(int color, int pieceType, int square) {
+void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply) {
     const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
     const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
@@ -174,13 +186,16 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square) {
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
 
+    float* acc_w = m_accumulator[ply][0];
+    float* acc_b = m_accumulator[ply][1];
+
     for(int i = 0; i < NNUE_SIZE; i++) {
-        m_accumulator[0][i] -= m_network.w1[NNUE_SIZE * feature_w + i];
-        m_accumulator[1][i] -= m_network.w1[NNUE_SIZE * feature_b + i];
+        acc_w[i] -= m_network.w1[NNUE_SIZE * feature_w + i];
+        acc_b[i] -= m_network.w1[NNUE_SIZE * feature_b + i];
     }
 }
 
-void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq) {
+void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int ply) {
     const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
     const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
@@ -208,13 +223,20 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq) {
     assert(feature_to_w <= NNUE_FEATURES);
     assert(feature_to_b <= NNUE_FEATURES);
 
-    for(int i = 0; i < NNUE_SIZE; i++) {
-        m_accumulator[0][i] -= m_network.w1[NNUE_SIZE * feature_from_w + i];
-        m_accumulator[1][i] -= m_network.w1[NNUE_SIZE * feature_from_b + i];
+    float* acc_w = m_accumulator[ply][0];
+    float* acc_b = m_accumulator[ply][1];
 
-        m_accumulator[0][i] += m_network.w1[NNUE_SIZE * feature_to_w + i];
-        m_accumulator[1][i] += m_network.w1[NNUE_SIZE * feature_to_b + i];
+    for(int i = 0; i < NNUE_SIZE; i++) {
+        acc_w[i] += m_network.w1[NNUE_SIZE * feature_to_w + i];
+        acc_b[i] += m_network.w1[NNUE_SIZE * feature_to_b + i];
+
+        acc_w[i] -= m_network.w1[NNUE_SIZE * feature_from_w + i];
+        acc_b[i] -= m_network.w1[NNUE_SIZE * feature_from_b + i];
     }
+}
+
+void NNUE::CopyAccumulator(int fromPly, int toPly) {
+    std::memcpy(&m_accumulator[toPly], m_accumulator[fromPly], sizeof(m_accumulator[0]));
 }
 
 float NNUE::Clamp(float n) {

@@ -527,7 +527,7 @@ int Evaluation::Evaluate(const Board& board) {
         eval = ClassicalEvaluation(board);
     } else {
         int color = board.ActivePlayer();
-        eval = nnue.Evaluate(color);
+        eval = nnue.Evaluate(color, board.Ply());
     }
 
     return eval;

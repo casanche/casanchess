@@ -3,8 +3,6 @@
 #include "NNUE.h"
 #include "Uci.h"
 
-#include <cstring> //for memcpy, delete this
-
 void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {    
     // Get move information
     COLOR color = board.ActivePlayer();
@@ -16,12 +14,10 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     assert(fromSq >= 0 && fromSq < 64);
     assert(toSq >= 0 && toSq < 64);
 
-    //Before any change in the board state
-    if(update_nnue && !UCI_CLASSICAL_EVAL)
-        nnue.SavePosition(board.m_ply);
-
     //Increase ply
     board.m_ply++;
+    const uint ply = board.m_ply;
+
     if(color == BLACK)
         board.m_moveNumber++;
     //Fifty-rule
@@ -74,12 +70,12 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     board.m_zobristKey.UpdateColor();
 
     //Store irreversible information (to help a later TakeMove)
-    assert(board.m_ply < MAX_PLY_HISTORY);
-    board.m_history[board.m_ply].fiftyrule = board.m_fiftyrule;
-    board.m_history[board.m_ply].castling = board.m_castlingRights;
-    board.m_history[board.m_ply].zkey = board.ZKey();
-    board.m_history[board.m_ply].enpassant = board.m_enPassantSquare;
-    board.m_history[board.m_ply].move = move;
+    assert(ply < MAX_PLY_HISTORY);
+    board.m_history[ply].fiftyrule = board.m_fiftyrule;
+    board.m_history[ply].castling = board.m_castlingRights;
+    board.m_history[ply].zkey = board.ZKey();
+    board.m_history[ply].enpassant = board.m_enPassantSquare;
+    board.m_history[ply].move = move;
 
     //Update helper bitboards
     board.UpdateBitboards();
@@ -89,6 +85,9 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
 
     //NNUE update
     if(update_nnue && !UCI_CLASSICAL_EVAL) {
+        // Copy Accumulator from previous ply
+        nnue.CopyAccumulator(ply-1, ply);
+
         bool isKing = (pieceType == KING);
         bool bucketChanged = false;
 
@@ -100,15 +99,15 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
 
         // Full update
         if( move.IsPromotion() || moveType == ENPASSANT || moveType == CASTLING || (isKing && bucketChanged) ) {
-            nnue.Inputs_FullUpdate();
+            nnue.Inputs_FullUpdate(ply);
         }
         // Incremental update
         else {
             if(!isKing)
-                nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq);
+                nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq, ply);
 
             if(moveType == CAPTURE) {
-                nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq);
+                nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq, ply);
             }
         }
     }
@@ -185,10 +184,6 @@ void MoveMaker::TakeMove(Board& board, Move move) {
     //Reset check calculation
     board.m_checkCalculated = false;
 
-    //Retrieve NNUE
-    if(!UCI_CLASSICAL_EVAL)
-        nnue.RestorePosition(board.m_ply);
-
     //Asserts
     assert(BoardIntegrityChecker::CheckIntegrity(board));
     assert(board.m_allpieces & SquareBB(fromSq));
@@ -205,7 +200,13 @@ void MoveMaker::MakeNull(Board& board) {
     Move move = Move();
 
     board.m_ply++;
-    assert(board.m_ply < MAX_PLY_HISTORY);
+    const uint ply = board.m_ply;
+    assert(ply < MAX_PLY_HISTORY);
+
+    // Copy the NNUE accumulator from the previous ply
+    if(!UCI_CLASSICAL_EVAL) {
+        nnue.CopyAccumulator(ply-1, ply);
+    }
 
     //Reset en-passant square
     if(board.m_enPassantSquare) {
@@ -218,11 +219,11 @@ void MoveMaker::MakeNull(Board& board) {
     board.m_zobristKey.UpdateColor();
 
     //Store irreversible information (to help a later TakeMove)
-    board.m_history[board.m_ply].fiftyrule = board.m_fiftyrule;
-    board.m_history[board.m_ply].castling = board.m_castlingRights;
-    board.m_history[board.m_ply].zkey = board.ZKey();
-    board.m_history[board.m_ply].enpassant = board.m_enPassantSquare;
-    board.m_history[board.m_ply].move = move;
+    board.m_history[ply].fiftyrule = board.m_fiftyrule;
+    board.m_history[ply].castling = board.m_castlingRights;
+    board.m_history[ply].zkey = board.ZKey();
+    board.m_history[ply].enpassant = board.m_enPassantSquare;
+    board.m_history[ply].move = move;
 
     //Reset check calculation
     board.m_checkCalculated = false;
@@ -237,12 +238,13 @@ void MoveMaker::TakeNull(Board& board) {
 
     assert(board.m_ply != 0);
     board.m_ply--;
+    const uint ply = board.m_ply;
 
     //Retrieve state
-    board.m_fiftyrule = board.m_history[board.m_ply].fiftyrule;
-    board.m_castlingRights = board.m_history[board.m_ply].castling;
-    board.m_zobristKey.SetKey( board.m_history[board.m_ply].zkey );
-    board.m_enPassantSquare = board.m_history[board.m_ply].enpassant;
+    board.m_fiftyrule = board.m_history[ply].fiftyrule;
+    board.m_castlingRights = board.m_history[ply].castling;
+    board.m_zobristKey.SetKey( board.m_history[ply].zkey );
+    board.m_enPassantSquare = board.m_history[ply].enpassant;
 
     //Reset check calculation
     board.m_checkCalculated = false;
