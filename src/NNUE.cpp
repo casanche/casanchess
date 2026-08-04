@@ -21,7 +21,6 @@
 #include "NNUE.h"
 #include "BitboardUtils.h"
 
-#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <fstream>
@@ -86,24 +85,17 @@ void NNUE::Load(std::string filepath) {
 
 int NNUE::Evaluate(int color, int ply) {
     //Layer 1
-    alignas(32) float o1[ ARCH[L2][ROW] ];
+    alignas(32) float outputLayer1[NNUE_SIZE * 2];
 
-    float* acc_active = m_accumulator[ply][color];
-    float* acc_inactive = m_accumulator[ply][1-color];
-
-    for(uint i = 0; i < NNUE_SIZE; i++) {
-        o1[i] = Clamp(acc_active[i]);
-    }
-    for(uint i = 0; i < NNUE_SIZE; i++) {
-        o1[i + NNUE_SIZE] = Clamp(acc_inactive[i]);
-    }
+    ClampWeights(m_accumulator[ply][color], outputLayer1, NNUE_SIZE);
+    ClampWeights(m_accumulator[ply][1-color], outputLayer1 + NNUE_SIZE, NNUE_SIZE);
 
     //Layers 2,3,4
     alignas(32) float o2[ ARCH[L3][ROW] ];
     alignas(32) float o3[ ARCH[L4][ROW] ];
     float o4[1];
 
-    ComputeLayer(o1, o2, m_network.b2, m_network.w2, ARCH[L2][ROW], ARCH[L2][COL], true);
+    ComputeLayer(outputLayer1, o2, m_network.b2, m_network.w2, ARCH[L2][ROW], ARCH[L2][COL], true);
     ComputeLayer(o2, o3, m_network.b3, m_network.w3, ARCH[L3][ROW], ARCH[L3][COL], true);
     ComputeLayer(o3, o4, m_network.b4, m_network.w4, ARCH[L4][ROW], ARCH[L4][COL], false);
 
@@ -233,8 +225,27 @@ void NNUE::CopyAccumulator(int fromPly, int toPly) {
     std::memcpy(&m_accumulator[toPly], m_accumulator[fromPly], sizeof(m_accumulator[0]));
 }
 
-float NNUE::Clamp(float n) {
-    return std::clamp(n, 0.0f, 1.0f);
+// float NNUE::Clamp(float n) const {
+//     return std::clamp(n, 0.0f, 1.0f);
+// }
+
+// Clamps the input to the range [0,1]
+void NNUE::ClampWeights(const float* input, float* output, int size) const {
+    #if defined(__AVX2__)
+        __m256 zero = _mm256_setzero_ps();
+        __m256 one = _mm256_set1_ps(1.0f);
+
+        for(int i = 0; i < size; i += 8) {
+            __m256 val = _mm256_load_ps(&input[i]);
+            val = _mm256_max_ps(val, zero);
+            val = _mm256_min_ps(val, one);
+            _mm256_store_ps(&output[i], val);
+        }
+    #else
+        for(int i = 0; i < size; i++) {
+            output[i] = Clamp(input[i]);
+        }
+    #endif
 }
 
 //Horizontal sum of 8 floats (256-bits)

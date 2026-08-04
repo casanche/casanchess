@@ -2,6 +2,7 @@
 
 #include "Constants.h"
 
+#include <algorithm>
 #include <string>
 
 constexpr int NNUE_SIZE = 128;
@@ -44,9 +45,13 @@ public:
 
 private:
     //Helpers
-    float Clamp(float n);
+    constexpr float Clamp(float n) const {
+        return std::clamp(n, 0.0f, 1.0f);
+    }
 
-    //Compute
+    // AVX2
+    void ClampWeights(const float* input, float* output, int size) const;
+    
     void ComputeLayer(const float* inputLayer, float* outputLayer,
                       const float* biases, const float* weights,
                       int dimInput, int dimOutput, bool with_ReLU);
