@@ -3,8 +3,6 @@
 #include "NNUE.h"
 #include "Uci.h"
 
-#include <cstring> //for memcpy, delete this
-
 void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {    
     // Get move information
     COLOR color = board.ActivePlayer();

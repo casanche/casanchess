@@ -85,11 +85,15 @@ Utils::Clock clock_eval;
 int NNUE::Evaluate(int color, int ply) {
     //Layer 1
     alignas(32) float o1[ ARCH[L2][ROW] ];
+
+    float* acc_active = m_accumulator[ply][color];
+    float* acc_inactive = m_accumulator[ply][1-color];
+
     for(uint i = 0; i < NNUE_SIZE; i++) {
-        o1[i            ] = Clamp(m_accumulator[ply][color][i]);
+        o1[i] = Clamp(acc_active[i]);
     }
     for(uint i = 0; i < NNUE_SIZE; i++) {
-        o1[i + NNUE_SIZE] = Clamp(m_accumulator[ply][1-color][i]);
+        o1[i + NNUE_SIZE] = Clamp(acc_inactive[i]);
     }
 
     //Layers 2,3,4
@@ -117,9 +121,12 @@ void NNUE::SetPieces(int color, uint64_t& pieces) {
 }
 
 void NNUE::Inputs_FullUpdate(int ply) {
+    float* acc_w = m_accumulator[ply][0];
+    float* acc_b = m_accumulator[ply][1];
+
     for(int i=0; i < NNUE_SIZE; i++) {
-        m_accumulator[ply][0][i] = m_network.b1[i];
-        m_accumulator[ply][1][i] = m_network.b1[i];
+        acc_w[i] = m_network.b1[i];
+        acc_b[i] = m_network.b1[i];
     }
 
     for(int color = WHITE; color <= BLACK; color++) {
@@ -151,9 +158,12 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply) {
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
 
+    float* acc_w = m_accumulator[ply][0];
+    float* acc_b = m_accumulator[ply][1];
+
     for(int i = 0; i < NNUE_SIZE; i++) {
-        m_accumulator[ply][0][i] += m_network.w1[NNUE_SIZE * feature_w + i];
-        m_accumulator[ply][1][i] += m_network.w1[NNUE_SIZE * feature_b + i];
+        acc_w[i] += m_network.w1[NNUE_SIZE * feature_w + i];
+        acc_b[i] += m_network.w1[NNUE_SIZE * feature_b + i];
     }
 }
 
@@ -176,9 +186,12 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply) {
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
 
+    float* acc_w = m_accumulator[ply][0];
+    float* acc_b = m_accumulator[ply][1];
+
     for(int i = 0; i < NNUE_SIZE; i++) {
-        m_accumulator[ply][0][i] -= m_network.w1[NNUE_SIZE * feature_w + i];
-        m_accumulator[ply][1][i] -= m_network.w1[NNUE_SIZE * feature_b + i];
+        acc_w[i] -= m_network.w1[NNUE_SIZE * feature_w + i];
+        acc_b[i] -= m_network.w1[NNUE_SIZE * feature_b + i];
     }
 }
 
@@ -210,12 +223,15 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
     assert(feature_to_w <= NNUE_FEATURES);
     assert(feature_to_b <= NNUE_FEATURES);
 
-    for(int i = 0; i < NNUE_SIZE; i++) {
-        m_accumulator[ply][0][i] -= m_network.w1[NNUE_SIZE * feature_from_w + i];
-        m_accumulator[ply][1][i] -= m_network.w1[NNUE_SIZE * feature_from_b + i];
+    float* acc_w = m_accumulator[ply][0];
+    float* acc_b = m_accumulator[ply][1];
 
-        m_accumulator[ply][0][i] += m_network.w1[NNUE_SIZE * feature_to_w + i];
-        m_accumulator[ply][1][i] += m_network.w1[NNUE_SIZE * feature_to_b + i];
+    for(int i = 0; i < NNUE_SIZE; i++) {
+        acc_w[i] += m_network.w1[NNUE_SIZE * feature_to_w + i];
+        acc_b[i] += m_network.w1[NNUE_SIZE * feature_to_b + i];
+
+        acc_w[i] -= m_network.w1[NNUE_SIZE * feature_from_w + i];
+        acc_b[i] -= m_network.w1[NNUE_SIZE * feature_from_b + i];
     }
 }
 
