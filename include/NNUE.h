@@ -34,8 +34,6 @@ public:
     int Evaluate(int color, int ply);
 
     void SetPieces(int color, uint64_t& pieces);
-    // void SavePosition(int ply);
-    // void RestorePosition(int ply);
 
     void Inputs_FullUpdate(int ply);
     void Inputs_AddPiece(int color, int pieceType, int square, int ply);

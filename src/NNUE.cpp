@@ -20,10 +20,15 @@
 
 #include "NNUE.h"
 #include "BitboardUtils.h"
-#include <immintrin.h>
+
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <fstream>
+
+#if defined(__AVX2__)
+    #include <immintrin.h>
+#endif
 
 namespace {
    constexpr int KING_BUCKET_MULTIPLIER = 640;
@@ -79,9 +84,6 @@ void NNUE::Load(std::string filepath) {
     file.close();
 }
 
-#include "Utils.h"
-Utils::Clock clock_eval;
-
 int NNUE::Evaluate(int color, int ply) {
     //Layer 1
     alignas(32) float o1[ ARCH[L2][ROW] ];
@@ -107,14 +109,6 @@ int NNUE::Evaluate(int color, int ply) {
 
     return CastInt(o4[0] * 100);
 }
-
-// void NNUE::SavePosition(int ply) {
-//     std::memcpy(&m_backupAccumulator[ply], &m_accumulator, sizeof(m_accumulator));
-// }
-
-// void NNUE::RestorePosition(int ply) {
-//     std::memcpy(&m_accumulator, &m_backupAccumulator[ply], sizeof(m_backupAccumulator[ply]));
-// }
 
 void NNUE::SetPieces(int color, uint64_t& pieces) {
     m_pieces[color] = &pieces;
