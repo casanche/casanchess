@@ -251,7 +251,7 @@ inline float HorizontalSum256(__m256 v) {
     return _mm_cvtss_f32(r1);
 }
 
-void NNUE::ComputeLayer(float* inputLayer, float* outputLayer, float* biases, float* weights, int dimInput, int dimOutput, bool with_ReLU) {
+void NNUE::ComputeLayer(const float* inputLayer, float* outputLayer, const float* biases, const float* weights, int dimInput, int dimOutput, bool with_ReLU) {
     for(int o = 0; o < dimOutput; o++) {
         float sum = biases[o];
 

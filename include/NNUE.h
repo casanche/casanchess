@@ -49,7 +49,9 @@ private:
     float Clamp(float n);
 
     //Compute
-    void ComputeLayer(float* inputLayer, float* outputLayer, float* biases, float* weights, int dimInput, int dimOutput, bool with_ReLU);
+    void ComputeLayer(const float* inputLayer, float* outputLayer,
+                      const float* biases, const float* weights,
+                      int dimInput, int dimOutput, bool with_ReLU);
 
     //Current state
     Bitboard* m_pieces[2];
