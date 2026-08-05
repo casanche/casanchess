@@ -1,12 +1,16 @@
 // NNUE.cpp
 //
 // NNUE (Efficiently Updatable Neural Network) evaluation.
-// A neural network that evaluates chess positions, optimized for incremental updates.
+// A neural network that evaluates chess positions.
 //
-// Architecture: HalfKP variant
-//   Input:  32 king buckets × 64 squares × 5 piece types × 2 colors = 20480 features
-//   Hidden: 128 → 32 → 32 → 1
-//   Output: Position score in centipawns
+// Optimized for incremental updates of the first layer (basically the point of NNUE).
+//
+// Architecture: HalfKP
+//   Features: 32 king buckets × 64 squares × 5 piece types × 2 colors = 20480 features
+//   Layers: (128x2) → 32 → 32 → 1
+//      L1 (128x2): White and black accumulatores are concatenated
+//      L2, L3: 2 hidden layers of 32 neurons each, to account for non-linearities
+//      L4: 1 output neuron, representing the evaluation score in centipawns
 //
 // Key concepts:
 //   - King buckets: 32 partitions of king position for learning king-relative patterns
@@ -15,15 +19,16 @@
 //   - SIMD: Uses AVX/SSE intrinsics for vectorized layer computation
 //
 // Efficiency: Only the first layer (largest) needs incremental updates.
-// On most moves, we add/remove a few features instead of recomputing 20480 inputs.
-// Full refresh only needed on king moves (bucket changes).
+// On most moves, we add/remove a few features instead of recomputing all the inputs.
 
 #include "NNUE.h"
 #include "BitboardUtils.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <fstream>
+#include <memory>
 
 #if defined(__AVX2__)
     #include <immintrin.h>
@@ -59,8 +64,8 @@ void NNUE::Load(std::string filepath) {
         return;
     }
 
-    NetworkStorage* nnue_storage = new NetworkStorage;
-    file.read((char*)nnue_storage, sizeof(NetworkStorage));
+    auto nnue_storage = std::make_unique<NetworkStorage>();
+    file.read((char*)nnue_storage.get(), sizeof(NetworkStorage));
 
     for(size_t i = 0; i < (sizeof(nnue_storage->w1) / sizeof(nnue_storage->w1[0])); i++) {
         m_network.w1[i] = (float)nnue_storage->w1[i] / NNUEConstants::CONVERSION_FACTOR;
@@ -79,16 +84,15 @@ void NNUE::Load(std::string filepath) {
         std::cout << "ERROR: NNUE not loaded correctly from file: " << m_filepath << std::endl;
     }
 
-    delete nnue_storage;
     file.close();
 }
 
-int NNUE::Evaluate(int color, int ply) {
+int NNUE::Evaluate(int color, int ply) const {
     //Layer 1
     alignas(32) float outputLayer1[NNUE_SIZE * 2];
 
-    ClampWeights(m_accumulator[ply][color], outputLayer1, NNUE_SIZE);
-    ClampWeights(m_accumulator[ply][1-color], outputLayer1 + NNUE_SIZE, NNUE_SIZE);
+    ActivateReLU(m_accumulator[ply][color], outputLayer1, NNUE_SIZE);
+    ActivateReLU(m_accumulator[ply][1-color], outputLayer1 + NNUE_SIZE, NNUE_SIZE);
 
     //Layers 2,3,4
     alignas(32) float o2[ ARCH[L3][ROW] ];
@@ -125,21 +129,24 @@ void NNUE::Inputs_FullUpdate(int ply) {
     }
 }
 
+namespace {
+    constexpr int GetFeatureIndex(int color, int pieceType, int square, int kingSquare) {
+        const int kingBucket = NNUEConstants::KING_BUCKETS[kingSquare];
+        const int index = (pieceType * 2) + (color);
+    
+        return (KING_BUCKET_MULTIPLIER * kingBucket) + (PIECE_INDEX_MULTIPLIER * index) + square;
+    }
+}
+
 void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply) {
     const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
     const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int kingBucket_w = NNUEConstants::KING_BUCKETS[kingSquare_w];
-    const int kingBucket_b = NNUEConstants::KING_BUCKETS[kingSquare_b];
-
-    const int index_w = (pieceType * 2) + (color);
-	const int index_b = (pieceType * 2) + (1 - color);
-
     const int square_w = square;
-	const int square_b = square ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
+    const int square_b = square ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int feature_w = (KING_BUCKET_MULTIPLIER * kingBucket_w) + (PIECE_INDEX_MULTIPLIER * index_w) + (square_w);
-	const int feature_b = (KING_BUCKET_MULTIPLIER * kingBucket_b) + (PIECE_INDEX_MULTIPLIER * index_b) + (square_b);
+    const int feature_w = GetFeatureIndex(color,   pieceType, square_w, kingSquare_w);
+    const int feature_b = GetFeatureIndex(1-color, pieceType, square_b, kingSquare_b);
 
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
@@ -147,9 +154,12 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply) {
     float* acc_w = m_accumulator[ply][0];
     float* acc_b = m_accumulator[ply][1];
 
+    const float* weights_w = &m_network.w1[NNUE_SIZE * feature_w];
+    const float* weights_b = &m_network.w1[NNUE_SIZE * feature_b];
+
     for(int i = 0; i < NNUE_SIZE; i++) {
-        acc_w[i] += m_network.w1[NNUE_SIZE * feature_w + i];
-        acc_b[i] += m_network.w1[NNUE_SIZE * feature_b + i];
+        acc_w[i] += weights_w[i];
+        acc_b[i] += weights_b[i];
     }
 }
 
@@ -157,17 +167,11 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply) {
     const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
     const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int kingBucket_w = NNUEConstants::KING_BUCKETS[kingSquare_w];
-    const int kingBucket_b = NNUEConstants::KING_BUCKETS[kingSquare_b];
-
-    const int index_w = (pieceType * 2) + (color);
-	const int index_b = (pieceType * 2) + (1 - color);
-
     const int square_w = square;
 	const int square_b = square ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int feature_w = (KING_BUCKET_MULTIPLIER * kingBucket_w) + (PIECE_INDEX_MULTIPLIER * index_w) + (square_w);
-	const int feature_b = (KING_BUCKET_MULTIPLIER * kingBucket_b) + (PIECE_INDEX_MULTIPLIER * index_b) + (square_b);
+    const int feature_w = GetFeatureIndex(color,   pieceType, square_w, kingSquare_w);
+    const int feature_b = GetFeatureIndex(1-color, pieceType, square_b, kingSquare_b);
 
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
@@ -175,9 +179,12 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply) {
     float* acc_w = m_accumulator[ply][0];
     float* acc_b = m_accumulator[ply][1];
 
+    const float* weights_w = &m_network.w1[NNUE_SIZE * feature_w];
+    const float* weights_b = &m_network.w1[NNUE_SIZE * feature_b];
+
     for(int i = 0; i < NNUE_SIZE; i++) {
-        acc_w[i] -= m_network.w1[NNUE_SIZE * feature_w + i];
-        acc_b[i] -= m_network.w1[NNUE_SIZE * feature_b + i];
+        acc_w[i] -= weights_w[i];
+        acc_b[i] -= weights_b[i];
     }
 }
 
@@ -185,23 +192,17 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
     const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
     const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int kingBucket_w = NNUEConstants::KING_BUCKETS[kingSquare_w];
-    const int kingBucket_b = NNUEConstants::KING_BUCKETS[kingSquare_b];
-
-    const int index_w = (pieceType * 2) + (color);
-	const int index_b = (pieceType * 2) + (1 - color);
-
     const int fromSq_w = fromSq;
 	const int fromSq_b = fromSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int toSq_w = toSq;
 	const int toSq_b = toSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
-    const int feature_from_w = (KING_BUCKET_MULTIPLIER * kingBucket_w) + (PIECE_INDEX_MULTIPLIER * index_w) + (fromSq_w);
-	const int feature_from_b = (KING_BUCKET_MULTIPLIER * kingBucket_b) + (PIECE_INDEX_MULTIPLIER * index_b) + (fromSq_b);
+    const int feature_from_w = GetFeatureIndex(color,   pieceType, fromSq_w, kingSquare_w);
+    const int feature_from_b = GetFeatureIndex(1-color, pieceType, fromSq_b, kingSquare_b);
 
-    const int feature_to_w = (KING_BUCKET_MULTIPLIER * kingBucket_w) + (PIECE_INDEX_MULTIPLIER * index_w) + (toSq_w);
-	const int feature_to_b = (KING_BUCKET_MULTIPLIER * kingBucket_b) + (PIECE_INDEX_MULTIPLIER * index_b) + (toSq_b);
+    const int feature_to_w = GetFeatureIndex(color,   pieceType, toSq_w, kingSquare_w);
+    const int feature_to_b = GetFeatureIndex(1-color, pieceType, toSq_b, kingSquare_b);
 
     assert(feature_from_w <= NNUE_FEATURES);
     assert(feature_from_b <= NNUE_FEATURES);
@@ -212,12 +213,18 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
     float* acc_w = m_accumulator[ply][0];
     float* acc_b = m_accumulator[ply][1];
 
-    for(int i = 0; i < NNUE_SIZE; i++) {
-        acc_w[i] += m_network.w1[NNUE_SIZE * feature_to_w + i];
-        acc_b[i] += m_network.w1[NNUE_SIZE * feature_to_b + i];
+    const float* weights_from_w = &m_network.w1[NNUE_SIZE * feature_from_w];
+    const float* weights_from_b = &m_network.w1[NNUE_SIZE * feature_from_b];
+    const float* weights_to_w = &m_network.w1[NNUE_SIZE * feature_to_w];
+    const float* weights_to_b = &m_network.w1[NNUE_SIZE * feature_to_b];
 
-        acc_w[i] -= m_network.w1[NNUE_SIZE * feature_from_w + i];
-        acc_b[i] -= m_network.w1[NNUE_SIZE * feature_from_b + i];
+    for(int i = 0; i < NNUE_SIZE; i++) {
+        acc_w[i] -= weights_from_w[i];
+        acc_b[i] -= weights_from_b[i];
+
+        acc_w[i] += weights_to_w[i];
+        acc_b[i] += weights_to_b[i];
+
     }
 }
 
@@ -225,12 +232,8 @@ void NNUE::CopyAccumulator(int fromPly, int toPly) {
     std::memcpy(&m_accumulator[toPly], m_accumulator[fromPly], sizeof(m_accumulator[0]));
 }
 
-// float NNUE::Clamp(float n) const {
-//     return std::clamp(n, 0.0f, 1.0f);
-// }
-
 // Clamps the input to the range [0,1]
-void NNUE::ClampWeights(const float* input, float* output, int size) const {
+void NNUE::ActivateReLU(const float* input, float* output, int size) const {
     #if defined(__AVX2__)
         __m256 zero = _mm256_setzero_ps();
         __m256 one = _mm256_set1_ps(1.0f);
@@ -248,49 +251,59 @@ void NNUE::ClampWeights(const float* input, float* output, int size) const {
     #endif
 }
 
-//Horizontal sum of 8 floats (256-bits)
-inline float HorizontalSum256(__m256 v) {
-    const __m128 r4 = _mm_add_ps( _mm256_castps256_ps128(v), _mm256_extractf128_ps(v, 1) );
-    const __m128 r2 = _mm_add_ps( r4, _mm_movehl_ps( r4, r4 ) );
-    const __m128 r1 = _mm_add_ss( r2, _mm_movehdup_ps( r2 ) );
-    return _mm_cvtss_f32(r1);
+namespace {
+    #if defined(__AVX2__)
+    //Horizontal sum of 8 floats (256-bits)
+    inline float HorizontalSum256(__m256 v) {
+        const __m128 r4 = _mm_add_ps( _mm256_castps256_ps128(v), _mm256_extractf128_ps(v, 1) );
+        const __m128 r2 = _mm_add_ps( r4, _mm_movehl_ps( r4, r4 ) );
+        const __m128 r1 = _mm_add_ss( r2, _mm_movehdup_ps( r2 ) );
+        return _mm_cvtss_f32(r1);
+    }
+    #endif
 }
 
-void NNUE::ComputeLayer(const float* inputLayer, float* outputLayer, const float* biases, const float* weights, int dimInput, int dimOutput, bool with_ReLU) {
+void NNUE::ComputeLayer(const float* inputLayer, float* outputLayer,
+                        const float* biases, const float* weights,
+                        int dimInput, int dimOutput, bool with_ReLU) const
+{
     for(int o = 0; o < dimOutput; o++) {
         float sum = biases[o];
-
         const int offset = o * dimInput;
 
-        __m256 dot0 = _mm256_setzero_ps();
-        __m256 dot1 = _mm256_setzero_ps();
-        __m256 dot2 = _mm256_setzero_ps();
-        __m256 dot3 = _mm256_setzero_ps();
+        #if defined(__AVX2__)
+            __m256 dot0 = _mm256_setzero_ps();
+            __m256 dot1 = _mm256_setzero_ps();
+            __m256 dot2 = _mm256_setzero_ps();
+            __m256 dot3 = _mm256_setzero_ps();
 
-        //_mm512_setzero_ps
+            for(int i = 0; i < dimInput; i += 32) {
+                __m256 inputs0 = _mm256_loadu_ps(&inputLayer[i +  0]);
+                __m256 inputs1 = _mm256_loadu_ps(&inputLayer[i +  8]);
+                __m256 inputs2 = _mm256_loadu_ps(&inputLayer[i + 16]);
+                __m256 inputs3 = _mm256_loadu_ps(&inputLayer[i + 24]);
 
-        for(int i = 0; i < dimInput; i += 32) {
-            __m256 inputs0 = _mm256_loadu_ps(&inputLayer[i +  0]);
-            __m256 inputs1 = _mm256_loadu_ps(&inputLayer[i +  8]);
-            __m256 inputs2 = _mm256_loadu_ps(&inputLayer[i + 16]);
-            __m256 inputs3 = _mm256_loadu_ps(&inputLayer[i + 24]);
+                __m256 weights0 = _mm256_loadu_ps(&weights[offset + i +  0]);
+                __m256 weights1 = _mm256_loadu_ps(&weights[offset + i +  8]);
+                __m256 weights2 = _mm256_loadu_ps(&weights[offset + i + 16]);
+                __m256 weights3 = _mm256_loadu_ps(&weights[offset + i + 24]);
 
-            __m256 weights0 = _mm256_loadu_ps(&weights[offset + i +  0]);
-            __m256 weights1 = _mm256_loadu_ps(&weights[offset + i +  8]);
-            __m256 weights2 = _mm256_loadu_ps(&weights[offset + i + 16]);
-            __m256 weights3 = _mm256_loadu_ps(&weights[offset + i + 24]);
+                dot0 = _mm256_fmadd_ps(inputs0, weights0, dot0);
+                dot1 = _mm256_fmadd_ps(inputs1, weights1, dot1);
+                dot2 = _mm256_fmadd_ps(inputs2, weights2, dot2);
+                dot3 = _mm256_fmadd_ps(inputs3, weights3, dot3);
+            }
+            
+            dot0 = _mm256_add_ps( dot0, dot1 );
+            dot2 = _mm256_add_ps( dot2, dot3 );
+            dot0 = _mm256_add_ps( dot0, dot2 );
 
-            dot0 = _mm256_fmadd_ps(inputs0, weights0, dot0);
-            dot1 = _mm256_fmadd_ps(inputs1, weights1, dot1);
-            dot2 = _mm256_fmadd_ps(inputs2, weights2, dot2);
-            dot3 = _mm256_fmadd_ps(inputs3, weights3, dot3);
-        }
-        
-        dot0 = _mm256_add_ps( dot0, dot1 );
-        dot2 = _mm256_add_ps( dot2, dot3 );
-        dot0 = _mm256_add_ps( dot0, dot2 );
-
-        sum += HorizontalSum256(dot0);
+            sum += HorizontalSum256(dot0);
+        #else
+            for(int i = 0; i < dimInput; i++) {
+                sum += inputLayer[i] * weights[offset + i];
+            }
+        #endif
 
         if(with_ReLU) {
             outputLayer[o] = Clamp(sum);

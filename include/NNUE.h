@@ -32,7 +32,7 @@ public:
     bool IsLoaded() const { return m_isLoaded; }
     std::string GetPath() const { return m_filepath; }
 
-    int Evaluate(int color, int ply);
+    int Evaluate(int color, int ply) const;
 
     void SetPieces(int color, uint64_t& pieces);
 
@@ -50,11 +50,10 @@ private:
     }
 
     // AVX2
-    void ClampWeights(const float* input, float* output, int size) const;
-    
+    void ActivateReLU(const float* input, float* output, int size) const;
     void ComputeLayer(const float* inputLayer, float* outputLayer,
                       const float* biases, const float* weights,
-                      int dimInput, int dimOutput, bool with_ReLU);
+                      int dimInput, int dimOutput, bool with_ReLU) const;
 
     //Current state
     Bitboard* m_pieces[2];
