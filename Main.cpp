@@ -19,7 +19,8 @@ int main(int argc, char** argv) {
     Evaluation::Init(); //after Attacks
     Syzygy::Init(Syzygy::DEFAULT_PATH);
     ZobristKeys::Init();
-    nnue.Load();
+
+    std::string NNUEPath_CLI = "";
 
     // Parse command line arguments
     std::span<char*> args(argv, argc);
@@ -38,8 +39,7 @@ int main(int argc, char** argv) {
             return 0;
         }
         else if (arg == "-n" && i + 1 < args.size()) {
-            // Path to .nnue file
-            nnue.Load(args[i + 1]);
+            NNUEPath_CLI = args[i + 1];
             ++i; // Skip next argument as it's the path
         }
         else if (arg == "bench") {
@@ -50,17 +50,22 @@ int main(int argc, char** argv) {
                     ++i;
                 } catch (...) {}
             }
+
+            nnue.Load(NNUEPath_CLI);
+
             Uci uci;
             uci.Bench(depth, false);
             return 0;
         }
     }
 
+    nnue.Load(NNUEPath_CLI);
+
     Uci uci;
     uci.Launch();
 
     int64_t elapsed = clock.Elapsed();
-    std::cout << "[TIME] " << elapsed << " ms" << std::endl;
+    std::cout << "info string [TIME] Init " << elapsed << " ms" << std::endl;
 
     Syzygy::Free();
 

@@ -46,12 +46,18 @@ NNUE::NNUE() {
     std::memset(m_accumulator, 0, sizeof(m_accumulator));
 }
 
-void NNUE::Load(std::string filepath) {
+bool NNUE::Load(std::string filepath) {
     if(!filepath.empty()) {
         m_filepath = filepath;
     }
 
     std::ifstream file(m_filepath, std::ios::binary);
+
+    if(!file.is_open()) {
+        std::cerr << "info string ERROR: NNUE file not found: " << m_filepath << std::endl;
+        m_isLoaded = false;
+        return false;
+    }
 
     file.read(reinterpret_cast<char*>(&m_network), sizeof(Network));
 
@@ -59,10 +65,11 @@ void NNUE::Load(std::string filepath) {
         std::cout << "info string NNUE loaded: " << m_filepath << std::endl;
         m_isLoaded = true;
     } else {
-        std::cerr << "ERROR: NNUE not loaded correctly from file: " << m_filepath << std::endl;
+        std::cout << "info string ERROR: NNUE file size mismatch or corrupted: " << m_filepath << std::endl;
+        m_isLoaded = false;
     }
 
-    file.close();
+    return m_isLoaded;
 }
 
 int NNUE::Evaluate(int color, int ply) const {

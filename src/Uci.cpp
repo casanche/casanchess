@@ -338,9 +338,16 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
             if(token != "value")
                 return;
-            stream >> token;
 
-            nnue.Load(token);
+            std::string path;
+
+            stream >> std::ws; // Skip leading whitespaces
+            std::getline(stream, path); // Support spaces
+
+            if(path.ends_with("\r"))
+                path.pop_back();
+
+            nnue.Load(path);
         }
         else if (token == "SyzygyPath") {
             stream >> token;

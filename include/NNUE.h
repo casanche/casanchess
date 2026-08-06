@@ -30,7 +30,7 @@ struct Network;
 class NNUE {
 public:
     NNUE();
-    void Load(std::string filepath = "");
+    bool Load(std::string filepath = "");
 
     int Evaluate(int color, int ply) const;
 
