@@ -1,5 +1,7 @@
 #include "NNUE.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <filesystem>
@@ -9,8 +11,25 @@
 float GetNumber(std::ifstream& ifile) {
     std::string line;
     std::getline(ifile, line, '\n');
-    float decimal = std::stof(line);
-    return decimal;
+    return std::stof(line);
+}
+
+template <typename T>
+T Quantize(float decimal, float factor) {
+    i64 integer = std::llround(decimal * factor);
+
+    i64 min = std::numeric_limits<T>::min();
+    i64 max = std::numeric_limits<T>::max();
+
+    if(integer < min || integer > max) {
+        std::cerr << "Warning: Quantization overflow for value " << decimal
+                  << " with factor " << factor
+                  << " --> Clamping to limits!"
+                  << std::endl;
+        integer = std::clamp(integer, min, max);
+    }
+
+    return static_cast<T>(integer);
 }
 
 void Convert(std::string ifilename, std::string ofilename) {
@@ -23,74 +42,78 @@ void Convert(std::string ifilename, std::string ofilename) {
 
     std::cout << "Converting network: " << ifilename << std::endl;
 
-    NetworkStorage* nnue_storage = new NetworkStorage;
+    auto nnue_storage = std::make_unique<Network>();
 
     //L1
     for(uint col = 0; col < ARCH[L1][COL]; col++) {
         for(uint row = 0; row < ARCH[L1][ROW]; row++) {
             float decimal = GetNumber(ifile);
-            int converted_value = CastInt(decimal * NNUEConstants::CONVERSION_FACTOR);
-            assert(std::abs(converted_value) < INFINITE_I16);
-            if(std::abs(converted_value) >= INFINITE_I16)
-                std::cout << "Watch out! Int16 overflow (" << decimal << ")" << std::endl;
-            nnue_storage->w1[row * ARCH[L1][COL] + col] = (int16_t)(converted_value);
+            i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_L1);
+            nnue_storage->w1[row * ARCH[L1][COL] + col] = quantized;
         }
     }
     for(uint col = 0; col < ARCH[L1][COL]; col++) {
         float decimal = GetNumber(ifile);
-        nnue_storage->b1[col] = decimal;
+        i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_L1);
+        nnue_storage->b1[col] = quantized;
     }
 
     //L2
     for(uint col = 0; col < ARCH[L2][COL]; col++) {
         for(uint row = 0; row < ARCH[L2][ROW]; row++) {
             float decimal = GetNumber(ifile);
-            //nnue_storage->w0[row * ARCH[L2][COL] + col] = decimal;
-            nnue_storage->w2[col * ARCH[L2][ROW] + row] = decimal; //transposition
+            i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_W);
+            nnue_storage->w2[col * ARCH[L2][ROW] + row] = quantized; //transposition
         }
     }
     for(uint col = 0; col < ARCH[L2][COL]; col++) {
         float decimal = GetNumber(ifile);
-        nnue_storage->b2[col] = decimal;
+        i32 quantized = Quantize<i32>(decimal, NNUEConstants::QUANT_FACTOR_B);
+        nnue_storage->b2[col] = quantized;
     }
 
     //L3
     for(uint col = 0; col < ARCH[L3][COL]; col++) {
         for(uint row = 0; row < ARCH[L3][ROW]; row++) {
             float decimal = GetNumber(ifile);
-            // nnue_storage->w0[row * ARCH[L3][COL] + col] = decimal;
-            nnue_storage->w3[col * ARCH[L3][ROW] + row] = decimal; //transposition
+            i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_W);
+            nnue_storage->w3[col * ARCH[L3][ROW] + row] = quantized; //transposition
         }
     }
     for(uint col = 0; col < ARCH[L3][COL]; col++) {
         float decimal = GetNumber(ifile);
-        nnue_storage->b3[col] = decimal;
+        i32 quantized = Quantize<i32>(decimal, NNUEConstants::QUANT_FACTOR_B);
+        nnue_storage->b3[col] = quantized;
     }
 
     //L4
     for(uint col = 0; col < ARCH[L4][COL]; col++) {
         for(uint row = 0; row < ARCH[L4][ROW]; row++) {
             float decimal = GetNumber(ifile);
-            nnue_storage->w4[row * ARCH[L4][COL] + col] = decimal;
+            i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_W);
+            nnue_storage->w4[row * ARCH[L4][COL] + col] = quantized;
         }
     }
     for(uint col = 0; col < ARCH[L4][COL]; col++) {
         float decimal = GetNumber(ifile);
-        nnue_storage->b4[col] = decimal;
+        i32 quantized = Quantize<i32>(decimal, NNUEConstants::QUANT_FACTOR_B);
+        nnue_storage->b4[col] = quantized;
     }
 
     ifile.close();
 
     //Write binary file
     std::ofstream ofile;
-    ofile.open(ofilename, std::ofstream::binary);
+    ofile.open(ofilename, std::ios::binary);
 
-    if(!ofile.is_open())
+    if(!ofile.is_open()) {
+        std::cerr << "ERROR: Could not open output file for writing: " << ofilename << std::endl;
         return;
+    }
 
-    std::cout << "Writting binary to: " << ofilename << std::endl;
+    std::cout << "Writing binary to: " << ofilename << std::endl;
 
-    ofile.write((char*)nnue_storage, sizeof(NetworkStorage));
+    ofile.write((char*)nnue_storage.get(), sizeof(Network));
     ofile.close();
 }
 

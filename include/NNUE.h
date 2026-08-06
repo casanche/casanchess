@@ -9,7 +9,6 @@ constexpr int NNUE_FEATURES = 32*64*5*2; //kingBuckets * square * pieceType * co
 
 namespace NNUEConstants {
     constexpr int BLACK_PERSPECTIVE_XOR = 56;
-    constexpr int CONVERSION_FACTOR = INFINITE_I16 / 3;
     constexpr u8 KING_BUCKETS[64] = {
         0, 1, 2, 3, 4, 5, 6, 7,
         8, 9,10,11,12,13,14,15,
@@ -20,6 +19,10 @@ namespace NNUEConstants {
        28,28,29,29,30,30,31,31,
        28,28,29,29,30,30,31,31
    };
+   // Quantization scale factors to convert weights to integers
+   constexpr int QUANT_FACTOR_L1 = 256; //W1, B1
+   constexpr int QUANT_FACTOR_W = 64; // W2, W3, W4
+   constexpr int QUANT_FACTOR_B = QUANT_FACTOR_L1 * QUANT_FACTOR_W; // B2, B3, B4
 }
 
 struct Network;
@@ -27,15 +30,11 @@ struct Network;
 class NNUE {
 public:
     NNUE();
-    void Load(std::string filepath = "");
-    bool IsLoaded() const { return m_isLoaded; }
-    std::string GetPath() const { return m_filepath; }
+    bool Load(std::string filepath = "");
 
-    int Evaluate(int color, int ply);
+    int Evaluate(int color, int ply) const;
 
-    void SetPieces(int color, uint64_t& pieces);
-    // void SavePosition(int ply);
-    // void RestorePosition(int ply);
+    void SetPieces(int color, u64& pieces);
 
     void Inputs_FullUpdate(int ply);
     void Inputs_AddPiece(int color, int pieceType, int square, int ply);
@@ -44,20 +43,25 @@ public:
 
     void CopyAccumulator(int fromPly, int toPly);
 
+    bool IsLoaded() const { return m_isLoaded; }
+    std::string GetPath() const { return m_filepath; }
+
 private:
-    //Helpers
-    float Clamp(float n);
+    void ActivateReLU(const i16* input, i16* output, int size) const;
 
-    //Compute
-    void ComputeLayer(float* inputLayer, float* outputLayer, float* biases, float* weights, int dimInput, int dimOutput, bool with_ReLU);
+    template <typename T, bool with_ReLU>
+    void ComputeLayer(const i16* inputLayer, T* outputLayer,
+                      const i32* biases, const i16* weights,
+                      int dimInput, int dimOutput) const;
 
+private:
     //Current state
     Bitboard* m_pieces[2];
 
     bool m_isLoaded;
     std::string m_filepath;
     
-    alignas(32) float m_accumulator[MAX_PLY_HISTORY][2][NNUE_SIZE]; // [PLY][COLOR][NNUE_SIZE]
+    alignas(32) i16 m_accumulator[MAX_PLY_HISTORY][2][NNUE_SIZE]; // [PLY][COLOR][NNUE_SIZE]
 };
 
 //Network architecture
@@ -79,24 +83,17 @@ constexpr uint ARCH_DIMENSIONS[NNUE_LAYERS][PARAMETER_TYPES] = {
 };
 
 struct alignas(32) Network {
-    float w1[ ARCH_DIMENSIONS[L1][W] ];
-    float b1[ ARCH_DIMENSIONS[L1][B] ];
-    float w2[ ARCH_DIMENSIONS[L2][W] ];
-    float b2[ ARCH_DIMENSIONS[L2][B] ];
-    float w3[ ARCH_DIMENSIONS[L3][W] ];
-    float b3[ ARCH_DIMENSIONS[L3][B] ];
-    float w4[ ARCH_DIMENSIONS[L4][W] ];
-    float b4[ ARCH_DIMENSIONS[L4][B] ];
-};
-struct NetworkStorage {
-    int16_t w1[ ARCH_DIMENSIONS[L1][0] ];
-    float b1[ ARCH_DIMENSIONS[L1][1] ];
-    float w2[ ARCH_DIMENSIONS[L2][0] ];
-    float b2[ ARCH_DIMENSIONS[L2][1] ];
-    float w3[ ARCH_DIMENSIONS[L3][0] ];
-    float b3[ ARCH_DIMENSIONS[L3][1] ];
-    float w4[ ARCH_DIMENSIONS[L4][0] ];
-    float b4[ ARCH_DIMENSIONS[L4][1] ];
+    i16 w1[ ARCH_DIMENSIONS[L1][0] ];
+    i16 b1[ ARCH_DIMENSIONS[L1][1] ];
+
+    i16 w2[ ARCH_DIMENSIONS[L2][0] ];
+    i32 b2[ ARCH_DIMENSIONS[L2][1] ];
+
+    i16 w3[ ARCH_DIMENSIONS[L3][0] ];
+    i32 b3[ ARCH_DIMENSIONS[L3][1] ];
+
+    i16 w4[ ARCH_DIMENSIONS[L4][0] ];
+    i32 b4[ ARCH_DIMENSIONS[L4][1] ];
 };
 
 inline Network m_network;
