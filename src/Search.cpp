@@ -847,7 +847,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 // Check if search should be stopped due to time limits.
 // Calculate every N nodes to avoid expensive time checks.
 bool Search::TimeOver() {
-    if(m_nodesTimeCheck > 5000) {
+    if(m_nodesTimeCheck > 1024) {
         m_nodesTimeCheck = 0;
         m_elapsedTime = ElapsedTime();
         if(m_elapsedTime > m_allocatedTime || m_elapsedTime > m_forcedTime)
