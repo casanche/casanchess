@@ -866,7 +866,6 @@ bool Search::TimeOver() {
 void Search::AllocateLimits(Board &board, const Limits& limits) {
     m_limits = limits;
     m_nodes = 0;
-    m_clock.Start();
 
     // Defaults
     m_maxDepth = MAX_DEPTH;
@@ -887,10 +886,13 @@ void Search::AllocateLimits(Board &board, const Limits& limits) {
 
     int myTime   = (color == WHITE) ? limits.wtime : limits.btime;
     int yourTime = (color == WHITE) ? limits.btime : limits.wtime;
-
     int myInc    = (color == WHITE) ? limits.winc  : limits.binc;
 
-    m_allocatedTime = myTime / movesToGo + myInc;
+    // Move overhead to account for communication delays
+    const int timeOverhead = 50; //ms
+    const int myTimeSafe = std::max(0, myTime - timeOverhead);
+
+    m_allocatedTime = myTimeSafe / movesToGo + myInc;
 
     if(m_debugMode)
         std::cout << "info string TimeAllocation " <<  myTime << " " << yourTime << " " << m_allocatedTime << std::endl;
