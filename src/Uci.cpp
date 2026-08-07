@@ -8,7 +8,6 @@
 
 #include <iostream>
 #include <string>
-#include <thread>
 #include <vector>
 #include <iomanip>
 
@@ -84,6 +83,13 @@ void Uci::Launch() {
         }
         else if(token == "quit" || token == "q") {
             std::cout << "info string quitting" << std::endl;
+
+            // Wait for the search to finish before exiting
+            m_search.Stop();
+            if(m_searchThread.joinable()) {
+                m_searchThread.join();
+            }
+
             break;
         }
         //Non-UCI commands
@@ -250,17 +256,24 @@ void Uci::Go(std::istringstream &stream) {
         else {
             std::string temp;
             stream >> temp;
+            
+            const uint defaultNodes = 200000;
             P("UNDEFINED GO STATMENT: " << temp << " -- (LOADING DEFAULT VALUES) -- ");
-            m_search.FixTime(2000);
+            P("Nodes: " << defaultNodes);
+            limits.nodes = defaultNodes;
             break;
         }
 
     }
 
+    // Wait thread of the previous search
+    if(m_searchThread.joinable()) {
+        m_searchThread.join();
+    }
+
     m_search.AllocateLimits(m_board, limits);
 
-    std::thread thread(&Uci::StartSearch, this);
-    thread.detach();
+    m_searchThread = std::thread(&Uci::StartSearch, this);
 }
 
 void Uci::Position(std::istringstream &stream) {

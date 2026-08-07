@@ -4,6 +4,7 @@
 #include "Search.h"
 
 #include <sstream>
+#include <thread>
 
 inline bool UCI_PONDER = false;
 inline bool UCI_CLASSICAL_EVAL = false;
@@ -25,4 +26,5 @@ private:
 
     Board m_board;
     Search m_search;
+    std::thread m_searchThread;
 };
