@@ -27,6 +27,9 @@ constexpr i16 MATESCORE_MIN = MATESCORE_MAX - 1024;
 constexpr i16 TBWIN = MATESCORE_MIN - 1;
 constexpr i16 WINSCORE = TBWIN - 1024;
 
+constexpr i16 NO_SCORE = -INFINITE_I16;
+constexpr i16 NO_EVAL = -INFINITE_I16;
+
 constexpr int MAX_DEPTH = 128;
 constexpr int MAX_PLY = 256;
 constexpr int MAX_PLY_HISTORY = 2048;

@@ -10,7 +10,9 @@
 
 void TTEntry::Clear() {
     zkey = 0;
-    score = 0;
+    score = NO_SCORE;
+    eval = NO_EVAL;
+    padding = 0;
     depth = 0;
     type = TTENTRY_TYPE::NONE;
     age = 0;
@@ -26,7 +28,7 @@ TT::~TT() {
     delete [] m_entries;
 }
 
-void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age) {
+void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age, int eval) {
     assert(abs(score) <= MATESCORE_MAX);
     assert(depth <= MAX_DEPTH);
 
@@ -36,9 +38,12 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     //Replacement scheme
     const bool older = age != entry-> age;
     const bool higherDepth = depth >= entry->depth;
-    if(older || higherDepth) {
+
+    const bool replace = older || higherDepth;
+    if(replace) {
         entry->zkey = UpperBits<u32>(zkey);
         entry->score = SafeCastInt16( ScoreToHash(score, ply) );
+        entry->eval = SafeCastInt16(eval);
         entry->depth = SafeCastU8(depth);
         entry->type = type;
         entry->age = age;
