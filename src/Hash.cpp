@@ -132,7 +132,7 @@ void EvalCache::Store(u64 zkey, int eval) {
     EvalEntry& entry = m_evalEntries[index];
 
     // Always-replace strategy
-    entry.zkey = UpperBits<u16>(zkey);
+    entry.zkey = UpperBits<u32>(zkey);
     entry.eval = SafeCastInt16(eval);
 }
 
@@ -140,7 +140,7 @@ bool EvalCache::Probe(u64 zkey, int& eval) {
     u64 index = zkey & m_mask;
     EvalEntry& entry = m_evalEntries[index];
 
-    if(entry.zkey == UpperBits<u16>(zkey)) {
+    if(entry.zkey == UpperBits<u32>(zkey)) {
         eval = entry.eval;
         return true;
     }

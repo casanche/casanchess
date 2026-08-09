@@ -6,7 +6,7 @@
 constexpr uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
 constexpr int PAWN_HASH_SIZE = 8192; //In number of entries
 
-// 2^19 entries = 2 MB / 32 bits per entry
+// 2^19 entries = 4 MB / 64 bits per entry
 constexpr u64 EVALCACHE_ENTRIES = 1 << 19;
 
 // =========================
@@ -58,10 +58,11 @@ private:
 // == Eval cache ==
 // ================
 
-// 16(zkey) + 16(eval) = 32 bits per entry
+// 32(zkey) + 16(eval) + 16(padding) = 64 bits per entry
 struct EvalEntry {
-    u16 zkey;
+    u32 zkey;
     i16 eval;
+    i16 padding;
 };
 
 class EvalCache {
