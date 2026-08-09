@@ -24,10 +24,10 @@ namespace Utils {
     void Clock::Start() {
         m_start = HighResClock::now();
     }
-    int64_t Clock::Elapsed() {
+    int64_t Clock::Elapsed() const {
         return std::chrono::duration_cast<std::chrono::milliseconds>(HighResClock::now() - m_start).count();
     }
-    int64_t Clock::ElapsedNanoseconds() {
+    int64_t Clock::ElapsedNanoseconds() const {
         return std::chrono::duration_cast<std::chrono::nanoseconds>(HighResClock::now() - m_start).count();
     }
 

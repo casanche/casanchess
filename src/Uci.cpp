@@ -4,6 +4,7 @@
 #include "Evaluation.h"
 #include "Hash.h"
 #include "NNUE.h"
+#include "SearchLimits.h"
 #include "Syzygy.h"
 
 #include <iostream>
@@ -54,42 +55,21 @@ void Uci::Launch() {
 
             std::cout << "uciok" << std::endl;
         }
-        else if(token == "debug") {
-            m_search.DebugMode();
-        }
-        else if(token == "isready") {
-            std::cout << "readyok" << std::endl;
-        }
-        else if(token == "setoption") {
-            SetOption(stream);
-        }
+        else if(token == "isready") { std::cout << "readyok" << std::endl; }
+        else if(token == "setoption") { SetOption(stream); }
         else if(token == "ucinewgame") {
+            StopAndJoin();
+
+            m_search.ClearSearch(true);
             m_board.Init();
         }
-        else if(token == "position") {
-            Position(stream);
-        }
-        else if(token == "go") {
-            Go(stream);
-        }
-        else if(token == "stop") {
-            m_search.Stop();
-        }
-        else if(token == "ponderhit") {
-            Limits limits = m_search.GetLimits();
-            limits.infinite = false;
-            limits.ponderhit = true;
-            m_search.AllocateLimits(m_board, limits);
-        }
+        else if(token == "position") { Position(stream); }
+        else if(token == "go") { Go(stream); }
+        else if(token == "stop") { StopAndJoin(); }
+        else if(token == "ponderhit") { m_search.PonderHit(); }
         else if(token == "quit" || token == "q") {
             std::cout << "info string quitting" << std::endl;
-
-            // Wait for the search to finish before exiting
-            m_search.Stop();
-            if(m_searchThread.joinable()) {
-                m_searchThread.join();
-            }
-
+            StopAndJoin();
             break;
         }
         //Non-UCI commands
@@ -147,9 +127,12 @@ void Uci::Launch() {
         }
     }
 
+    StopAndJoin();
 }
 
 void Uci::Bench(int depth, bool verbose) {
+    StopAndJoin();
+
     if(verbose)
         std::cout << "Running benchmark at depth " << depth << "..." << std::endl;
 
@@ -191,18 +174,12 @@ void Uci::Bench(int depth, bool verbose) {
         m_board.SetFen(testPositions[i]);
 
         // Set search limits
-        Limits limits;
-        limits.depth = depth;
-        limits.infinite = false;
-
-        // Run search
-        m_search.AllocateLimits(m_board, limits);
-        m_search.IterativeDeepening(m_board, true);
+        m_search.IterativeDeepening(m_board, UCI_Limits::FixDepth(depth), true);
 
         // Get results using the engine's own calculations
-        int64_t elapsed = m_search.ElapsedTime();
         u64 nodes = m_search.GetNodes();
-        int nps = m_search.GetNps();
+        i64 elapsed = m_search.GetLimits().ElapsedTime();
+        int nps = m_search.GetLimits().CalculateNPS(nodes);
 
         totalNodes += nodes;
         totalTime += elapsed;
@@ -237,13 +214,15 @@ void Uci::Bench(int depth, bool verbose) {
 }
 
 void Uci::Go(std::istringstream &stream) {
+    StopAndJoin();
+    
     std::string token;
-    Limits limits;
+    UCI_Limits limits;
 
     while(stream >> token) {
 
-        if(token == "ponder") { limits.infinite = true; stream >> token; }
-        if(token == "infinite") limits.infinite = true;
+        if(token == "ponder") { limits.ponder = true; }
+        else if(token == "infinite") limits.infinite = true;
         else if(token == "depth") stream >> limits.depth;
         else if(token == "movetime") stream >> limits.moveTime;
         else if(token == "nodes") stream >> limits.nodes;
@@ -254,29 +233,20 @@ void Uci::Go(std::istringstream &stream) {
         else if(token == "movestogo") stream >> limits.movesToGo;
 
         else {
-            std::string temp;
-            stream >> temp;
-            
-            const uint defaultNodes = 200000;
-            P("UNDEFINED GO STATMENT: " << temp << " -- (LOADING DEFAULT VALUES) -- ");
-            P("Nodes: " << defaultNodes);
-            limits.nodes = defaultNodes;
+            const uint DEFAULT_NODES = 150000;
+            P("[WARNING] UNDEFINED GO STATEMENT: " << token << " -> Using default statement: 'go nodes " << DEFAULT_NODES << "'");
+            limits.nodes = DEFAULT_NODES;
             break;
         }
 
     }
 
-    // Wait thread of the previous search
-    if(m_searchThread.joinable()) {
-        m_searchThread.join();
-    }
-
-    m_search.AllocateLimits(m_board, limits);
-
-    m_searchThread = std::thread(&Uci::StartSearch, this);
+    m_searchThread = std::thread(&Uci::StartSearch, this, limits);
 }
 
 void Uci::Position(std::istringstream &stream) {
+    StopAndJoin();
+
     std::string token;
 
     while(stream >> token) {
@@ -305,6 +275,8 @@ void Uci::Position(std::istringstream &stream) {
 }
 
 void Uci::SetOption(std::istringstream &stream) {
+    StopAndJoin();
+
     std::string token;
     stream >> token; //should be 'name'
     if(token != "name")
@@ -388,6 +360,73 @@ void Uci::SetOption(std::istringstream &stream) {
     }
 }
 
-void Uci::StartSearch() {
-    m_search.IterativeDeepening(m_board);
+void Uci::StartSearch(UCI_Limits limits) {
+    m_search.IterativeDeepening(m_board, limits);
+}
+
+void Uci::StopAndJoin() {
+    m_search.Stop();
+
+    // Thread join
+    if(m_searchThread.joinable()) {
+        m_searchThread.join();
+    }
+}
+
+// =================
+// == UCI Outputs ==
+// =================
+
+void Uci::Output(int depth, int seldepth, int score, u64 nodes, i64 time, uint nps, int tbHits, BOUND_TYPE bound, const std::string& PV) {
+    if(!UCI_OUTPUT) return;
+
+    std::cout << "info depth " << depth;
+    std::cout << " seldepth " << seldepth;
+
+    if(IsMateValue(score)) {
+        int mateScore = (score > 0) ?  MATESCORE_MAX - score + 1
+                                    : -MATESCORE_MAX - score - 1;
+        std::cout << " score mate " << mateScore / 2; //return mate in moves, not in plies
+    } else {
+        std::cout << " score cp " << score;
+    }
+    if(bound == BOUND_TYPE::LOWER_BOUND) std::cout << " lowerbound";
+    if(bound == BOUND_TYPE::UPPER_BOUND) std::cout << " upperbound";
+
+    std::cout << " time " << time;
+    std::cout << " nodes " << nodes;
+    std::cout << " nps " << nps;
+
+    if(time > 1000)
+        std::cout << " hashfull " << Hash::tt.Occupancy();
+    if(tbHits)
+        std::cout << " tbhits " << tbHits;
+
+    std::cout << " pv " << PV;
+    std::cout << std::endl;
+}
+
+void Uci::RootUpdate(int depth, int seldepth, int currMoveNumber, const std::string& currMove, u64 nodes, i64 time, uint nps, int tbHits) {
+    if(!UCI_OUTPUT) return;
+    if(time < UCI_OUTPUT_ROOTMAX_MINTIME) return;
+    
+    std::cout << "info depth " << depth
+              << " seldepth " << seldepth
+              << " currmovenumber " << currMoveNumber
+              << " currmove " << currMove
+              << " time " << time
+              << " nodes " << nodes
+              << " nps " << nps;
+    if(tbHits)
+        std::cout << " tbhits " << tbHits;
+    std::cout << std::endl;
+}
+
+void Uci::BestMove(const std::string& bestmove, const std::string& pondermove) {
+    if(!UCI_OUTPUT) return;
+
+    std::cout << "bestmove " << bestmove;
+    if(UCI_PONDER && !pondermove.empty())
+        std::cout << " ponder " << pondermove;
+    std::cout << std::endl;
 }

@@ -7,6 +7,7 @@
 #include "Heuristics.h"
 #include "Move.h"
 #include "PV.h"
+#include "SearchLimits.h"
 #include "Utils.h"
 
 #include <vector>
@@ -15,49 +16,25 @@ const int MAX_ROOTMOVES = 256;
 
 using BOUND_TYPE = TTENTRY_TYPE;
 
-// Search limits from UCI
-struct Limits {
-    bool infinite = false;
-    bool ponderhit = false;
-    int depth = 0;
-    int nodes = 0;
-    int moveTime = 0;
-
-    int wtime = 0;
-    int btime = 0;
-
-    int winc = 0;
-    int binc = 0;
-
-    int movesToGo = 0;
-};
-
 class Search {
 public:
     Search();
+    void ClearSearch(bool fullSearchClearFlag);
 
     // Start search
-    void IterativeDeepening(Board &board, bool fullSearchClearFlag = false);
+    void IterativeDeepening(Board &board, const UCI_Limits& limits, bool fullSearchClearFlag = false);
 
     // Flow
-    void ClearSearch(bool fullSearchClearFlag);
-    int64_t ElapsedTime() { return m_clock.Elapsed(); }
-    void Stop() { m_stop = true; }
-    void DebugMode() { m_debugMode = true; }
+    void PonderHit() { m_limits.PonderHit(); }
+    void Stop() { m_limits.Stop(); }
 
     // Limits management
-    Limits GetLimits() { return m_limits; }
-    void AllocateLimits(Board &board, const Limits& limits);
-    void FixDepth(int depth);
-    void FixTime(int time); // (ms)
-    void FixNodes(int nodes);
-    void Infinite();
+    const Limits& GetLimits() const { return m_limits; }
 
     // Getters
     Move BestMove() const { return m_bestMove; };
     int BestScore() const { return m_bestScore; };
     u64 GetNodes() const { return m_nodes; };
-    int GetNps() const { return m_nps; };
 
     // Interface
     void MakeMove(Board &board) { board.MakeMove(m_bestMove); };
@@ -69,16 +46,8 @@ private:
     int NegaMax(Board  &board, int depth, int alpha, int beta);
     int QuiescenceSearch(Board &board, int alpha, int beta);
 
-    // IterativeDeepening methods
-    void UciOutput(std::string PV, int score, BOUND_TYPE bound = BOUND_TYPE::EXACT);
-
     // NegaMax methods
     int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
-
-    // Limits and internal calculations
-    int CalculateNPS() { return static_cast<int>(1000 * m_nodes / (m_elapsedTime+1)); }
-    bool TimeOver();
-    bool NodeLimit() { return m_nodes >= m_forcedNodes; };
 
     // Debug
     void ShowDebugInfo();
@@ -93,7 +62,6 @@ private:
     u8 m_searchCount; // Used as 'age' in transposition tables
     // Nodes
     u64 m_nodes; // Number of nodes searched
-    int m_nps; // Nodes per second
     uint m_tbHits; // Number of endgame table hits
     // Depth
     int m_depth; // Current search depth, in plies, for this iteration
@@ -103,21 +71,10 @@ private:
 
     // Limits
     Limits m_limits;
-    int m_maxDepth; // Fixed depth limit
-    int m_forcedTime; // Fixed time limit (ms)
-    u64 m_forcedNodes; // Fixed nodes limit
-    bool m_stop; // Flag to indicate search stop
-    
-    // Time management
-    Utils::Clock m_clock;
-    int64_t m_elapsedTime; // Time passed since the start of the search (ms)
-    int m_allocatedTime; // In normal timed games, estimation of the time to use within the search (ms)
-    int m_nodesTimeCheck; // Number of nodes searched since the last time check
 
     // Heuristics
     Heuristics m_heuristics; // Heuristics for move ordering (history, killers)
 
     // Debug
-    bool m_debugMode; // UCI debug mode
     SearchDebug m_debug;
 };

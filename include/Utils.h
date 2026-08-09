@@ -31,8 +31,8 @@ namespace Utils {
     class Clock {
     public:
         void Start();
-        int64_t Elapsed();
-        int64_t ElapsedNanoseconds();
+        int64_t Elapsed() const;
+        int64_t ElapsedNanoseconds() const;
     private:
         std::chrono::high_resolution_clock::time_point m_start;
     };

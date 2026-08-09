@@ -10,6 +10,7 @@ protected:
     Board board;
     Search search;
     CoutHelper verbosity;
+    UCI_Limits limits = UCI_Limits::FixDepth(1);
     void SetUp() override {
         verbosity.Mute();
     }
@@ -21,8 +22,7 @@ protected:
 //https://www.talkchess.com/forum/viewtopic.php?p=710549
 TEST_F(PositionMisc, QuiescenceExplosion) {
     board.SetFen("1QqQqQq1/r6Q/Q6q/q6Q/B2q4/q6Q/k6K/1qQ1QqRb w - -");
-    search.FixDepth(1);
-    search.IterativeDeepening(board, true);
+    search.IterativeDeepening(board, limits, true);
     EXPECT_EQ(search.BestScore(), MATESCORE_MAX - 1);
 }
 
@@ -31,8 +31,7 @@ TEST_F(PositionMisc, QuiescenceExplosion) {
 // Difficult mate in #5. Too much pruning will see mate in #6
 // TEST_F(PositionMisc, Mate1) {
 //     board.SetFen("8/3N4/6p1/1p5p/5b1p/P2k2n1/1B6/3KQ3 w - -");
-//     search.FixTime(2000);
-//     search.IterativeDeepening(board, true);
+//     search.IterativeDeepening(board, true, UCI_Limits::FixTime(2000));
 //     EXPECT_EQ(search.BestMove().Notation(), "b2a1");
 // }
 

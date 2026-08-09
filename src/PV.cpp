@@ -27,10 +27,10 @@ void PV::Update(int ply, Move move) {
     m_pvLength[ply] = m_pvLength[childPly] + 1;
 }
 
-Move PV::PonderMove() const {
-    if(m_pvLength[0] > 1)
-        return m_pvTable[0][1];
-    return Move();
+std::string PV::PonderString() const {
+    if(m_pvLength[0] > 1 && m_pvTable[0][1].MoveType() != NULLMOVE)
+        return m_pvTable[0][1].Notation();
+    return "";
 }
 
 std::string PV::PVString() const {
