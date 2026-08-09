@@ -142,6 +142,7 @@ set(ENGINE_SOURCES
     src/NNUE.cpp
     src/PV.cpp
     src/Search.cpp
+    src/SearchLimits.cpp
     src/Syzygy.cpp
     src/Uci.cpp
     src/Utils.cpp

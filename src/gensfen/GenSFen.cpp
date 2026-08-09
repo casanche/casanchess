@@ -134,7 +134,6 @@ void GenSFen::Random(std::string filename) {
 
     Board board;
     Search search;
-    search.FixDepth(7);
     State state;
 
     const int maxGames = INFINITE;
@@ -184,7 +183,7 @@ void GenSFen::RandomBenchmark(int maxGames) {
 
     Board board;
     Search search;
-    search.FixDepth(7);
+    UCI_Limits limits = UCI_Limits::FixDepth(7);
 
     for(int n_game = 1; n_game <= maxGames; n_game++) {
         clock.Start();
@@ -194,11 +193,11 @@ void GenSFen::RandomBenchmark(int maxGames) {
 
         clock.Start();
 
-        search.IterativeDeepening(board);
+        search.IterativeDeepening(board, limits);
         int score_active = search.BestScore();
 
         board.MakeNull();
-        search.IterativeDeepening(board);
+        search.IterativeDeepening(board, limits);
         int score_inactive = search.BestScore();
         board.TakeNull();
 
@@ -221,7 +220,6 @@ void GenSFen::RandomBenchmark(int maxGames) {
 
 int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
     Search search_depth1;
-    search_depth1.FixDepth(1);
 
     bool validScore = false;
     int tries = 0;
@@ -233,13 +231,13 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
         int nPieces = PopCount(board.AllPieces());
         if(NoMoves(board) || nPieces <= 6)
             continue;
-        search_depth1.IterativeDeepening(board);
+        search_depth1.IterativeDeepening(board, UCI_Limits::FixDepth(1));
         int score_active = search_depth1.BestScore();
 
         board.MakeNull();
         if(NoMoves(board))
             continue;
-        search_depth1.IterativeDeepening(board);
+        search_depth1.IterativeDeepening(board, UCI_Limits::FixDepth(1));
         int score_inactive = search_depth1.BestScore();
 
         bool evalPass = (abs(score_active) < 66) || (abs(score_inactive) < 66);
@@ -257,16 +255,14 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
 // - Best move is quiet at low depths (to skip trivial captures)
 // - Evaluation conditions: At least one color has [-200,200]. Both colors have [-800,800].
 void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition, int thresholdEval, int thresholdEvalBoth, uint minPly) {
-    search.FixDepth(5);
-    search.IterativeDeepening(board);
+    search.IterativeDeepening(board, UCI_Limits::FixDepth(5));
     currentPosition.calculatedDepth = 5;
     currentPosition.bestMove = search.BestMove();
     
     if(board.Ply() < minPly || board.IsCheck() || !search.BestMove().IsQuiet())
         return;
 
-    search.FixDepth(7);
-    search.IterativeDeepening(board);
+    search.IterativeDeepening(board, UCI_Limits::FixDepth(7));
     currentPosition.calculatedDepth = 7;
     currentPosition.bestMove = search.BestMove();
 
@@ -284,16 +280,14 @@ void GenSFen::WriteEvals(Board& board, Search& search, std::ofstream& outputFile
     }
 
     // Low depth. Check that move is quiet.
-    search.FixDepth(5);
-    search.IterativeDeepening(board);
+    search.IterativeDeepening(board, UCI_Limits::FixDepth(5));
     if(!search.BestMove().IsQuiet()) {
         board.TakeNull();
         return;
     }
 
     // Normal depth
-    search.FixDepth(7);
-    search.IterativeDeepening(board);
+    search.IterativeDeepening(board, UCI_Limits::FixDepth(7));
     eval[1-color] = search.BestScore();
 
     // Eval conditions
