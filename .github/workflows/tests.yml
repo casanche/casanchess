@@ -56,6 +56,7 @@ jobs:
         ${{ runner.os == 'Windows' && matrix.compiler == 'g++' && '-G Ninja' || '' }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+        ${{ matrix.os == 'windows-2025' && matrix.compiler == 'g++' && '-DCMAKE_CXX_FLAGS=-g' || '' }}
         -DENABLE_STATIC=ON
         -DBUILD_TESTS=ON
         -DBUILD_TESTS_EXTRA=ON
@@ -87,6 +88,31 @@ jobs:
 
         echo bench | ./${BASE_PATH}casanchess${EXTENSION_SUFFIX}
 
+    - name: Configure crash dumps - MinGW
+      if: ${{ matrix.os == 'windows-2025' && matrix.compiler == 'g++' }}
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\crash-dumps" | Out-Null
+        $key = "HKCU:\Software\Microsoft\Windows\Windows Error Reporting\LocalDumps\casanchess.exe"
+        New-Item -Path $key -Force | Out-Null
+        New-ItemProperty -Path $key -Name DumpFolder -PropertyType ExpandString -Value "$env:GITHUB_WORKSPACE\crash-dumps" -Force | Out-Null
+        New-ItemProperty -Path $key -Name DumpType -PropertyType DWord -Value 2 -Force | Out-Null
+        New-ItemProperty -Path $key -Name DumpCount -PropertyType DWord -Value 3 -Force | Out-Null
+
+    - name: Install ProcDump - MinGW
+      if: ${{ matrix.os == 'windows-2025' && matrix.compiler == 'g++' }}
+      shell: pwsh
+      run: |
+        $archive = "$env:RUNNER_TEMP\procdump.zip"
+        $directory = "$env:RUNNER_TEMP\procdump"
+        Invoke-WebRequest `
+          -Uri "https://download.sysinternals.com/files/Procdump.zip" `
+          -OutFile $archive
+        Expand-Archive -Path $archive -DestinationPath $directory -Force
+        if (-not (Test-Path "$directory\procdump64.exe")) {
+          throw "ProcDump executable was not found after extraction"
+        }
+
     - name: Smoke Test - UCI
       working-directory: ./build
       run: |
@@ -95,13 +121,22 @@ jobs:
         
         ENGINE_BIN="./${BASE_PATH}casanchess${EXTENSION_SUFFIX}"
 
-        timeout 30s bash -c "
-        (
+        if [[ "${{ matrix.os }}" == "windows-2025" && "${{ matrix.compiler }}" == "g++" ]]; then
+          PROCDUMP="$(cygpath -w "$RUNNER_TEMP/procdump/procdump64.exe")"
+          DUMP_DIR="$(cygpath -w "$GITHUB_WORKSPACE/crash-dumps")"
+          ENGINE_WIN="$(cygpath -w "$PWD/${BASE_PATH}casanchess${EXTENSION_SUFFIX}")"
+          MONITOR=( "$PROCDUMP" -accepteula -ma -e -n 1 -x "$DUMP_DIR" "$ENGINE_WIN" )
+        else
+          MONITOR=( "$ENGINE_BIN" )
+        fi
+
+        set +e
+        {
           echo 'uci'
           echo 'setoption name Hash value 32'
           echo 'isready'
           sleep 1
-          
+
           # 1) Startpos go movetime
           echo 'position startpos'
           echo 'go movetime 500'
@@ -116,17 +151,108 @@ jobs:
           echo 'position startpos'
           echo 'go nodes 50000'
           sleep 1
-          
+
           # 3) FEN go inifinite and stop
           echo 'position fen 8/3P3k/n2K3p/2p3n1/1b4N1/2p1p1P1/8/3B4 w - - 0 1 moves g4f6 h7g7 f6h5 g7g6 d1c2'
           echo 'go infinite'
           sleep 2
           echo 'stop'
           sleep 1
-          
+
           echo 'quit'
-        ) | $ENGINE_BIN
-        "
+        } | timeout 30s "${MONITOR[@]}"
+        monitor_status=${PIPESTATUS[1]}
+        set -e
+
+        if [[ "$monitor_status" -ne 0 ]]; then
+          exit "$monitor_status"
+        fi
+
+        if [[ "${{ matrix.os }}" == "windows-2025" && "${{ matrix.compiler }}" == "g++" ]] &&
+           compgen -G "$GITHUB_WORKSPACE/crash-dumps/*.dmp" > /dev/null; then
+          echo "ProcDump captured an engine crash"
+          exit 1
+        fi
+
+    - name: List crash dumps - MinGW
+      if: ${{ always() && matrix.os == 'windows-2025' && matrix.compiler == 'g++' }}
+      shell: pwsh
+      run: |
+        Get-ChildItem "$env:GITHUB_WORKSPACE\crash-dumps" -Force -ErrorAction SilentlyContinue |
+          Select-Object Name, Length, LastWriteTime
+
+    - name: GDB diagnostics - MinGW
+      if: ${{ failure() && matrix.os == 'windows-2025' && matrix.compiler == 'g++' }}
+      working-directory: ./build
+      run: |
+        if ! command -v gdb >/dev/null 2>&1; then
+          echo "gdb is not available on this runner"
+          exit 0
+        fi
+
+        set +e
+
+        run_gdb_case() {
+          case_name="$1"
+          shift
+          echo "=== GDB: $case_name ==="
+          {
+            sleep 1
+            printf '%s\n' "$@"
+            sleep 5
+          } | gdb -q -batch \
+            -ex "set pagination off" \
+            -ex "set confirm off" \
+            -ex "run" \
+            -ex "bt full" \
+            --args ./casanchess.exe
+        }
+
+        run_gdb_case "startpos depth 5" \
+          'uci' \
+          'position startpos' \
+          'go depth 5'
+
+        run_gdb_case "startpos nodes 50000" \
+          'uci' \
+          'position startpos' \
+          'go nodes 50000'
+
+        run_gdb_case "tactical FEN infinite" \
+          'uci' \
+          'position fen 8/3P3k/n2K3p/2p3n1/1b4N1/2p1p1P1/8/3B4 w - - 0 1 moves g4f6 h7g7 f6h5 g7g6 d1c2' \
+          'go infinite'
+
+        echo "=== GDB: complete UCI smoke sequence ==="
+        {
+          sleep 1
+          echo 'uci'
+          echo 'setoption name Hash value 32'
+          echo 'isready'
+          sleep 1
+          echo 'position startpos'
+          echo 'go movetime 500'
+          sleep 1
+          echo 'ucinewgame'
+          echo 'isready'
+          sleep 1
+          echo 'position startpos'
+          echo 'go nodes 50000'
+          sleep 1
+          echo 'position fen 8/3P3k/n2K3p/2p3n1/1b4N1/2p1p1P1/8/3B4 w - - 0 1 moves g4f6 h7g7 f6h5 g7g6 d1c2'
+          echo 'go infinite'
+          sleep 2
+          echo 'stop'
+          sleep 1
+          echo 'quit'
+        } | gdb -q -batch \
+          -ex "set pagination off" \
+          -ex "set confirm off" \
+          -ex "run" \
+          -ex "bt full" \
+          --args ./casanchess.exe
+
+        set -e
 
     - name: Upload artifacts
       if: always()
@@ -137,4 +263,5 @@ jobs:
           build/casanchess*
           build/Release/casanchess*
           build/*.nnue
+          crash-dumps/*.dmp
         retention-days: 2
