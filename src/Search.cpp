@@ -78,7 +78,7 @@ Search::Search() {
     m_forcedNodes = INFINITE_U64;
 
     // Search state
-    m_bestScore = -INFINITE_SCORE;
+    m_bestScore = NO_SCORE;
     m_searchCount = 0;
 
     ClearSearch(true);
@@ -108,7 +108,7 @@ void Search::ClearSearch(bool fullClear) {
 
     // Search state
     m_pv.ClearTable();
-    m_bestScore = -INFINITE_SCORE;
+    m_bestScore = NO_SCORE;
     m_bestMove = Move();
 
     // Depth tracking
@@ -275,7 +275,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     m_nodes++;
 
     Move bestMove;
-    int bestScore = -INFINITE_SCORE;
+    int bestScore = NO_SCORE;
     int alphaOriginal = alpha; // Save the original alpha for TT logic
     int score;
 
@@ -435,13 +435,17 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Transposition table probe --------
     Move bestMove; // For later storage in the TT
-    int bestScore = -INFINITE_SCORE;
+    int bestScore = NO_SCORE;
     int alphaOriginal = alpha; // For TT entry type calculation
+    int ttEval = NO_EVAL;
     
     TTEntry* ttEntry = Hash::tt.Probe(board.ZKey(), depth);
     if(ttEntry && !isPV) {
         D( m_debug.Increment("NegaMax: TT Hit") );
+
         int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
+        ttEval = ttEntry->eval;
+
         if( ttEntry->type == TTENTRY_TYPE::EXACT
             || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
             || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
@@ -487,11 +491,21 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
     }
 
-    // Calculate static evaluation once, used for pruning heuristics
+    // --------- Static Evaluation ---------
+    // Used in pruning heuristics
     int eval = 0;
     if(!inCheck) {
-        D( m_debug.Increment("NegaMax: _: Call to Evaluation") );
-        eval = Evaluation::Evaluate(board);
+        D( m_debug.Increment("NegaMax: Evaluation: 1: Enter") );
+        if(ttEval != NO_EVAL) {
+            D( m_debug.Increment("NegaMax: Evaluation: 2.1: Use TT Eval") );
+            eval = ttEval;
+        } else if(Hash::evalCache.Probe(board.ZKey(), eval)) {
+            D( m_debug.Increment("NegaMax: Evaluation: 2.2: Use EvalCache") );
+        } else {
+            D( m_debug.Increment("NegaMax: Evaluation: 3: Call Evaluate()") );
+            eval = Evaluation::Evaluate(board);
+            Hash::evalCache.Store(board.ZKey(), eval);
+        }
     }
 
     // --- Reverse Futility Pruning ---
@@ -546,7 +560,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff - Depth " + std::to_string(depth)) );
             if(IsWinValue(nullScore))
                 nullScore = beta;  // Avoid reporting false mates in zugzwang
-            Hash::tt.Store(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount);
+            Hash::tt.Store(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount, eval);
             return nullScore;
         }
     }
@@ -670,7 +684,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(score >= beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
-            Hash::tt.Store(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount);
+            Hash::tt.Store(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
 
             // Update heuristics
             if( move.IsQuiet() ) {
@@ -696,7 +710,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         D( m_debug.Increment("NegaMax: AlphaBeta: " + std::string(withinBounds ? "Exact" : "UpperBound")) );
         TTENTRY_TYPE type = withinBounds ? TTENTRY_TYPE::EXACT
                                          : TTENTRY_TYPE::UPPER_BOUND;
-        Hash::tt.Store(board.ZKey(), bestScore, type, bestMove, depth, m_ply, m_searchCount);
+        Hash::tt.Store(board.ZKey(), bestScore, type, bestMove, depth, m_ply, m_searchCount, eval);
     }
 
     return bestScore;
@@ -726,14 +740,17 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         return Evaluation::Evaluate(board);
     }
 
+    const bool isPV = (beta - alpha) != 1;
+    Move hashMove; // For move ordering
+    int ttEval = NO_EVAL;
+
     // Probe transposition table.
     // Only non-PV nodes: PV nodes require the most accurate score possible.
     TTEntry* ttEntry = Hash::tt.Probe(board.ZKey(), 0);
-    Move hashMove; // For move ordering
-    const bool isPV = (beta - alpha) != 1;
     if(ttEntry) {
         D( m_debug.Increment("Quiescence: TT Hit: Exists") );
         hashMove = ttEntry->bestMove;
+        ttEval = ttEntry->eval;
 
         if(!isPV) {
             int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
@@ -747,17 +764,21 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         }
     }
 
-    // Stand pat: static evaluation of current position
-    int standPat = 0;
-    int bestScore = -INFINITE_SCORE;
     bool inCheck = board.IsCheck();
+    int bestScore = NO_SCORE;
+
+    // Stand pat: static evaluation of current position
+    // Probe evaluation cache first (modifies standPat if hit)
+    int standPat = 0;
     if(!inCheck) {
-        // Probe evaluation cache first (modifies standPat if hit)
-        const bool cacheHit = Hash::evalCache.Probe(board.ZKey(), standPat);
-        if(cacheHit) {
-            D( m_debug.Increment("Quiescence: StandPat: EvalCache hit") );
+        D( m_debug.Increment("Quiescence: Evaluation: 1: Enter") );
+        if(ttEval != NO_EVAL) {
+            D( m_debug.Increment("Quiescence: Evaluation: 2.1: Use TT Eval") );
+            standPat = ttEval;
+        } else if(Hash::evalCache.Probe(board.ZKey(), standPat)) {
+            D( m_debug.Increment("Quiescence: Evaluation: 2.2: Use EvalCache") );
         } else {
-            D( m_debug.Increment("Quiescence: StandPat: Evaluation called") );
+            D( m_debug.Increment("Quiescence: Evaluation: 3: Call Evaluate()") );
             standPat = Evaluation::Evaluate(board);
             Hash::evalCache.Store(board.ZKey(), standPat);
         }
@@ -833,7 +854,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             bestScore = score;
 
         if(score >= beta) {
-            Hash::tt.Store(board.ZKey(), bestScore, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount);
+            Hash::tt.Store(board.ZKey(), bestScore, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
             return score;
         }
 
