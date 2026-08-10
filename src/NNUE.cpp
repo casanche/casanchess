@@ -239,9 +239,8 @@ void NNUE::ActivateReLU(const i16* input, i16* output, int size) const {
 
 namespace {
     #if defined(__AVX2__)
-    //Horizontal sum of 8 integers (256-bits)
-    inline i32 HorizontalSum256(__m256i v) {
-        __m128i x = _mm_add_epi32(_mm256_castsi256_si128(v), _mm256_extracti128_si256(v, 1));
+    // Horizontal sum of 4 integers (128-bits)
+    inline i32 HorizontalSum128(__m128i x) {
         x = _mm_add_epi32(x, _mm_srli_si128(x, 8));
         x = _mm_add_epi32(x, _mm_srli_si128(x, 4));
         return _mm_cvtsi128_si32(x);
@@ -269,7 +268,9 @@ void NNUE::ComputeLayer(const i16* inputLayer, T* outputLayer,
                 dot = _mm256_add_epi32(dot, product);
             }
 
-            sum += HorizontalSum256(dot);
+            __m128i x = _mm_add_epi32(_mm256_castsi256_si128(dot), _mm256_extracti128_si256(dot, 1));
+
+            sum += HorizontalSum128(x);
         #else
             for(int i = 0; i < dimInput; i++) {
                 sum += inputLayer[i] * weights[offset + i];
