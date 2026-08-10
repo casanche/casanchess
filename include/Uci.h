@@ -2,6 +2,7 @@
 
 #include "Board.h"
 #include "Search.h"
+#include "SearchLimits.h"
 
 #include <sstream>
 #include <thread>
@@ -17,6 +18,7 @@ constexpr int UCI_OUTPUT_ROOTMAX_MINTIME = 1000; //ms
 class Uci {
 public:
     Uci();
+    ~Uci();
     void Bench(int depth, bool verbose);
     void Launch();
 
@@ -29,10 +31,11 @@ private:
     void Go(std::istringstream &stream);
     void Position(std::istringstream &stream);
     void SetOption(std::istringstream &stream);
-    void StartSearch(UCI_Limits limits);
+    void StartSearch();
     void StopAndJoin();
 
     Board m_board;
     Search m_search;
+    UCI_Limits m_limits;
     std::thread m_searchThread;
 };

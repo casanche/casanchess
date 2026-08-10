@@ -27,6 +27,10 @@ Uci::Uci() :
     m_search(Search())
 {}
 
+Uci::~Uci() {
+    StopAndJoin();
+}
+
 void Uci::Launch() {
 
     std::string line;
@@ -126,8 +130,6 @@ void Uci::Launch() {
             std::cout << "Command not valid: " << line << std::endl;
         }
     }
-
-    StopAndJoin();
 }
 
 void Uci::Bench(int depth, bool verbose) {
@@ -241,7 +243,8 @@ void Uci::Go(std::istringstream &stream) {
 
     }
 
-    m_searchThread = std::thread(&Uci::StartSearch, this, limits);
+    m_limits = limits; // To avoid copies in std::thread that may cause memory misalignments
+    m_searchThread = std::thread(&Uci::StartSearch, this);
 }
 
 void Uci::Position(std::istringstream &stream) {
@@ -360,8 +363,8 @@ void Uci::SetOption(std::istringstream &stream) {
     }
 }
 
-void Uci::StartSearch(UCI_Limits limits) {
-    m_search.IterativeDeepening(m_board, limits);
+void Uci::StartSearch() {
+    m_search.IterativeDeepening(m_board, m_limits);
 }
 
 void Uci::StopAndJoin() {
