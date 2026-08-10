@@ -29,10 +29,11 @@ private:
     void Go(std::istringstream &stream);
     void Position(std::istringstream &stream);
     void SetOption(std::istringstream &stream);
-    void StartSearch(UCI_Limits limits);
+    void StartSearch();
     void StopAndJoin();
 
     Board m_board;
     Search m_search;
+    UCI_Limits m_searchLimits;
     std::thread m_searchThread;
 };

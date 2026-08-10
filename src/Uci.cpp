@@ -217,20 +217,20 @@ void Uci::Go(std::istringstream &stream) {
     StopAndJoin();
     
     std::string token;
-    UCI_Limits limits;
+    m_searchLimits = {};
 
     while(stream >> token) {
 
-        if(token == "ponder") { limits.ponder = true; }
-        else if(token == "infinite") limits.infinite = true;
-        else if(token == "depth") stream >> limits.depth;
-        else if(token == "movetime") stream >> limits.moveTime;
-        else if(token == "nodes") stream >> limits.nodes;
-        else if(token == "wtime") stream >> limits.wtime;
-        else if(token == "btime") stream >> limits.btime;
-        else if(token == "winc") stream >> limits.winc;
-        else if(token == "binc") stream >> limits.binc;
-        else if(token == "movestogo") stream >> limits.movesToGo;
+        if(token == "ponder") { m_searchLimits.ponder = true; }
+        else if(token == "infinite") m_searchLimits.infinite = true;
+        else if(token == "depth") stream >> m_searchLimits.depth;
+        else if(token == "movetime") stream >> m_searchLimits.moveTime;
+        else if(token == "nodes") stream >> m_searchLimits.nodes;
+        else if(token == "wtime") stream >> m_searchLimits.wtime;
+        else if(token == "btime") stream >> m_searchLimits.btime;
+        else if(token == "winc") stream >> m_searchLimits.winc;
+        else if(token == "binc") stream >> m_searchLimits.binc;
+        else if(token == "movestogo") stream >> m_searchLimits.movesToGo;
 
         else {
             std::string temp;
@@ -239,13 +239,13 @@ void Uci::Go(std::istringstream &stream) {
             const uint DEFAULT_NODES = 200000;
             P("UNDEFINED GO STATEMENT: " << temp << " -- (LOADING DEFAULT VALUES) -- ");
             P("Nodes: " << DEFAULT_NODES);
-            limits.nodes = DEFAULT_NODES;
+            m_searchLimits.nodes = DEFAULT_NODES;
             break;
         }
 
     }
 
-    m_searchThread = std::thread(&Uci::StartSearch, this, limits);
+    m_searchThread = std::thread(&Uci::StartSearch, this);
 }
 
 void Uci::Position(std::istringstream &stream) {
@@ -364,8 +364,8 @@ void Uci::SetOption(std::istringstream &stream) {
     }
 }
 
-void Uci::StartSearch(UCI_Limits limits) {
-    m_search.IterativeDeepening(m_board, limits);
+void Uci::StartSearch() {
+    m_search.IterativeDeepening(m_board, m_searchLimits);
 }
 
 void Uci::StopAndJoin() {
