@@ -28,7 +28,11 @@ jobs:
           - os: windows-2025
             build_type: Release
             compiler: g++
-          # DEBUG
+          # DEBUG - Windows
+          - os: windows-2025
+            build_type: Debug
+            compiler: g++
+          # DEBUG - Linux
           - os: ubuntu-latest
             build_type: Debug
             compiler: g++
