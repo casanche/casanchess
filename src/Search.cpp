@@ -853,10 +853,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         if(score > bestScore)
             bestScore = score;
 
-        if(score >= beta) {
-            Hash::tt.Store(board.ZKey(), bestScore, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
+        if(score >= beta)
             return score;
-        }
 
         if(score > alpha)
             alpha = score;
