@@ -240,7 +240,7 @@ void NNUE::ActivateReLU(const i16* input, i16* output, int size) const {
 namespace {
     #if defined(__AVX2__)
     //Horizontal sum of 8 integers (256-bits)
-    inline i32 HorizontalSum256(__m256i v) {
+    inline i32 HorizontalSum256(const __m256i& v) {
         __m128i x = _mm_add_epi32(_mm256_castsi256_si128(v), _mm256_extracti128_si256(v, 1));
         x = _mm_add_epi32(x, _mm_srli_si128(x, 8));
         x = _mm_add_epi32(x, _mm_srli_si128(x, 4));
