@@ -11,6 +11,7 @@ using namespace BitboardUtils;
 #include "MoveGenerator.h"
 #include "NNUE.h"
 
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -396,11 +397,9 @@ Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYP
 void Board::ClearBits() {
     for(COLOR color : {WHITE, BLACK}) {
         m_kingAttackers[color] = 0;
-
-        for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
-            m_pieces[color][pieceType] = 0;
-        }
     }
+
+    std::memset(m_pieces, 0, sizeof(m_pieces));
 
     for(int i = 0; i < MAX_PLY_HISTORY; ++i) {
         m_history[i].Clear();
@@ -456,8 +455,8 @@ void Board::InitStateAndHistory() {
     m_checkCalculated = false;
 
     if(!UCI_CLASSICAL_EVAL) {
-        nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]);
-        nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
+        nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]); // Passing a reference
+        nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]); // Passing a reference
         nnue.Inputs_FullUpdate(m_ply);
     }
 }
