@@ -116,6 +116,7 @@ void Limits::Apply_PonderHit() {
     m_limits.ponderhit = true;
 
     AllocateLimits(m_color, m_limits, m_movesSize);
+    m_allocatedTime /= 2;
 
     RestartClock(); // without ResetSignals()
 }
