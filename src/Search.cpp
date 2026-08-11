@@ -115,7 +115,10 @@ void Search::ClearSearch(bool fullClear) {
 void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool fullClear) {
     ClearSearch(fullClear);
 
-    m_limits.StartNewSearch(board.ActivePlayer(), limits);
+    MoveList rootMoves = MoveGenerator::GenerateMoves(board);
+    size_t movesSize = rootMoves.size();
+
+    m_limits.StartNewSearch(board.ActivePlayer(), limits, movesSize);
     
     D( m_debug.Increment("IterativeDeepening: _: Start") );
     m_searchCount++;

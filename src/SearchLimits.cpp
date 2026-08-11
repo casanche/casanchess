@@ -5,9 +5,11 @@ namespace {
     constexpr int TIMEOVER_CHECK_NODES = 1024; // Check time every N nodes
 }
 
-void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits) {
+void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesSize) {
+    m_movesSize = movesSize;
+
     ResetSignals();
-    AllocateLimits(color, limits);
+    AllocateLimits(color, limits, m_movesSize);
     RestartClock();
 }
 
@@ -62,7 +64,7 @@ void Limits::ResetSignals() {
 // - depth: search for a fixed depth
 // - moveTime: search for a fixed time
 // - nodes: search for a fixed number of nodes
-void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits) {
+void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits, size_t movesSize) {
     m_limits = limits;
     m_color = color;
 
@@ -75,12 +77,8 @@ void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits) {
     if(limits.depth)    { m_forcedDepth = limits.depth; return; }
     if(limits.moveTime) { m_forcedTime = limits.moveTime; return; }
     if(limits.nodes)    { m_forcedNodes = limits.nodes; return; }
-
+    
     // Time estimation in normal games
-    constexpr int ESTIMATED_MOVESTOGO = 20;
-    const int movesToGo = limits.movesToGo ? limits.movesToGo
-                                           : ESTIMATED_MOVESTOGO;
-
     int myTime   = (color == WHITE) ? limits.wtime : limits.btime;
     // int yourTime = (color == WHITE) ? limits.btime : limits.wtime;
     int myInc    = (color == WHITE) ? limits.winc  : limits.binc;
@@ -88,7 +86,18 @@ void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits) {
     // Move overhead to account for communication delays
     const int myTimeSafe = std::max(0, myTime - TIME_OVERHEAD);
 
-    m_allocatedTime = myTimeSafe / movesToGo + myInc;
+    constexpr int ESTIMATED_MOVESTOGO = 20;
+    const int movesToGo = limits.movesToGo ? limits.movesToGo
+                                           : ESTIMATED_MOVESTOGO;
+
+    m_allocatedTime = (myTimeSafe / movesToGo) + myInc;
+
+    // Safety net: don't use more than the remaining time
+    m_allocatedTime = std::min(m_allocatedTime, (i64)myTimeSafe);
+
+    // Extra adjustments: root-level information
+    if(movesSize == 1)
+        m_allocatedTime /= 3;
 }
 
 void Limits::Infinite() {
@@ -106,7 +115,8 @@ void Limits::Apply_PonderHit() {
     m_limits.ponder = false;
     m_limits.ponderhit = true;
 
-    AllocateLimits(m_color, m_limits);
+    AllocateLimits(m_color, m_limits, m_movesSize);
+    m_allocatedTime /= 2;
 
     RestartClock(); // without ResetSignals()
 }

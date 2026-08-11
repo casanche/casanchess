@@ -35,7 +35,7 @@ class Limits {
 public:
     Limits() = default;
 
-    void StartNewSearch(COLOR color, const UCI_Limits& limits);
+    void StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesSize);
 
     bool LimitsReached(u64 nodes);
 
@@ -58,7 +58,7 @@ private:
     // =============
     // == Methods ==
     // =============
-    void AllocateLimits(COLOR color, const UCI_Limits& limits);
+    void AllocateLimits(COLOR color, const UCI_Limits& limits, size_t movesSize);
 
     void Infinite();
     
@@ -83,6 +83,10 @@ private:
     i64 m_forcedTime = 0; // Fixed time limit (ms)
     u64 m_forcedNodes = 0; // Fixed nodes limit
 
+    // Root-level information
+    size_t m_movesSize = 0; // Number of legal moves in the root position (used for time estimation)
+
+    // UCI signals
     std::atomic<bool> m_stop = false; // Flag to stop the search (time limit, user input, etc.)
     std::atomic<bool> m_ponderhit = false; // Flag to indicate that the ponder move was played
 };
