@@ -18,8 +18,9 @@ using u64 = uint64_t;
 using Bitboard = uint64_t;
 
 constexpr int INFINITE = std::numeric_limits<int>::max();
-constexpr u64 INFINITE_U64 = std::numeric_limits<u64>::max();
 constexpr i16 INFINITE_I16 = std::numeric_limits<i16>::max();
+constexpr i64 INFINITE_I64 = std::numeric_limits<i64>::max();
+constexpr u64 INFINITE_U64 = std::numeric_limits<u64>::max();
 
 constexpr i16 INFINITE_SCORE = INFINITE_I16 - 1024;
 constexpr i16 MATESCORE_MAX = INFINITE_SCORE - 1024;

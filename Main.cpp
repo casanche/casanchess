@@ -64,10 +64,8 @@ int main(int argc, char** argv) {
     Uci uci;
     uci.Launch();
 
-    int64_t elapsed = clock.Elapsed();
-    std::cout << "info string [TIME] Init " << elapsed << " ms" << std::endl;
+    std::cout << "info string [TIME] " << clock.Elapsed() << " ms" << std::endl;
 
     Syzygy::Free();
-
     return 0;
 }
