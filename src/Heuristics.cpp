@@ -11,12 +11,8 @@
 //Unnamed namespace (private functions)
 namespace {
 
-    void RateMoves(Board &board, MoveList &moves, TT& tt, const Heuristics &heuristics, int ply) {
-        Move hashMove;
-        TTEntry* ttEntry = tt.Probe(board.ZKey());
-        if(ttEntry)
-            hashMove = ttEntry->bestMove;
-
+    void RateMoves(Board &board, MoveList &moves, Move hashMove, const Heuristics &heuristics, int ply) {
+    
         Move killer1 = heuristics.killer.Primary(ply);
         Move killer2 = heuristics.killer.Secondary(ply);
         Move killer3, killer4;
@@ -125,8 +121,8 @@ namespace {
 
 } //unnamed namespace
 
-void Sorting::SortMoves(Board &board, MoveList& moves, TT& tt, const Heuristics &heuristics, int ply) {
-    RateMoves(board, moves, tt, heuristics, ply);
+void Sorting::SortMoves(Board &board, MoveList& moves, Move hashMove, const Heuristics &heuristics, int ply) {
+    RateMoves(board, moves, hashMove, heuristics, ply);
     std::ranges::sort(moves, ByScore);
 }
 
