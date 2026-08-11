@@ -5,9 +5,11 @@ namespace {
     constexpr int TIMEOVER_CHECK_NODES = 1024; // Check time every N nodes
 }
 
-void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits) {
+void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesSize) {
+    m_movesSize = movesSize;
+
     ResetSignals();
-    AllocateLimits(color, limits);
+    AllocateLimits(color, limits, m_movesSize);
     RestartClock();
 }
 
@@ -62,7 +64,7 @@ void Limits::ResetSignals() {
 // - depth: search for a fixed depth
 // - moveTime: search for a fixed time
 // - nodes: search for a fixed number of nodes
-void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits) {
+void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits, size_t movesSize) {
     m_limits = limits;
     m_color = color;
 
@@ -92,6 +94,10 @@ void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits) {
 
     // Safety net: don't use more than the remaining time
     m_allocatedTime = std::min(m_allocatedTime, (i64)myTimeSafe);
+
+    // Extra adjustments: root-level information
+    if(movesSize == 1)
+        m_allocatedTime /= 3;
 }
 
 void Limits::Infinite() {
@@ -109,7 +115,7 @@ void Limits::Apply_PonderHit() {
     m_limits.ponder = false;
     m_limits.ponderhit = true;
 
-    AllocateLimits(m_color, m_limits);
+    AllocateLimits(m_color, m_limits, m_movesSize);
 
     RestartClock(); // without ResetSignals()
 }
