@@ -37,7 +37,7 @@ public:
     ~TT();
 
     void Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age, int eval = NO_EVAL);
-    TTEntry* Probe(u64 zkey, int depth);
+    TTEntry* Probe(u64 zkey);
 
     void Clear();
     void SetSize(int sizeInMB);
