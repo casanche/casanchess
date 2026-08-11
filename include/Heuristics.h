@@ -14,7 +14,7 @@ const int MAX_BONUS = 400;
 constexpr int MAX_HISTORY_VALUE = std::bit_floor( (uint)INFINITE / MAX_BONUS );
 
 namespace Sorting {
-    void SortMoves(Board &board, MoveList &moves, TT& tt, const Heuristics &heuristics, int ply);
+    void SortMoves(Board &board, MoveList &moves, Move hashMove, const Heuristics &heuristics, int ply);
     void SortEvasions(Board &board, MoveList &moves, Move hashMove);
     void SortTactical(Board &board, MoveList &moves, Move hashMove);
 }

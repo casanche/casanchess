@@ -211,10 +211,15 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     MoveList moves = MoveGenerator::GenerateMoves(board);
     D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
-    SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
+    Move hashMove; // For move ordering
+    TTEntry* ttEntry = Hash::tt.Probe(board.ZKey());
+    if(ttEntry)
+        hashMove = ttEntry->bestMove;
+
+    SortMoves(board, moves, hashMove, m_heuristics, m_ply);
 
     if(!m_bestMove.MoveType() && !moves.empty())
-        m_bestMove = moves[0]; // Life jacket if first move at depth 1 is not completed
+        m_bestMove = moves[0]; // Safety net if first move at depth 1 is not completed
 
     int moveNumber = 0;
 
@@ -357,12 +362,15 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     Move bestMove; // For later storage in the TT
     int bestScore = NO_SCORE;
     int alphaOriginal = alpha; // For TT entry type calculation
+
+    Move hashMove; // For move ordering
     int ttEval = NO_EVAL;
     
     TTEntry* ttEntry = Hash::tt.Probe(board.ZKey());
     if(ttEntry) {
         D( m_debug.Increment("NegaMax: TT: Hit") );
         ttEval = ttEntry->eval;
+        hashMove = ttEntry->bestMove;
 
         if(!isPV && ttEntry->depth >= depth) {
             D( m_debug.Increment("NegaMax: TT: Higher Depth") );
@@ -515,7 +523,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Move ordering ---------
     // Order moves to maximize search efficiency (hash move, captures, killers, history...)
-    SortMoves(board, moves, Hash::tt, m_heuristics, m_ply);
+    SortMoves(board, moves, hashMove, m_heuristics, m_ply);
 
     // --------- Move loop ---------
     int moveNumber = 0;
