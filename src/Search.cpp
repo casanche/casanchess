@@ -359,19 +359,22 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     int alphaOriginal = alpha; // For TT entry type calculation
     int ttEval = NO_EVAL;
     
-    TTEntry* ttEntry = Hash::tt.Probe(board.ZKey(), depth);
-    if(ttEntry && !isPV) {
-        D( m_debug.Increment("NegaMax: TT Hit") );
-
-        int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
+    TTEntry* ttEntry = Hash::tt.Probe(board.ZKey());
+    if(ttEntry) {
+        D( m_debug.Increment("NegaMax: TT: Hit") );
         ttEval = ttEntry->eval;
 
-        if( ttEntry->type == TTENTRY_TYPE::EXACT
-            || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-            || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
-        ) {
-            D( m_debug.Increment("NegaMax: TT Hit: Cut-Off") );
-            return score;
+        if(!isPV && ttEntry->depth >= depth) {
+            D( m_debug.Increment("NegaMax: TT: Higher Depth") );
+            int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
+
+            if( ttEntry->type == TTENTRY_TYPE::EXACT
+                || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+                || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
+            ) {
+                D( m_debug.Increment("NegaMax: TT: Cut-Off") );
+                return score;
+            }
         }
     }
 
@@ -663,19 +666,20 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     // Probe transposition table.
     // Only non-PV nodes: PV nodes require the most accurate score possible.
-    TTEntry* ttEntry = Hash::tt.Probe(board.ZKey(), 0);
+    TTEntry* ttEntry = Hash::tt.Probe(board.ZKey());
     if(ttEntry) {
-        D( m_debug.Increment("Quiescence: TT Hit: Exists") );
+        D( m_debug.Increment("Quiescence: TT: Hit") );
         hashMove = ttEntry->bestMove;
         ttEval = ttEntry->eval;
 
         if(!isPV) {
+            D( m_debug.Increment("Quiescence: TT: !isPV") );
             int score = Hash::tt.ScoreFromHash(ttEntry->score, m_ply);
             if( ttEntry->type == TTENTRY_TYPE::EXACT
                 || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
                 || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
             ) {
-                D( m_debug.Increment("Quiescence: TT Hit: Return score") );
+                D( m_debug.Increment("Quiescence: TT: Cut-Off") );
                 return score;
             }
         }
