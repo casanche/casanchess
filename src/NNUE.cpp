@@ -74,14 +74,14 @@ bool NNUE::Load(std::string filepath) {
 
 int NNUE::Evaluate(int color, int ply) const {
     //Layer 1
-    alignas(32) i16 outputLayer1[NNUE_SIZE * 2];
+    i16 outputLayer1[NNUE_SIZE * 2];
 
     ActivateReLU(m_accumulator[ply][color], outputLayer1, NNUE_SIZE);
     ActivateReLU(m_accumulator[ply][1-color], outputLayer1 + NNUE_SIZE, NNUE_SIZE);
 
     //Layers 2,3,4
-    alignas(32) i16 o2[ ARCH[L3][ROW] ];
-    alignas(32) i16 o3[ ARCH[L4][ROW] ];
+    i16 o2[ ARCH[L3][ROW] ];
+    i16 o3[ ARCH[L4][ROW] ];
     i32 o4[1];
 
     ComputeLayer<i16, true>(outputLayer1, o2, m_network.b2, m_network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
