@@ -35,11 +35,15 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     u64 index = zkey & m_mask;
     TTEntry* entry = &m_entries[index];
 
-    //Replacement scheme
-    const bool older = age != entry-> age;
-    const bool higherDepth = depth >= entry->depth;
+    // ----- Replacement scheme -----
 
-    const bool replace = older || higherDepth;
+    constexpr int AGING_DEPTH_PENALTY = 2;
+
+    const bool older = age != entry->age;
+    const int effectiveDepth = older ? (entry->depth - AGING_DEPTH_PENALTY)
+                                     : entry->depth;
+
+    const bool replace = (depth >= effectiveDepth);
     if(replace) {
         entry->zkey = UpperBits<u32>(zkey);
         entry->score = SafeCastInt16( ScoreToHash(score, ply) );
