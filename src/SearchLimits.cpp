@@ -75,12 +75,8 @@ void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits) {
     if(limits.depth)    { m_forcedDepth = limits.depth; return; }
     if(limits.moveTime) { m_forcedTime = limits.moveTime; return; }
     if(limits.nodes)    { m_forcedNodes = limits.nodes; return; }
-
+    
     // Time estimation in normal games
-    constexpr int ESTIMATED_MOVESTOGO = 20;
-    const int movesToGo = limits.movesToGo ? limits.movesToGo
-                                           : ESTIMATED_MOVESTOGO;
-
     int myTime   = (color == WHITE) ? limits.wtime : limits.btime;
     // int yourTime = (color == WHITE) ? limits.btime : limits.wtime;
     int myInc    = (color == WHITE) ? limits.winc  : limits.binc;
@@ -88,7 +84,14 @@ void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits) {
     // Move overhead to account for communication delays
     const int myTimeSafe = std::max(0, myTime - TIME_OVERHEAD);
 
-    m_allocatedTime = myTimeSafe / movesToGo + myInc;
+    constexpr int ESTIMATED_MOVESTOGO = 20;
+    const int movesToGo = limits.movesToGo ? limits.movesToGo
+                                           : ESTIMATED_MOVESTOGO;
+
+    m_allocatedTime = (myTimeSafe / movesToGo) + myInc;
+
+    // Safety net: don't use more than the remaining time
+    m_allocatedTime = std::min(m_allocatedTime, (i64)myTimeSafe);
 }
 
 void Limits::Infinite() {
