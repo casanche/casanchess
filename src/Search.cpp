@@ -45,7 +45,6 @@ using namespace Sorting;
 #include <algorithm> //max(), clamp()
 #include <cmath> //INFINITY
 #include <iomanip> //debug output
-#include <format>
 
 // Search parameters
 const int MAX_QS_PLIES = 128;  // Maximum depth limit for quiescence search
@@ -723,7 +722,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     assert(m_ply < MAX_PLY);
 
     D( m_debug.Increment("Quiescence: _: Hits"); );
-    D( if(m_plyqs <= 2 || m_plyqs % 5 == 0) m_debug.Increment("Quiescence: QPly " + std::format("{:03}", m_plyqs)) );
+    D( if(m_plyqs <= 2 || m_plyqs % 5 == 0) m_debug.Increment("Quiescence: QPly " + std::to_string(m_plyqs)) );
 
     m_nodes++;
     m_nodesTimeCheck++;
