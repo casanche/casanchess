@@ -562,7 +562,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             && move.MoveType() == CAPTURE
             && board.LastMove().MoveType() == CAPTURE
             && move.ToSq() == board.LastMove().ToSq()
-            && move.CapturedType() == board.LastMove().CapturedType()
         ) {
             D( m_debug.Increment("NegaMax: Extension: Recapture") );
             localExtension++;
