@@ -558,15 +558,15 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // ----- Recapture extension ------
         // Extend if the move is a recapture of the same piece type
-        if(!extension
-            && move.MoveType() == CAPTURE
-            && board.LastMove().MoveType() == CAPTURE
-            && move.ToSq() == board.LastMove().ToSq()
-            // && move.CapturedType() == board.LastMove().CapturedType()
-        ) {
-            D( m_debug.Increment("NegaMax: Extension: Recapture") );
-            localExtension++;
-        }
+        // if(!extension
+        //     && move.MoveType() == CAPTURE
+        //     && board.LastMove().MoveType() == CAPTURE
+        //     && move.ToSq() == board.LastMove().ToSq()
+        //     // && move.CapturedType() == board.LastMove().CapturedType()
+        // ) {
+        //     D( m_debug.Increment("NegaMax: Extension: Recapture") );
+        //     localExtension++;
+        // }
 
         // -------- Late Move Reductions ----------
         // Reduce depth of less-promising moves
