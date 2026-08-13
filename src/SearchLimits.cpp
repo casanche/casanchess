@@ -29,7 +29,7 @@ bool Limits::LimitsReached(u64 nodes) {
     // Time. Calculate every N nodes to avoid expensive time checks.
     if(nodes >= m_nextTimeCheck) {
         m_nextTimeCheck = nodes + TIMEOVER_CHECK_NODES;
-        i64 elapsedTime = UpdateElapsedTime();
+        i64 elapsedTime = UpdatedElapsedTime();
         if(elapsedTime >= m_allocatedTime || elapsedTime >= m_forcedTime) {
             Stop();
             return true;
@@ -39,7 +39,7 @@ bool Limits::LimitsReached(u64 nodes) {
     return false;
 }
 
-i64 Limits::UpdateElapsedTime() {
+i64 Limits::UpdatedElapsedTime() {
     m_elapsedTime = m_clock.Elapsed();
     return m_elapsedTime;
 }
@@ -116,9 +116,11 @@ void Limits::Apply_PonderHit() {
     m_limits.ponderhit = true;
 
     AllocateLimits(m_color, m_limits, m_movesSize);
-    m_allocatedTime /= 2;
 
-    RestartClock(); // without ResetSignals()
+    if(m_allocatedTime == INFINITE_I64) return;
+
+    // Extend allocated time
+    m_allocatedTime += UpdatedElapsedTime() / 2;
 }
 
 void Limits::RestartClock() {

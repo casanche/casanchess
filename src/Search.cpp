@@ -134,7 +134,7 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
         // Stop search if limits are reached within the loop
         if(m_limits.Stopped()) break;
 
-        i64 elapsedTime = m_limits.UpdateElapsedTime();
+        i64 elapsedTime = m_limits.UpdatedElapsedTime();
         Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::EXACT, m_pv.PVString());
 
         // Stop search if we used half of the allocated time, since
@@ -167,7 +167,7 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
         // Display lowerbound / upperbound info
         BOUND_TYPE bound = (score <= alpha) ? BOUND_TYPE::UPPER_BOUND
                                             : BOUND_TYPE::LOWER_BOUND;
-        i64 elapsedTime = m_limits.UpdateElapsedTime();
+        i64 elapsedTime = m_limits.UpdatedElapsedTime();
         Uci::Output(m_depth, m_selPly, score, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, m_pv.PVString());
 
         // Asymmetrical incremental aspiration
@@ -230,7 +230,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             P( "RootMax: " << move.Notation() );
 
         // Display the root move under analysis and update the counters
-        elapsedTime = m_limits.UpdateElapsedTime();
+        elapsedTime = m_limits.UpdatedElapsedTime();
         Uci::RootUpdate(m_depth, m_selPly, moveNumber, move.Notation(), m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits);
 
         board.MakeMove(move);
@@ -279,7 +279,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
             elapsedTime = m_limits.ElapsedTime();
             if(elapsedTime > UCI_OUTPUT_ROOTMAX_MINTIME) {
-                elapsedTime = m_limits.UpdateElapsedTime();
+                elapsedTime = m_limits.UpdatedElapsedTime();
                 Uci::Output(m_depth, m_selPly, score, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::LOWER_BOUND, m_pv.PVString());
             }
         }

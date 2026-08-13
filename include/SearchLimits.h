@@ -40,7 +40,7 @@ public:
     bool LimitsReached(u64 nodes);
 
     // Time management
-    i64 UpdateElapsedTime();
+    i64 UpdatedElapsedTime();
     uint CalculateNPS(u64 nodes) const;
 
     // UCI signals
