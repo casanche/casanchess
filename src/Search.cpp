@@ -20,11 +20,10 @@
 // - Extensions:
 //    - Check extension
 //    - One-reply extension
-//    - Recapture extension in PV nodes
+//    - Recapture extension
 //
 // - Reductions:
 //    - Late Move Reductions: reduce search depth for late non-promising moves
-//    - Razoring: reduce search depth for clearly losing positions
 //
 // - Heuristics:
 //    - History heuristics: reward successful moves in past positions
@@ -449,15 +448,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("NegaMax: Pruning: Reverse Futility - Depth " + std::to_string(depth)) );
             return staticEval;
         }
-    }
-
-    // --------- Razoring -------------
-    // Reduction in hopeless nodes (eval << alpha)
-    if(depth == 3 && eval + 1150 <= alpha && !isPV && !extension && Evaluation::AreHeavyPieces(board))
-    {
-        D( m_debug.Increment("NegaMax: Pruning: Razoring") );
-        D( m_debug.Increment("NegaMax: Pruning: Razoring - Depth " + std::to_string(depth)) );
-        depth--;
     }
 
     // --------- Null-move pruning -----------
