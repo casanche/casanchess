@@ -64,31 +64,31 @@ void Limits::ResetSignals() {
 // - depth: search for a fixed depth
 // - moveTime: search for a fixed time
 // - nodes: search for a fixed number of nodes
-void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits, size_t movesSize) {
-    m_limits = limits;
+void Limits::AllocateLimits(COLOR color, const UCI_Limits& uciLimits, size_t movesSize) {
+    m_uciLimits = uciLimits;
     m_color = color;
 
     // Default to infinite search
     Infinite();
 
     // Special search modes
-    if(limits.infinite) { return; }
-    if(limits.ponder)   { return; }
-    if(limits.depth)    { m_forcedDepth = limits.depth; return; }
-    if(limits.moveTime) { m_forcedTime = limits.moveTime; return; }
-    if(limits.nodes)    { m_forcedNodes = limits.nodes; return; }
+    if(uciLimits.infinite) { return; }
+    if(uciLimits.ponder)   { return; }
+    if(uciLimits.depth)    { m_forcedDepth = uciLimits.depth; return; }
+    if(uciLimits.moveTime) { m_forcedTime = uciLimits.moveTime; return; }
+    if(uciLimits.nodes)    { m_forcedNodes = uciLimits.nodes; return; }
     
     // Time estimation in normal games
-    int myTime   = (color == WHITE) ? limits.wtime : limits.btime;
-    // int yourTime = (color == WHITE) ? limits.btime : limits.wtime;
-    int myInc    = (color == WHITE) ? limits.winc  : limits.binc;
+    int myTime   = (color == WHITE) ? uciLimits.wtime : uciLimits.btime;
+    // int yourTime = (color == WHITE) ? uciLimits.btime : uciLimits.wtime;
+    int myInc    = (color == WHITE) ? uciLimits.winc  : uciLimits.binc;
 
     // Move overhead to account for communication delays
     const int myTimeSafe = std::max(0, myTime - TIME_OVERHEAD);
 
     constexpr int ESTIMATED_MOVESTOGO = 20;
-    const int movesToGo = limits.movesToGo ? limits.movesToGo
-                                           : ESTIMATED_MOVESTOGO;
+    const int movesToGo = uciLimits.movesToGo ? uciLimits.movesToGo
+                                               : ESTIMATED_MOVESTOGO;
 
     m_allocatedTime = (myTimeSafe / movesToGo) + myInc;
 
@@ -108,12 +108,12 @@ void Limits::Infinite() {
 }
 
 void Limits::Apply_PonderHit() {
-    assert(m_ponderhit && m_limits.ponder);
+    assert(m_ponderhit && m_uciLimits.ponder);
 
     m_ponderhit = false;
-    m_limits.ponder = false;
+    m_uciLimits.ponder = false;
 
-    AllocateLimits(m_color, m_limits, m_movesSize);
+    AllocateLimits(m_color, m_uciLimits, m_movesSize);
 
     if(m_allocatedTime == INFINITE_I64) return;
 

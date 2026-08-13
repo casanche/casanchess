@@ -56,7 +56,7 @@ private:
     // =============
     // == Methods ==
     // =============
-    void AllocateLimits(COLOR color, const UCI_Limits& limits, size_t movesSize);
+    void AllocateLimits(COLOR color, const UCI_Limits& uciLimits, size_t movesSize);
 
     void Infinite();
     
@@ -66,7 +66,7 @@ private:
     // ===============
     // == Variables ==
     // ===============
-    UCI_Limits m_limits;
+    UCI_Limits m_uciLimits;
 
     COLOR m_color;
 
