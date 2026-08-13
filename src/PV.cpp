@@ -28,8 +28,11 @@ void PV::Update(int ply, Move move) {
 }
 
 std::string PV::PonderString() const {
-    if(m_pvLength[0] > 1 && m_pvTable[0][1].MoveType() != NULLMOVE)
-        return m_pvTable[0][1].Notation();
+    if(m_pvLength[0] > 1) {
+        const std::string ponderString = m_pvTable[0][1].Notation();
+        if(ponderString != "0000")
+            return ponderString;
+    }
     return "";
 }
 
