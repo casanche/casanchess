@@ -4,12 +4,12 @@
 #include "MoveGenerator.h"
 
 #include <bit>
+#include <cassert>
 
 class Board;
 class TT;
 struct Heuristics;
 
-const int HEURISTICS_MAX_PLY = 128;
 const int MAX_BONUS = 400;
 constexpr int MAX_HISTORY_VALUE = std::bit_floor( (uint)INFINITE / MAX_BONUS );
 
@@ -28,21 +28,22 @@ public:
         }
     }
     void Update(const Move& killer, int ply) {
+        assert(ply >= 0 && ply < MAX_PLY);
         if(killer != m_killers[ply][0]) {
             m_killers[ply][1] = m_killers[ply][0];
             m_killers[ply][0] = killer;
         }
     }
     Move Primary(int ply) const {
-        assert(ply>=0);
+        assert(ply >= 0 && ply < MAX_PLY);
         return m_killers[ply][0];
     }
     Move Secondary(int ply) const {
-        assert(ply>=0);
+        assert(ply >= 0 && ply < MAX_PLY);
         return m_killers[ply][1];
     }
 private:
-    Move m_killers[HEURISTICS_MAX_PLY][2]; //[PLY][SLOT]
+    Move m_killers[MAX_PLY][2]; //[PLY][SLOT]
 };
 
 class HistoryHeuristics {
