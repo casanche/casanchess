@@ -1,4 +1,6 @@
 #include "Fen.h"
+
+#include "Attacks.h"
 #include "Board.h"
 #include "Utils.h"
 
@@ -70,7 +72,12 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     fenStream >> token;
     if(token != "-") {
         int square = board.SquareToIndex(token);
-        board.m_enPassantSquare = SquareBB(square);
+
+        // Is capture possible?
+        Bitboard pawns = board.Piece(board.ActivePlayer(), PAWN);
+        Bitboard epThreats = Attacks::AttacksPawns(board.InactivePlayer(), square);
+        if(epThreats & pawns)
+            board.m_enPassantSquare = SquareBB(square);
     }
 
     //50-move rule
