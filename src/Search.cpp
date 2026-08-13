@@ -146,6 +146,8 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
             D( m_debug.Print() );
     }
 
+    m_limits.WaitIfNecessary();
+
     Uci::BestMove(m_bestMove.Notation(), m_pv.PonderString());
 }
 

@@ -42,9 +42,10 @@ public:
     uint CalculateNPS(u64 nodes) const;
 
     // UCI signals
+    void PonderHit();
     void ResetSignals();
-    void PonderHit() { m_ponderhit = true; }
-    void Stop() { m_stop = true; }
+    void Stop();
+    void WaitIfNecessary();
 
     // Getters
     i64 AllocatedTime() const { return m_allocatedTime; }
@@ -87,4 +88,5 @@ private:
     // UCI signals
     std::atomic<bool> m_stop = false; // Flag to stop the search (time limit, user input, etc.)
     std::atomic<bool> m_ponderhit = false; // Flag to indicate that the ponder move was played
+    std::atomic<bool> m_wakeup = false; // Flag to wake up the search thread after a 'stop' or 'ponderhit' signal if needed
 };

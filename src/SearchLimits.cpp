@@ -48,9 +48,31 @@ uint Limits::CalculateNPS(u64 nodes) const {
     return static_cast<uint>(1000 * nodes / (m_elapsedTime+1));
 }
 
+void Limits::PonderHit() {
+    m_ponderhit = true;
+
+    m_wakeup = true;
+    m_wakeup.notify_all();
+}
+
 void Limits::ResetSignals() {
     m_stop = false;
     m_ponderhit = false;
+
+    m_wakeup = false;
+}
+
+void Limits::Stop() {
+    m_stop = true;
+
+    m_wakeup = true;
+    m_wakeup.notify_all();
+}
+
+void Limits::WaitIfNecessary() {
+    while(!m_stop && (m_uciLimits.infinite || m_uciLimits.ponder)) {
+        m_wakeup.wait(false);
+    }
 }
 
 // =============
