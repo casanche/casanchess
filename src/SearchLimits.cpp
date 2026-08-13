@@ -2,7 +2,7 @@
 
 namespace {
     constexpr int TIME_OVERHEAD = 50; //ms
-    constexpr int TIMEOVER_CHECK_NODES = 1024; // Check time every N nodes
+    constexpr int STOP_CHECK_NODES = 1024; // Check 'stop' conditions every N nodes
 }
 
 void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesSize) {
@@ -14,26 +14,28 @@ void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesS
 }
 
 bool Limits::LimitsReached(u64 nodes) {
-    // Sent by interface
-    if(m_stop)
-        return true;
-    if(m_ponderhit)
-        Apply_PonderHit();
-
     // Fixed nodes
     if(nodes >= m_forcedNodes) {
         Stop();
         return true;
     }
 
-    // Time. Calculate every N nodes to avoid expensive time checks.
-    if(nodes >= m_nextTimeCheck) {
-        m_nextTimeCheck = nodes + TIMEOVER_CHECK_NODES;
+    // Calculate expensive 'stop' conditions every N nodes
+    if(nodes >= m_nextStopCheck) {
+        // Signal checks sent by interface
+        if(m_stop)
+            return true;
+        if(m_ponderhit)
+            Apply_PonderHit();
+
+        // Time checks
         i64 elapsedTime = UpdatedElapsedTime();
         if(elapsedTime >= m_allocatedTime || elapsedTime >= m_forcedTime) {
             Stop();
             return true;
         }
+
+        m_nextStopCheck = nodes + STOP_CHECK_NODES;
     }
 
     return false;
@@ -145,7 +147,7 @@ void Limits::Apply_PonderHit() {
 
 void Limits::RestartClock() {
     m_elapsedTime = 0;
-    m_nextTimeCheck = TIMEOVER_CHECK_NODES;
+    m_nextStopCheck = STOP_CHECK_NODES;
 
     m_clock.Start();
 }

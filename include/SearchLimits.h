@@ -75,7 +75,7 @@ private:
     Utils::Clock m_clock;
     i64 m_elapsedTime = 0; // Time passed since the start of the search (ms)
     i64 m_allocatedTime = 0; // In normal timed games, estimation of the time to use within the search (ms)
-    u64 m_nextTimeCheck = 0; // Next node count to check time (to avoid expensive time checks every node)
+    u64 m_nextStopCheck = 0; // Next node count to check 'stop' conditions (to avoid expensive checks every node)
 
     // Fixed limits
     int m_forcedDepth = 0; // Fixed depth limit
