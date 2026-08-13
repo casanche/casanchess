@@ -108,12 +108,10 @@ void Limits::Infinite() {
 }
 
 void Limits::Apply_PonderHit() {
-    assert(m_limits.ponder && m_limits.ponderhit);
+    assert(m_ponderhit && m_limits.ponder);
 
     m_ponderhit = false;
-
     m_limits.ponder = false;
-    m_limits.ponderhit = true;
 
     AllocateLimits(m_color, m_limits, m_movesSize);
 

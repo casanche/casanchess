@@ -8,9 +8,7 @@
 // Search limits from UCI (input)
 struct UCI_Limits {
     bool infinite = false;
-
     bool ponder = false;
-    bool ponderhit = false;
 
     int depth = 0;
     int nodes = 0;
