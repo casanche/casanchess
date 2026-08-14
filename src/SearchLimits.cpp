@@ -1,8 +1,13 @@
 #include "SearchLimits.h"
 
+#include <algorithm>
+#include <cassert>
+#include <chrono>
+#include <thread>
+
 namespace {
     constexpr int TIME_OVERHEAD = 50; //ms
-    constexpr int TIMEOVER_CHECK_NODES = 1024; // Check time every N nodes
+    constexpr int TIMECHECK_NODES = 1024; // Check 'time' stop conditions every N nodes
 }
 
 void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesSize) {
@@ -14,11 +19,8 @@ void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesS
 }
 
 bool Limits::LimitsReached(u64 nodes) {
-    // Sent by interface
-    if(m_stop)
+    if(Stopped())
         return true;
-    if(m_ponderhit)
-        Apply_PonderHit();
 
     // Fixed nodes
     if(nodes >= m_forcedNodes) {
@@ -26,20 +28,26 @@ bool Limits::LimitsReached(u64 nodes) {
         return true;
     }
 
-    // Time. Calculate every N nodes to avoid expensive time checks.
-    if(nodes >= m_nextTimeCheck) {
-        m_nextTimeCheck = nodes + TIMEOVER_CHECK_NODES;
-        i64 elapsedTime = UpdateElapsedTime();
+    // Calculate expensive 'stop' conditions every N nodes
+    if(nodes >= m_timecheckNodes) {
+        // Time checks
+        i64 elapsedTime = UpdatedElapsedTime();
         if(elapsedTime >= m_allocatedTime || elapsedTime >= m_forcedTime) {
             Stop();
             return true;
         }
+
+        // Ponderhit check
+        if(PonderHitReceived())
+            Apply_PonderHit();
+
+        m_timecheckNodes = nodes + TIMECHECK_NODES;
     }
 
     return false;
 }
 
-i64 Limits::UpdateElapsedTime() {
+i64 Limits::UpdatedElapsedTime() {
     m_elapsedTime = m_clock.Elapsed();
     return m_elapsedTime;
 }
@@ -49,8 +57,14 @@ uint Limits::CalculateNPS(u64 nodes) const {
 }
 
 void Limits::ResetSignals() {
-    m_stop = false;
-    m_ponderhit = false;
+    m_stop.store(false, std::memory_order_relaxed);
+    m_ponderhit.store(false, std::memory_order_relaxed);
+}
+
+void Limits::WaitIfNecessary() {
+    while(!Stopped() && (m_uciLimits.infinite || (m_uciLimits.ponder && !PonderHitReceived()))) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
 }
 
 // =============
@@ -64,31 +78,31 @@ void Limits::ResetSignals() {
 // - depth: search for a fixed depth
 // - moveTime: search for a fixed time
 // - nodes: search for a fixed number of nodes
-void Limits::AllocateLimits(COLOR color, const UCI_Limits& limits, size_t movesSize) {
-    m_limits = limits;
+void Limits::AllocateLimits(COLOR color, const UCI_Limits& uciLimits, size_t movesSize) {
+    m_uciLimits = uciLimits;
     m_color = color;
 
     // Default to infinite search
     Infinite();
 
     // Special search modes
-    if(limits.infinite) { return; }
-    if(limits.ponder)   { return; }
-    if(limits.depth)    { m_forcedDepth = limits.depth; return; }
-    if(limits.moveTime) { m_forcedTime = limits.moveTime; return; }
-    if(limits.nodes)    { m_forcedNodes = limits.nodes; return; }
+    if(uciLimits.infinite) { return; }
+    if(uciLimits.ponder)   { return; }
+    if(uciLimits.depth)    { m_forcedDepth = uciLimits.depth; return; }
+    if(uciLimits.moveTime) { m_forcedTime = uciLimits.moveTime; return; }
+    if(uciLimits.nodes)    { m_forcedNodes = uciLimits.nodes; return; }
     
     // Time estimation in normal games
-    int myTime   = (color == WHITE) ? limits.wtime : limits.btime;
-    // int yourTime = (color == WHITE) ? limits.btime : limits.wtime;
-    int myInc    = (color == WHITE) ? limits.winc  : limits.binc;
+    int myTime   = (color == WHITE) ? uciLimits.wtime : uciLimits.btime;
+    // int yourTime = (color == WHITE) ? uciLimits.btime : uciLimits.wtime;
+    int myInc    = (color == WHITE) ? uciLimits.winc  : uciLimits.binc;
 
     // Move overhead to account for communication delays
     const int myTimeSafe = std::max(0, myTime - TIME_OVERHEAD);
 
     constexpr int ESTIMATED_MOVESTOGO = 20;
-    const int movesToGo = limits.movesToGo ? limits.movesToGo
-                                           : ESTIMATED_MOVESTOGO;
+    const int movesToGo = uciLimits.movesToGo ? uciLimits.movesToGo
+                                               : ESTIMATED_MOVESTOGO;
 
     m_allocatedTime = (myTimeSafe / movesToGo) + myInc;
 
@@ -108,22 +122,22 @@ void Limits::Infinite() {
 }
 
 void Limits::Apply_PonderHit() {
-    assert(m_limits.ponder && m_limits.ponderhit);
+    assert(PonderHitReceived() && m_uciLimits.ponder);
 
-    m_ponderhit = false;
+    m_ponderhit.store(false, std::memory_order_relaxed);
+    m_uciLimits.ponder = false;
 
-    m_limits.ponder = false;
-    m_limits.ponderhit = true;
+    AllocateLimits(m_color, m_uciLimits, m_movesSize);
 
-    AllocateLimits(m_color, m_limits, m_movesSize);
-    m_allocatedTime /= 2;
+    if(m_allocatedTime == INFINITE_I64) return;
 
-    RestartClock(); // without ResetSignals()
+    // Extend allocated time
+    m_allocatedTime += UpdatedElapsedTime() / 2;
 }
 
 void Limits::RestartClock() {
     m_elapsedTime = 0;
-    m_nextTimeCheck = TIMEOVER_CHECK_NODES;
+    m_timecheckNodes = TIMECHECK_NODES;
 
     m_clock.Start();
 }

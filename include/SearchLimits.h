@@ -8,9 +8,7 @@
 // Search limits from UCI (input)
 struct UCI_Limits {
     bool infinite = false;
-
     bool ponder = false;
-    bool ponderhit = false;
 
     int depth = 0;
     int nodes = 0;
@@ -40,25 +38,28 @@ public:
     bool LimitsReached(u64 nodes);
 
     // Time management
-    i64 UpdateElapsedTime();
+    i64 UpdatedElapsedTime();
     uint CalculateNPS(u64 nodes) const;
 
     // UCI signals
+    void PonderHit() { m_ponderhit.store(true, std::memory_order_relaxed); }
     void ResetSignals();
-    void PonderHit() { m_ponderhit = true; }
-    void Stop() { m_stop = true; }
+    void Stop() { m_stop.store(true, std::memory_order_relaxed); }
+    void WaitIfNecessary();
+
+    bool Stopped() const { return m_stop.load(std::memory_order_relaxed); }
+    bool PonderHitReceived() const { return m_ponderhit.load(std::memory_order_relaxed); }
 
     // Getters
     i64 AllocatedTime() const { return m_allocatedTime; }
     i64 ElapsedTime() const { return m_elapsedTime; }
     int MaxDepth() const { return m_forcedDepth; }
-    bool Stopped() const { return m_stop; }
     
 private:
     // =============
     // == Methods ==
     // =============
-    void AllocateLimits(COLOR color, const UCI_Limits& limits, size_t movesSize);
+    void AllocateLimits(COLOR color, const UCI_Limits& uciLimits, size_t movesSize);
 
     void Infinite();
     
@@ -68,7 +69,7 @@ private:
     // ===============
     // == Variables ==
     // ===============
-    UCI_Limits m_limits;
+    UCI_Limits m_uciLimits;
 
     COLOR m_color;
 
@@ -76,7 +77,7 @@ private:
     Utils::Clock m_clock;
     i64 m_elapsedTime = 0; // Time passed since the start of the search (ms)
     i64 m_allocatedTime = 0; // In normal timed games, estimation of the time to use within the search (ms)
-    u64 m_nextTimeCheck = 0; // Next node count to check time (to avoid expensive time checks every node)
+    u64 m_timecheckNodes = 0; // Next node count to check 'time' stop conditions (to avoid expensive checks every node)
 
     // Fixed limits
     int m_forcedDepth = 0; // Fixed depth limit
