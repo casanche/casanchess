@@ -44,13 +44,18 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
 
     const bool replace = older || higherDepth;
     if(replace) {
+        const bool zkeyMatch = (UpperBits<u32>(zkey) == entry->zkey);
+    
         entry->zkey = UpperBits<u32>(zkey);
         entry->score = SafeCastInt16( ScoreToHash(score, ply) );
         entry->eval = SafeCastInt16(eval);
         entry->depth = SafeCastU8(depth);
         entry->type = type;
         entry->age = ttAge;
-        entry->bestMove = bestMove;
+
+        // Do not overwrite a valid bestMove with a null move for the same position
+        if(bestMove.MoveType() != MOVE_TYPE::NULLMOVE || !zkeyMatch)
+            entry->bestMove = bestMove;
     }
 }
 
