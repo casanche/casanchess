@@ -42,16 +42,18 @@ public:
     uint CalculateNPS(u64 nodes) const;
 
     // UCI signals
-    void PonderHit();
+    void PonderHit() { m_ponderhit.store(true, std::memory_order_relaxed); }
     void ResetSignals();
-    void Stop();
+    void Stop() { m_stop.store(true, std::memory_order_relaxed); }
     void WaitIfNecessary();
+
+    bool Stopped() const { return m_stop.load(std::memory_order_relaxed); }
+    bool PonderHitReceived() const { return m_ponderhit.load(std::memory_order_relaxed); }
 
     // Getters
     i64 AllocatedTime() const { return m_allocatedTime; }
     i64 ElapsedTime() const { return m_elapsedTime; }
     int MaxDepth() const { return m_forcedDepth; }
-    bool Stopped() const { return m_stop; }
     
 private:
     // =============
@@ -75,7 +77,7 @@ private:
     Utils::Clock m_clock;
     i64 m_elapsedTime = 0; // Time passed since the start of the search (ms)
     i64 m_allocatedTime = 0; // In normal timed games, estimation of the time to use within the search (ms)
-    u64 m_nextStopCheck = 0; // Next node count to check 'stop' conditions (to avoid expensive checks every node)
+    u64 m_timecheckNodes = 0; // Next node count to check 'time' stop conditions (to avoid expensive checks every node)
 
     // Fixed limits
     int m_forcedDepth = 0; // Fixed depth limit
@@ -88,5 +90,4 @@ private:
     // UCI signals
     std::atomic<bool> m_stop = false; // Flag to stop the search (time limit, user input, etc.)
     std::atomic<bool> m_ponderhit = false; // Flag to indicate that the ponder move was played
-    std::atomic<bool> m_wakeup = false; // Flag to wake up the search thread after a 'stop' or 'ponderhit' signal if needed
 };

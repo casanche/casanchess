@@ -1,8 +1,13 @@
 #include "SearchLimits.h"
 
+#include <algorithm>
+#include <cassert>
+#include <chrono>
+#include <thread>
+
 namespace {
     constexpr int TIME_OVERHEAD = 50; //ms
-    constexpr int STOP_CHECK_NODES = 1024; // Check 'stop' conditions every N nodes
+    constexpr int TIMECHECK_NODES = 1024; // Check 'time' stop conditions every N nodes
 }
 
 void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesSize) {
@@ -14,6 +19,9 @@ void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesS
 }
 
 bool Limits::LimitsReached(u64 nodes) {
+    if(Stopped())
+        return true;
+
     // Fixed nodes
     if(nodes >= m_forcedNodes) {
         Stop();
@@ -21,13 +29,7 @@ bool Limits::LimitsReached(u64 nodes) {
     }
 
     // Calculate expensive 'stop' conditions every N nodes
-    if(nodes >= m_nextStopCheck) {
-        // Signal checks sent by interface
-        if(m_stop)
-            return true;
-        if(m_ponderhit)
-            Apply_PonderHit();
-
+    if(nodes >= m_timecheckNodes) {
         // Time checks
         i64 elapsedTime = UpdatedElapsedTime();
         if(elapsedTime >= m_allocatedTime || elapsedTime >= m_forcedTime) {
@@ -35,7 +37,11 @@ bool Limits::LimitsReached(u64 nodes) {
             return true;
         }
 
-        m_nextStopCheck = nodes + STOP_CHECK_NODES;
+        // Ponderhit check
+        if(PonderHitReceived())
+            Apply_PonderHit();
+
+        m_timecheckNodes = nodes + TIMECHECK_NODES;
     }
 
     return false;
@@ -50,30 +56,14 @@ uint Limits::CalculateNPS(u64 nodes) const {
     return static_cast<uint>(1000 * nodes / (m_elapsedTime+1));
 }
 
-void Limits::PonderHit() {
-    m_ponderhit = true;
-
-    m_wakeup = true;
-    m_wakeup.notify_all();
-}
-
 void Limits::ResetSignals() {
-    m_stop = false;
-    m_ponderhit = false;
-
-    m_wakeup = false;
-}
-
-void Limits::Stop() {
-    m_stop = true;
-
-    m_wakeup = true;
-    m_wakeup.notify_all();
+    m_stop.store(false, std::memory_order_relaxed);
+    m_ponderhit.store(false, std::memory_order_relaxed);
 }
 
 void Limits::WaitIfNecessary() {
-    while(!m_stop && (m_uciLimits.infinite || m_uciLimits.ponder)) {
-        m_wakeup.wait(false);
+    while(!Stopped() && (m_uciLimits.infinite || (m_uciLimits.ponder && !PonderHitReceived()))) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
@@ -132,9 +122,9 @@ void Limits::Infinite() {
 }
 
 void Limits::Apply_PonderHit() {
-    assert(m_ponderhit && m_uciLimits.ponder);
+    assert(PonderHitReceived() && m_uciLimits.ponder);
 
-    m_ponderhit = false;
+    m_ponderhit.store(false, std::memory_order_relaxed);
     m_uciLimits.ponder = false;
 
     AllocateLimits(m_color, m_uciLimits, m_movesSize);
@@ -147,7 +137,7 @@ void Limits::Apply_PonderHit() {
 
 void Limits::RestartClock() {
     m_elapsedTime = 0;
-    m_nextStopCheck = STOP_CHECK_NODES;
+    m_timecheckNodes = TIMECHECK_NODES;
 
     m_clock.Start();
 }
