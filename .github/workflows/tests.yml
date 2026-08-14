@@ -28,6 +28,10 @@ jobs:
           - os: windows-2025
             build_type: Release
             compiler: g++
+          # RELWITHDEBINFO - Windows
+          - os: windows-2025
+            build_type: RelWithDebInfo
+            compiler: g++
           # DEBUG - Windows
           - os: windows-2025
             build_type: Debug
