@@ -35,8 +35,11 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     u64 index = zkey & m_mask;
     TTEntry* entry = &m_entries[index];
 
+    // Age bitfield protection
+    const u8 ttAge = age & 0x3F;
+
     //Replacement scheme
-    const bool older = age != entry-> age;
+    const bool older = ttAge != entry-> age;
     const bool higherDepth = depth >= entry->depth;
 
     const bool replace = older || higherDepth;
@@ -46,7 +49,7 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
         entry->eval = SafeCastInt16(eval);
         entry->depth = SafeCastU8(depth);
         entry->type = type;
-        entry->age = age;
+        entry->age = ttAge;
         entry->bestMove = bestMove;
     }
 }
