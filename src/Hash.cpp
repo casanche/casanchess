@@ -35,19 +35,27 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     u64 index = zkey & m_mask;
     TTEntry* entry = &m_entries[index];
 
+    // Age bitfield protection
+    const u8 ttAge = age & 0x3F;
+
     //Replacement scheme
-    const bool older = age != entry-> age;
+    const bool older = ttAge != entry-> age;
     const bool higherDepth = depth >= entry->depth;
 
     const bool replace = older || higherDepth;
     if(replace) {
+        const bool zkeyMatch = (UpperBits<u32>(zkey) == entry->zkey);
+    
         entry->zkey = UpperBits<u32>(zkey);
         entry->score = SafeCastInt16( ScoreToHash(score, ply) );
         entry->eval = SafeCastInt16(eval);
         entry->depth = SafeCastU8(depth);
         entry->type = type;
-        entry->age = age;
-        entry->bestMove = bestMove;
+        entry->age = ttAge;
+
+        // Do not overwrite a valid bestMove with a null move for the same position
+        if(bestMove.MoveType() != MOVE_TYPE::NULLMOVE || !zkeyMatch)
+            entry->bestMove = bestMove;
     }
 }
 
