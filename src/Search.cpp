@@ -423,7 +423,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Static Evaluation ---------
     // Used in pruning heuristics
-    int eval = 0;
+    int eval = NO_EVAL;
     if(!inCheck) {
         D( m_debug.Increment("NegaMax: Evaluation: 1: Enter") );
         if(ttEval != NO_EVAL) {
