@@ -81,8 +81,9 @@ void GenSFen::Games(std::string filename) {
 
     BookPositions bookPositions = ReadBook(BOOK_FILE);
 
+    TT tt;
+    Search search(tt);
     Board board;
-    Search search;
     State state;
 
     const int maxGames = INFINITE;
@@ -132,8 +133,9 @@ void GenSFen::Random(std::string filename) {
     std::ofstream outputFile;
     outputFile.open(filename);
 
+    TT tt;
+    Search search(tt);
     Board board;
-    Search search;
     State state;
 
     const int maxGames = INFINITE;
@@ -181,8 +183,9 @@ void GenSFen::RandomBenchmark(int maxGames) {
     int64_t time_search = 0;
     int passed = 0;
 
+    TT tt;
+    Search search(tt);
     Board board;
-    Search search;
     UCI_Limits limits = UCI_Limits::FixDepth(7);
 
     for(int n_game = 1; n_game <= maxGames; n_game++) {
@@ -219,7 +222,8 @@ void GenSFen::RandomBenchmark(int maxGames) {
 }
 
 int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
-    Search search_depth1;
+    TT tt;
+    Search search_depth1(tt);
 
     bool validScore = false;
     int tries = 0;

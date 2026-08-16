@@ -5,13 +5,16 @@
 
 #include <iostream>
 
+const int fixedNodes = 250000;
 const std::string prefix = ">";
 
-Interface::Interface() {
+Interface::Interface() : m_tt(), m_search(m_tt), m_board() {
     NewGame();
 }
 
 void Interface::NewGame() {
+    m_tt.Clear();
+
     m_board.Init();
 }
 
@@ -64,10 +67,8 @@ void Interface::Start(std::string fenString) {
 
         //Think and make a move
         else if(input == "think" || input == "t") {
-            Search search;
-
-            search.IterativeDeepening(m_board, UCI_Limits::FixDepth(11));
-            search.MakeMove(m_board);
+            m_search.IterativeDeepening(m_board, UCI_Limits::FixNodes(fixedNodes));
+            m_search.MakeMove(m_board);
         }
 
         //Show the list of moves
@@ -90,5 +91,5 @@ void Interface::Start(std::string fenString) {
 
 void Interface::PrintWelcome() {
     P(" CASANCHESS ");
-    P(" Author: Carlos Sánchez Mayordomo ");
+    P(" Author: Carlos Sanchez Mayordomo ");
 }

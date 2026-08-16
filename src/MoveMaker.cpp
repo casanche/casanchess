@@ -1,6 +1,6 @@
 #include "MoveMaker.h"
 #include "Board.h"
-#include "NNUE.h"
+#include "NNUE_Architecture.h"
 #include "Uci.h"
 
 void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {    
@@ -86,7 +86,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     //NNUE update
     if(update_nnue && !UCI_CLASSICAL_EVAL) {
         // Copy Accumulator from previous ply
-        nnue.CopyAccumulator(ply-1, ply);
+        board.m_nnue.CopyAccumulator(ply-1, ply);
 
         bool isKing = (pieceType == KING);
         bool bucketChanged = false;
@@ -99,15 +99,15 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
 
         // Full update
         if( move.IsPromotion() || moveType == ENPASSANT || moveType == CASTLING || (isKing && bucketChanged) ) {
-            nnue.Inputs_FullUpdate(ply);
+            board.m_nnue.Inputs_FullUpdate(ply);
         }
         // Incremental update
         else {
             if(!isKing)
-                nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq, ply);
+                board.m_nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq, ply);
 
             if(moveType == CAPTURE) {
-                nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq, ply);
+                board.m_nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq, ply);
             }
         }
     }
@@ -205,7 +205,7 @@ void MoveMaker::MakeNull(Board& board) {
 
     // Copy the NNUE accumulator from the previous ply
     if(!UCI_CLASSICAL_EVAL) {
-        nnue.CopyAccumulator(ply-1, ply);
+        board.m_nnue.CopyAccumulator(ply-1, ply);
     }
 
     //Reset en-passant square

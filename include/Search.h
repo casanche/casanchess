@@ -18,7 +18,12 @@ using BOUND_TYPE = TTENTRY_TYPE;
 
 class Search {
 public:
-    Search();
+    Search(TT& tt);
+
+    // Copy forbidden
+    Search(const Search&) = delete;
+    Search& operator=(const Search&) = delete;
+
     void ClearSearch(bool fullSearchClearFlag);
 
     // Start search
@@ -71,6 +76,10 @@ private:
 
     // Limits
     Limits m_limits;
+
+    // Hash tables
+    TT& m_tt;
+    EvalCache m_evalCache;
 
     // Heuristics
     Heuristics m_heuristics; // Heuristics for move ordering (history, killers)

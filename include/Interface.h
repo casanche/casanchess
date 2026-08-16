@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Board.h"
+#include "Hash.h"
+#include "Search.h"
 
 #include <string>
 
@@ -12,5 +14,8 @@ public:
     void Start(std::string fenString = "");
 private:
     void PrintWelcome();
+
+    TT m_tt;
+    Search m_search;
     Board m_board;
 };

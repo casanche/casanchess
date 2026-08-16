@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Constants.h"
+#include "NNUE.h"
 #include "ZobristKeys.h"
 
 #include "Fen.h"
@@ -33,7 +34,6 @@ public:
     
     //Print, Debug
     void Print(bool bits = false) const;
-    void ShowHashMoves();
     void ShowHistory();
     void ShowMoves();
 
@@ -54,6 +54,9 @@ public:
 
     // Static Exchange Evaluation
     int SEE(Move move) const;
+
+    // NNUE
+    int NNUE_Evaluate() const { return m_nnue.Evaluate(m_activePlayer, m_ply); }
 
     // Helper methods
     Bitboard AttackersTo(COLOR color, int square, Bitboard blockers) const;
@@ -113,6 +116,9 @@ private:
     //History
     uint m_initialPly;
     BoardHistory m_history[MAX_PLY_HISTORY];
+
+    //NNUE
+    NNUE m_nnue;
 
     friend class Fen;
     friend class MoveMaker;

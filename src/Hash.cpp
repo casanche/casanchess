@@ -132,7 +132,7 @@ EvalCache::EvalCache() {
 }
 
 void EvalCache::Store(u64 zkey, int eval) {
-    assert(abs(eval) < MATESCORE_MAX);
+    assert(abs(eval) < WINSCORE);
 
     u64 index = zkey & m_mask;
     EvalEntry& entry = m_evalEntries[index];

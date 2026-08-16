@@ -23,19 +23,25 @@ public:
     void Launch();
 
     // Search Outputs
-    static void Output(int depth, int seldepth, int score, u64 nodes, i64 time, uint nps, int tbHits, BOUND_TYPE bound, const std::string& PV);
+    static void Output(int depth, int seldepth, int score, u64 nodes, i64 time, uint nps, int tbHits, BOUND_TYPE bound, const std::string& PV, const TT& tt);
     static void RootUpdate(int depth, int seldepth, int currMoveNumber, const std::string& currMove, u64 nodes, i64 time, uint nps, int tbHits);
     static void BestMove(const std::string& bestMove, const std::string& ponderMove);
-
+    
 private:
     void Go(std::istringstream &stream);
     void Position(std::istringstream &stream);
     void SetOption(std::istringstream &stream);
+    
     void StartSearch();
+
+    void ShowHashMoves();
     void StopAndJoin();
 
-    Board m_board;
-    Search m_search;
     UCI_Limits m_limits;
+    
+    TT m_tt;
+    Search m_search;
+    Board m_board;
+
     std::thread m_searchThread;
 };
