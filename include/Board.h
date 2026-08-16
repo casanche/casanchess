@@ -107,7 +107,7 @@ private:
     ZobristKey m_pawnKey;
 
     //Pieces
-    Bitboard m_pieces[2][8]; //[COLOR][PIECE_TYPE]
+    PieceBitboards m_pieces;
     Bitboard m_allpieces;
 
     //Helpers

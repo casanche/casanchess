@@ -3,6 +3,9 @@
 #include "NNUE_Architecture.h"
 
 #include <string>
+#include <memory>
+
+using PieceBitboards = Bitboard[2][8]; //[COLOR][PIECE_TYPE]
 
 struct SharedNetwork {
     // The actual network (from the binary file)
@@ -15,18 +18,24 @@ struct SharedNetwork {
     bool Load(const std::string& path);
 };
 
+struct NNUE_State {
+    alignas(32) i16 accumulator[MAX_PLY_HISTORY][2][NNUE_SIZE]; // [PLY][COLOR][NNUE_SIZE]
+};
+
 class NNUE {
 public:
     NNUE();
 
+    NNUE(const NNUE& other);
+    NNUE& operator=(const NNUE& other);
+    ~NNUE() = default;
+
     int Evaluate(int color, int ply) const;
 
-    void SetPieces(int color, u64& pieces);
-
-    void Inputs_FullUpdate(int ply);
-    void Inputs_AddPiece(int color, int pieceType, int square, int ply);
-    void Inputs_RemovePiece(int color, int pieceType, int square, int ply);
-    void Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int ply);
+    void Inputs_FullUpdate(int ply, const PieceBitboards pieces);
+    void Inputs_AddPiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b);
+    void Inputs_RemovePiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b);
+    void Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int ply, int kingSquare_w, int kingSquare_b);
 
     void CopyAccumulator(int fromPly, int toPly);
     
@@ -43,9 +52,9 @@ private:
                       int dimInput, int dimOutput) const;
 
 private:
+    // Global
     inline static SharedNetwork s_shared;
 
-    //Local state
-    Bitboard* m_pieces[2];
-    alignas(32) i16 m_accumulator[MAX_PLY_HISTORY][2][NNUE_SIZE]; // [PLY][COLOR][NNUE_SIZE]
+    // Local
+    std::unique_ptr<NNUE_State> m_state = std::make_unique<NNUE_State>();
 };

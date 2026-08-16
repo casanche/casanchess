@@ -99,15 +99,18 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
 
         // Full update
         if( move.IsPromotion() || moveType == ENPASSANT || moveType == CASTLING || (isKing && bucketChanged) ) {
-            board.m_nnue.Inputs_FullUpdate(ply);
+            board.m_nnue.Inputs_FullUpdate(ply, board.m_pieces);
         }
         // Incremental update
         else {
+            int kingSquare_w = BitscanForward(board.m_pieces[WHITE][KING]);
+            int kingSquare_b = BitscanForward(board.m_pieces[BLACK][KING]);
+
             if(!isKing)
-                board.m_nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq, ply);
+                board.m_nnue.Inputs_MovePiece(color, (pieceType-1), fromSq, toSq, ply, kingSquare_w, kingSquare_b);
 
             if(moveType == CAPTURE) {
-                board.m_nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq, ply);
+                board.m_nnue.Inputs_RemovePiece((1-color), (move.CapturedType()-1), toSq, ply, kingSquare_w, kingSquare_b);
             }
         }
     }

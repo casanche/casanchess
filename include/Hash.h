@@ -120,5 +120,6 @@ namespace Hash{
 // ======================
 
 namespace Hash {
+    inline EvalCache evalCache;
     inline PawnHash pawnHash;
 }

@@ -442,9 +442,6 @@ void Board::InitStateAndHistory() {
 
     m_checkCalculated = false;
 
-    if(!UCI_CLASSICAL_EVAL) {
-        m_nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]);
-        m_nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
-        m_nnue.Inputs_FullUpdate(m_ply);
-    }
+    if(!UCI_CLASSICAL_EVAL)
+        m_nnue.Inputs_FullUpdate(m_ply, m_pieces);
 }
