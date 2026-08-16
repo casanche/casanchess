@@ -40,6 +40,7 @@ public:
     // Fen
     void SetFen(std::string fenString) { Fen::SetPosition(*this, fenString); }
     std::string SetFenRandom() { return Fen::SetRandomPosition(*this); }
+    std::string GetFen() const { return Fen::GetFen(*this); }
     std::string GetSimplifiedFen() const { return Fen::GetSimplifiedFen(*this); }
 
     // MoveMaker
