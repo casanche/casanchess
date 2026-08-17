@@ -28,6 +28,7 @@ class Board {
 public:
     Board();
     void Init();
+    void InitStateAndHistory();
     
     u64 Perft(int depth);
     void Divide(int depth);
@@ -91,7 +92,6 @@ private:
     void ClearBits();
     void UpdateBitboards();
     void UpdateKingAttackers(COLOR color);
-    void InitStateAndHistory();
 
     //Static Exchange Evaluation
     Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) const;

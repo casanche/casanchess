@@ -339,6 +339,10 @@ void Uci::SetOption(std::istringstream &stream) {
                 path.pop_back();
 
             NNUE::Load(path);
+
+            m_tt.Clear();
+            m_search.ClearSearch(true);
+            m_board.Init();
         }
         else if (token == "SyzygyPath") {
             stream >> token;
