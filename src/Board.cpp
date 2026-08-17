@@ -117,19 +117,6 @@ void Board::Print(bool bits) const {
     std::cout << "FEN (simplified): " << GetSimplifiedFen() << std::endl;
 }
 
-void Board::ShowHashMoves() {
-    MoveList moves = MoveGenerator::GenerateMoves(*this);
-
-    for(auto move : moves)  {
-        MakeMove(move);
-        TTEntry* ttEntry = Hash::tt.Probe(ZKey());
-        if(ttEntry) {
-            P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
-        }
-        TakeMove(move);
-    }
-}
-
 void Board::ShowHistory() {
     for(uint i = m_initialPly + 1; i <= m_ply; i++) {
         std::cout << i << ". " << m_history[i].move.Notation() << " ";
@@ -455,9 +442,6 @@ void Board::InitStateAndHistory() {
 
     m_checkCalculated = false;
 
-    if(!UCI_CLASSICAL_EVAL) {
-        nnue.SetPieces(WHITE, m_pieces[WHITE][NO_PIECE]);
-        nnue.SetPieces(BLACK, m_pieces[BLACK][NO_PIECE]);
-        nnue.Inputs_FullUpdate(m_ply);
-    }
+    if(!UCI_CLASSICAL_EVAL)
+        m_nnue.Inputs_FullUpdate(m_ply, m_pieces);
 }

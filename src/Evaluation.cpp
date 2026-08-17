@@ -526,8 +526,7 @@ int Evaluation::Evaluate(const Board& board) {
     if(UCI_CLASSICAL_EVAL) {
         eval = ClassicalEvaluation(board);
     } else {
-        int color = board.ActivePlayer();
-        eval = nnue.Evaluate(color, board.Ply());
+        eval = board.NNUE_Evaluate();
     }
 
     return eval;

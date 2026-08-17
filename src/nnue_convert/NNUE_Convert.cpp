@@ -1,4 +1,4 @@
-#include "NNUE.h"
+#include "NNUE_Architecture.h"
 
 #include <algorithm>
 #include <cmath>

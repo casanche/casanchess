@@ -23,7 +23,7 @@ namespace TestCommon {
         Attacks::Init();
         Evaluation::Init(); //after Attacks
         ZobristKeys::Init();
-        nnue.Load();
+        NNUE::Load();
     }
 
     class CoutHelper {

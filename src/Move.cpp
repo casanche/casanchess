@@ -81,7 +81,7 @@ std::string Move::DescriptiveNotation() const {
     return IndexToNotation(data.fromSq) + IndexToNotation(data.toSq) + promotionSuffix;
 }
 
-std::string Move::IndexToNotation(int index) const {
+std::string Move::IndexToNotation(int index) {
     char file = FILES_NOTATION[index % 8];
     char rank = RANKS_NOTATION[index / 8];
     return std::string({file, rank});

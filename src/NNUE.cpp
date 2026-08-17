@@ -39,76 +39,94 @@ namespace {
    constexpr int PIECE_INDEX_MULTIPLIER = 64;
 }
 
-NNUE::NNUE() {
-    m_isLoaded = false;
-    m_filepath = "network-20260806.nnue";
+// =========================
+// ===== SharedNetwork =====
+// =========================
 
-    std::memset(m_accumulator, 0, sizeof(m_accumulator));
-}
+bool SharedNetwork::Load(const std::string& path) {
+    if(!path.empty())
+        filepath = path;
 
-bool NNUE::Load(std::string filepath) {
-    if(!filepath.empty()) {
-        m_filepath = filepath;
-    }
-
-    std::ifstream file(m_filepath, std::ios::binary);
+    std::ifstream file(filepath, std::ios::binary);
 
     if(!file.is_open()) {
-        std::cerr << "info string ERROR: NNUE file not found: " << m_filepath << std::endl;
-        m_isLoaded = false;
+        std::cerr << "info string ERROR: NNUE file not found: " << filepath << std::endl;
+        isLoaded = false;
         return false;
     }
 
-    file.read(reinterpret_cast<char*>(&m_network), sizeof(Network));
+    file.read(reinterpret_cast<char*>(&network), sizeof(Network));
 
     if(file.gcount() == sizeof(Network)) {
-        std::cout << "info string NNUE loaded: " << m_filepath << std::endl;
-        m_isLoaded = true;
+        std::cout << "info string NNUE loaded: " << filepath << std::endl;
+        isLoaded = true;
     } else {
-        std::cout << "info string ERROR: NNUE file size mismatch or corrupted: " << m_filepath << std::endl;
-        m_isLoaded = false;
+        std::cout << "info string ERROR: NNUE file size mismatch or corrupted: " << filepath << std::endl;
+        isLoaded = false;
     }
 
-    return m_isLoaded;
+    return isLoaded;
+}
+
+// ================
+// ===== NNUE =====
+// ================
+
+NNUE::NNUE() {
+    std::memset(m_state->accumulator, 0, sizeof(m_state->accumulator));
+}
+
+// Deep copy
+NNUE::NNUE(const NNUE& other) {
+    std::memcpy(m_state->accumulator, other.m_state->accumulator, sizeof(m_state->accumulator));
+}
+
+// Deep assignment
+NNUE& NNUE::operator=(const NNUE& other) {
+    if(this != &other) {
+        if(!m_state)
+            m_state = std::make_unique<NNUE_State>();
+        std::memcpy(m_state->accumulator, other.m_state->accumulator, sizeof(m_state->accumulator));
+    }
+    return *this;
 }
 
 int NNUE::Evaluate(int color, int ply) const {
     //Layer 1
     i16 outputLayer1[NNUE_SIZE * 2];
 
-    ActivateReLU(m_accumulator[ply][color], outputLayer1, NNUE_SIZE);
-    ActivateReLU(m_accumulator[ply][1-color], outputLayer1 + NNUE_SIZE, NNUE_SIZE);
+    ActivateReLU(m_state->accumulator[ply][color], outputLayer1, NNUE_SIZE);
+    ActivateReLU(m_state->accumulator[ply][1-color], outputLayer1 + NNUE_SIZE, NNUE_SIZE);
 
     //Layers 2,3,4
     i16 o2[ ARCH[L3][ROW] ];
     i16 o3[ ARCH[L4][ROW] ];
     i32 o4[1];
 
-    ComputeLayer<i16, true>(outputLayer1, o2, m_network.b2, m_network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
-    ComputeLayer<i16, true>(o2, o3, m_network.b3, m_network.w3, ARCH[L3][ROW], ARCH[L3][COL]);
-    ComputeLayer<i32, false>(o3, o4, m_network.b4, m_network.w4, ARCH[L4][ROW], ARCH[L4][COL]);
+    ComputeLayer<i16, true>(outputLayer1, o2, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
+    ComputeLayer<i16, true>(o2, o3, s_shared.network.b3, s_shared.network.w3, ARCH[L3][ROW], ARCH[L3][COL]);
+    ComputeLayer<i32, false>(o3, o4, s_shared.network.b4, s_shared.network.w4, ARCH[L4][ROW], ARCH[L4][COL]);
 
     return (o4[0] * 100) / NNUEConstants::QUANT_FACTOR_B;
 }
 
-void NNUE::SetPieces(int color, u64& pieces) {
-    m_pieces[color] = &pieces;
-}
-
-void NNUE::Inputs_FullUpdate(int ply) {
-    i16* acc_w = m_accumulator[ply][0];
-    i16* acc_b = m_accumulator[ply][1];
+void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {
+    i16* acc_w = m_state->accumulator[ply][0];
+    i16* acc_b = m_state->accumulator[ply][1];
 
     for(int i=0; i < NNUE_SIZE; i++) {
-        acc_w[i] = m_network.b1[i];
-        acc_b[i] = m_network.b1[i];
+        acc_w[i] = s_shared.network.b1[i];
+        acc_b[i] = s_shared.network.b1[i];
     }
+
+    int kingSquare_w = BitscanForward(pieces[WHITE][KING]);
+    int kingSquare_b = BitscanForward(pieces[BLACK][KING]);
 
     for(int color = WHITE; color <= BLACK; color++) {
         for(int pieceType = PAWN; pieceType <= QUEEN; pieceType++) {
-            Bitboard bitboard = m_pieces[color][pieceType];
+            Bitboard bitboard = pieces[color][pieceType];
             for(int square : BitboardIterator(bitboard)) {
-                Inputs_AddPiece(color, pieceType-1, square, ply);
+                Inputs_AddPiece(color, pieceType-1, square, ply, kingSquare_w, kingSquare_b);
             }
         }
     }
@@ -123,9 +141,8 @@ namespace {
     }
 }
 
-void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply) {
-    const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
-    const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
+void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b) {
+    kingSquare_b ^= NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int square_w = square;
     const int square_b = square ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
@@ -136,11 +153,11 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply) {
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
 
-    i16* acc_w = m_accumulator[ply][0];
-    i16* acc_b = m_accumulator[ply][1];
+    i16* acc_w = m_state->accumulator[ply][0];
+    i16* acc_b = m_state->accumulator[ply][1];
 
-    const i16* weights_w = &m_network.w1[NNUE_SIZE * feature_w];
-    const i16* weights_b = &m_network.w1[NNUE_SIZE * feature_b];
+    const i16* weights_w = &s_shared.network.w1[NNUE_SIZE * feature_w];
+    const i16* weights_b = &s_shared.network.w1[NNUE_SIZE * feature_b];
 
     for(int i = 0; i < NNUE_SIZE; i++) {
         acc_w[i] += weights_w[i];
@@ -148,9 +165,8 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply) {
     }
 }
 
-void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply) {
-    const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
-    const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
+void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b) {
+    kingSquare_b ^= NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int square_w = square;
 	const int square_b = square ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
@@ -161,11 +177,11 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply) {
     assert(feature_w <= NNUE_FEATURES);
     assert(feature_b <= NNUE_FEATURES);
 
-    i16* acc_w = m_accumulator[ply][0];
-    i16* acc_b = m_accumulator[ply][1];
+    i16* acc_w = m_state->accumulator[ply][0];
+    i16* acc_b = m_state->accumulator[ply][1];
 
-    const i16* weights_w = &m_network.w1[NNUE_SIZE * feature_w];
-    const i16* weights_b = &m_network.w1[NNUE_SIZE * feature_b];
+    const i16* weights_w = &s_shared.network.w1[NNUE_SIZE * feature_w];
+    const i16* weights_b = &s_shared.network.w1[NNUE_SIZE * feature_b];
 
     for(int i = 0; i < NNUE_SIZE; i++) {
         acc_w[i] -= weights_w[i];
@@ -173,9 +189,8 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply) {
     }
 }
 
-void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int ply) {
-    const int kingSquare_w = BitscanForward(m_pieces[WHITE][KING]);
-    const int kingSquare_b = BitscanForward(m_pieces[BLACK][KING]) ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
+void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int ply, int kingSquare_w, int kingSquare_b) {
+    kingSquare_b ^= NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int fromSq_w = fromSq;
 	const int fromSq_b = fromSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
@@ -195,13 +210,13 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
     assert(feature_to_w <= NNUE_FEATURES);
     assert(feature_to_b <= NNUE_FEATURES);
 
-    i16* acc_w = m_accumulator[ply][0];
-    i16* acc_b = m_accumulator[ply][1];
+    i16* acc_w = m_state->accumulator[ply][0];
+    i16* acc_b = m_state->accumulator[ply][1];
 
-    const i16* weights_from_w = &m_network.w1[NNUE_SIZE * feature_from_w];
-    const i16* weights_from_b = &m_network.w1[NNUE_SIZE * feature_from_b];
-    const i16* weights_to_w = &m_network.w1[NNUE_SIZE * feature_to_w];
-    const i16* weights_to_b = &m_network.w1[NNUE_SIZE * feature_to_b];
+    const i16* weights_from_w = &s_shared.network.w1[NNUE_SIZE * feature_from_w];
+    const i16* weights_from_b = &s_shared.network.w1[NNUE_SIZE * feature_from_b];
+    const i16* weights_to_w = &s_shared.network.w1[NNUE_SIZE * feature_to_w];
+    const i16* weights_to_b = &s_shared.network.w1[NNUE_SIZE * feature_to_b];
 
     for(int i = 0; i < NNUE_SIZE; i++) {
         acc_w[i] -= weights_from_w[i];
@@ -214,7 +229,7 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
 }
 
 void NNUE::CopyAccumulator(int fromPly, int toPly) {
-    std::memcpy(&m_accumulator[toPly], m_accumulator[fromPly], sizeof(m_accumulator[0]));
+    std::memcpy(&m_state->accumulator[toPly], m_state->accumulator[fromPly], sizeof(m_state->accumulator[0]));
 }
 
 // Clamps the input to the range [0,255]

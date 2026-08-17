@@ -1,6 +1,7 @@
+#include "Debug.h"
+
 #include "Board.h"
 #include "Constants.h"
-#include "Debug.h"
 
 #include <iostream>
 

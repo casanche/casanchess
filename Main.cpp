@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
                 } catch (...) {}
             }
 
-            nnue.Load(NNUEPath_CLI);
+            NNUE::Load(NNUEPath_CLI);
 
             Uci uci;
             uci.Bench(depth, false);
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    nnue.Load(NNUEPath_CLI);
+    NNUE::Load(NNUEPath_CLI);
 
     Uci uci;
     uci.Launch();

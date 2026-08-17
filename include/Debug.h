@@ -52,6 +52,7 @@ public:
     void Clear() { debugVariables.clear(); };
     void Increment(const std::string& theVariable);
     void Print();
+
 private:
     std::map<std::string, int> debugVariables;
 };

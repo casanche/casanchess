@@ -3,6 +3,8 @@
 #include "Constants.h"
 #include "Move.h"
 
+#include <memory>
+
 constexpr uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
 constexpr int PAWN_HASH_SIZE = 8192; //In number of entries
 
@@ -78,7 +80,7 @@ public:
     u64 Occupancy(u64 sampleSize = 1000) const;
 
 private:
-    EvalEntry m_evalEntries[EVALCACHE_ENTRIES];
+    std::unique_ptr<EvalEntry[]> m_evalEntries = std::make_unique<EvalEntry[]>(EVALCACHE_ENTRIES);
 
     u64 m_size; // Number of entries
     u64 m_mask;
@@ -120,7 +122,5 @@ namespace Hash{
 // ======================
 
 namespace Hash {
-    inline TT tt;
-    inline EvalCache evalCache;
     inline PawnHash pawnHash;
 }

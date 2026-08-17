@@ -7,10 +7,15 @@ using namespace TestCommon;
 
 class PositionMisc : public ::testing::Test {
 protected:
-    Board board;
+    TT tt;
     Search search;
+    Board board;
+
     CoutHelper verbosity;
     UCI_Limits limits = UCI_Limits::FixDepth(1);
+
+    PositionMisc(): tt(), search(tt), board() {}
+
     void SetUp() override {
         verbosity.Mute();
     }

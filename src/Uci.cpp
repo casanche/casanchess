@@ -23,8 +23,9 @@ namespace {
 }
 
 Uci::Uci() :
-    m_board(Board()),
-    m_search(Search())
+    m_tt(),
+    m_search(m_tt),
+    m_board()
 {}
 
 Uci::~Uci() {
@@ -51,7 +52,7 @@ void Uci::Launch() {
             std::cout << "option name ClassicalEval type check default false" << std::endl;
             std::cout << "option name ClearHash type button" << std::endl;
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
-            std::cout << "option name NNUE_Path type string default " << nnue.GetPath() << std::endl;
+            std::cout << "option name NNUE_Path type string default " << NNUE::GetPath() << std::endl;
             std::cout << "option name Ponder type check default false" << std::endl;
             std::cout << "option name SyzygyPath type string default " << Syzygy::DEFAULT_PATH << std::endl;
             std::cout << "option name SyzygyProbeLimit type spin default " << UCI_SYZYGY_PROBE_LIMIT << " min 0 max 7" << std::endl;
@@ -64,6 +65,7 @@ void Uci::Launch() {
         else if(token == "ucinewgame") {
             StopAndJoin();
 
+            m_tt.Clear();
             m_search.ClearSearch(true);
             m_board.Init();
         }
@@ -102,7 +104,7 @@ void Uci::Launch() {
             Bench(depth, true);
         }
         else if(token == "hashmoves") {
-            m_board.ShowHashMoves();
+            ShowHashMoves();
         }
         else if(token == "mirror") {
             m_board.Mirror();
@@ -176,6 +178,7 @@ void Uci::Bench(int depth, bool verbose) {
         m_board.SetFen(testPositions[i]);
 
         // Set search limits
+        m_tt.Clear();
         m_search.IterativeDeepening(m_board, UCI_Limits::FixDepth(depth), true);
 
         // Get results using the engine's own calculations
@@ -293,7 +296,7 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
             P(token);
 
-            Hash::tt.SetSize( stoi(token) );
+            m_tt.SetSize( stoi(token) );
         }
         else if(token == "Ponder") {
             stream >> token; //should be 'value'
@@ -308,7 +311,7 @@ void Uci::SetOption(std::istringstream &stream) {
                 UCI_PONDER = false;
         }
         else if(token == "ClearHash") {
-            Hash::tt.Clear();
+            m_tt.Clear();
         }
         else if(token == "ClassicalEval") {
             stream >> token;
@@ -335,7 +338,11 @@ void Uci::SetOption(std::istringstream &stream) {
             if(path.ends_with("\r"))
                 path.pop_back();
 
-            nnue.Load(path);
+            NNUE::Load(path);
+
+            m_tt.Clear();
+            m_search.ClearSearch(true);
+            m_board.Init();
         }
         else if (token == "SyzygyPath") {
             stream >> token;
@@ -367,6 +374,19 @@ void Uci::StartSearch() {
     m_search.IterativeDeepening(m_board, m_limits);
 }
 
+void Uci::ShowHashMoves() {
+    MoveList moves = MoveGenerator::GenerateMoves(m_board);
+
+    for(auto move : moves) {
+        m_board.MakeMove(move);
+        TTEntry* ttEntry = m_tt.Probe(m_board.ZKey());
+        if(ttEntry) {
+            P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
+        }
+        m_board.TakeMove(move);
+    }
+}
+
 void Uci::StopAndJoin() {
     m_search.Stop();
 
@@ -380,7 +400,7 @@ void Uci::StopAndJoin() {
 // == UCI Outputs ==
 // =================
 
-void Uci::Output(int depth, int seldepth, int score, u64 nodes, i64 time, uint nps, int tbHits, BOUND_TYPE bound, const std::string& PV) {
+void Uci::Output(int depth, int seldepth, int score, u64 nodes, i64 time, uint nps, int tbHits, BOUND_TYPE bound, const std::string& PV, const TT& tt) {
     if(!UCI_OUTPUT) return;
 
     std::cout << "info depth " << depth;
@@ -401,7 +421,7 @@ void Uci::Output(int depth, int seldepth, int score, u64 nodes, i64 time, uint n
     std::cout << " nps " << nps;
 
     if(time > 1000)
-        std::cout << " hashfull " << Hash::tt.Occupancy();
+        std::cout << " hashfull " << tt.Occupancy();
     if(tbHits)
         std::cout << " tbhits " << tbHits;
 

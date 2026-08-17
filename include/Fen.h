@@ -14,6 +14,7 @@ public:
     static void SetPosition(Board& board, std::string fenString);
     static std::string SetRandomPosition(Board& board);
 
+    static std::string GetFen(const Board& board);
     static std::string GetSimplifiedFen(const Board& board);
 
     static EPDLine ReadEPDLine(const std::string& line);

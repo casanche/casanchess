@@ -115,8 +115,8 @@ TEST_F(ZobristKeyTest, HashConsistency) {
     u64 zkey1 = board1.ZKey();
     
     // Run the same position multiple times
+    Board board2;
     for (int i = 0; i < 10; i++) {
-        Board board2;
         board2.SetFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         u64 zkey2 = board2.ZKey();
         EXPECT_EQ(zkey1, zkey2) << "Hash inconsistent at iteration " << i;

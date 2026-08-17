@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Constants.h"
+#include "NNUE.h"
 #include "ZobristKeys.h"
 
 #include "Fen.h"
@@ -27,19 +28,20 @@ class Board {
 public:
     Board();
     void Init();
+    void InitStateAndHistory();
     
     u64 Perft(int depth);
     void Divide(int depth);
     
     //Print, Debug
     void Print(bool bits = false) const;
-    void ShowHashMoves();
     void ShowHistory();
     void ShowMoves();
 
     // Fen
     void SetFen(std::string fenString) { Fen::SetPosition(*this, fenString); }
     std::string SetFenRandom() { return Fen::SetRandomPosition(*this); }
+    std::string GetFen() const { return Fen::GetFen(*this); }
     std::string GetSimplifiedFen() const { return Fen::GetSimplifiedFen(*this); }
 
     // MoveMaker
@@ -54,6 +56,9 @@ public:
 
     // Static Exchange Evaluation
     int SEE(Move move) const;
+
+    // NNUE
+    int NNUE_Evaluate() const { return m_nnue.Evaluate(m_activePlayer, m_ply); }
 
     // Helper methods
     Bitboard AttackersTo(COLOR color, int square, Bitboard blockers) const;
@@ -87,7 +92,6 @@ private:
     void ClearBits();
     void UpdateBitboards();
     void UpdateKingAttackers(COLOR color);
-    void InitStateAndHistory();
 
     //Static Exchange Evaluation
     Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) const;
@@ -103,7 +107,7 @@ private:
     ZobristKey m_pawnKey;
 
     //Pieces
-    Bitboard m_pieces[2][8]; //[COLOR][PIECE_TYPE]
+    PieceBitboards m_pieces;
     Bitboard m_allpieces;
 
     //Helpers
@@ -113,6 +117,9 @@ private:
     //History
     uint m_initialPly;
     BoardHistory m_history[MAX_PLY_HISTORY];
+
+    //NNUE
+    NNUE m_nnue;
 
     friend class Fen;
     friend class MoveMaker;

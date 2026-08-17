@@ -3,6 +3,7 @@
 #include "Debug.h"
 
 #include <bit>
+#include <cstring>
 
 // =========================
 // == Transposition table ==
@@ -128,11 +129,12 @@ EvalCache::EvalCache() {
 
     m_size = EVALCACHE_ENTRIES;
     m_mask = m_size - 1;
+
     Clear();
 }
 
 void EvalCache::Store(u64 zkey, int eval) {
-    assert(abs(eval) < MATESCORE_MAX);
+    assert(abs(eval) < WINSCORE);
 
     u64 index = zkey & m_mask;
     EvalEntry& entry = m_evalEntries[index];
@@ -154,9 +156,7 @@ bool EvalCache::Probe(u64 zkey, int& eval) {
 }
 
 void EvalCache::Clear() {
-    for(auto& entry : m_evalEntries) {
-        entry = {};
-    }
+    std::memset(m_evalEntries.get(), 0, sizeof(EvalEntry) * EVALCACHE_ENTRIES);
 }
 
 u64 EvalCache::Occupancy(u64 sampleSize) const {
