@@ -102,7 +102,7 @@ void Search::ClearSearch(bool fullClear) {
     // Completely clear hashes and history heuristics for a reproducible search
     if(fullClear) {
         assert(m_tt.Occupancy() == 0);
-        Hash::evalCache.Clear();
+        m_evalCache.Clear();
         Hash::pawnHash.Clear();
 
         m_heuristics.history.Clear();
@@ -431,12 +431,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(ttEval != NO_EVAL) {
             D( m_debug.Increment("NegaMax: Evaluation: 2.1: Use TT Eval") );
             eval = ttEval;
-        } else if(Hash::evalCache.Probe(board.ZKey(), eval)) {
+        } else if(m_evalCache.Probe(board.ZKey(), eval)) {
             D( m_debug.Increment("NegaMax: Evaluation: 2.2: Use EvalCache") );
         } else {
             D( m_debug.Increment("NegaMax: Evaluation: 3: Call Evaluate()") );
             eval = Evaluation::Evaluate(board);
-            Hash::evalCache.Store(board.ZKey(), eval);
+            m_evalCache.Store(board.ZKey(), eval);
         }
     }
 
@@ -695,12 +695,12 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         if(ttEval != NO_EVAL) {
             D( m_debug.Increment("Quiescence: Evaluation: 2.1: Use TT Eval") );
             standPat = ttEval;
-        } else if(Hash::evalCache.Probe(board.ZKey(), standPat)) {
+        } else if(m_evalCache.Probe(board.ZKey(), standPat)) {
             D( m_debug.Increment("Quiescence: Evaluation: 2.2: Use EvalCache") );
         } else {
             D( m_debug.Increment("Quiescence: Evaluation: 3: Call Evaluate()") );
             standPat = Evaluation::Evaluate(board);
-            Hash::evalCache.Store(board.ZKey(), standPat);
+            m_evalCache.Store(board.ZKey(), standPat);
         }
 
         if(standPat > alpha) {

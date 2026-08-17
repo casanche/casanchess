@@ -79,7 +79,7 @@ private:
 
     // Hash tables
     TT& m_tt;
-    // EvalCache m_evalCache;
+    EvalCache m_evalCache;
 
     // Heuristics
     Heuristics m_heuristics; // Heuristics for move ordering (history, killers)
