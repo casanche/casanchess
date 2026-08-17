@@ -13,24 +13,24 @@ enum CASTLING_TYPE_SIMPLE { CASTLING_KING=0, CASTLING_QUEEN=1 };
 
 //Generate the zKey bitwords. Call once before running the program
 void ZobristKeys::Init() {
-    Utils::PRNG_64 random(70);
+    Utils::PRNG rng(70);
     //Color
-    m_zkeyColor = random.Random();
+    m_zkeyColor = rng.Random64();
     for(COLOR color : {WHITE, BLACK}) {
         //Pieces
         for(int pieceType = PAWN; pieceType <= KING; pieceType++) {
             for(int square = A1; square <= H8; square++) {
-                m_zkeyPieces[color][pieceType][square] = random.Random();
+                m_zkeyPieces[color][pieceType][square] = rng.Random64();
             }
         }
         //Castling rights
         for(CASTLING_TYPE_SIMPLE castlingType : {CASTLING_KING, CASTLING_QUEEN}) {
-            m_zkeyCastling[color][castlingType] = random.Random();
+            m_zkeyCastling[color][castlingType] = rng.Random64();
         }
     }
     //En passant
     for(int file = FILEA; file <= FILEH; file++) {
-        m_zkeyEnpassant[file] = random.Random();
+        m_zkeyEnpassant[file] = rng.Random64();
     }
 }
 

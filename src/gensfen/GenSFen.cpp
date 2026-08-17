@@ -89,7 +89,7 @@ void GenSFen::Games(std::string filename) {
     const int maxGames = INFINITE;
     for(int n_game = 0; n_game < maxGames; n_game++) {
         //New starting position
-        uint32_t randomIndex = m_rng.Random(0, static_cast<uint32_t>(bookPositions.size())-1);
+        uint32_t randomIndex = m_rng.Random32(0, static_cast<uint32_t>(bookPositions.size())-1);
         std::string position = bookPositions[randomIndex];
         board.SetFen(position);
 
@@ -107,7 +107,7 @@ void GenSFen::Games(std::string filename) {
             WriteEvals(board, search, outputFile, currentPosition, 200, 800, 8);
 
             // Make next move (random or best)
-            bool doRandomMove = board.Ply() < 20 && m_rng.Random(0,100) < 33 && !board.IsCheck();
+            bool doRandomMove = board.Ply() < 20 && m_rng.Random32(0,100) < 33 && !board.IsCheck();
             Move nextMove = doRandomMove ? RandomMove(board) : currentPosition.bestMove;
             board.MakeMove(nextMove);
 

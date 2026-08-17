@@ -10,27 +10,54 @@
 //EXPECT_STREQ, EXPECT_STRNE, EXPECT_STRCASEEQ, EXPECT_STRCASENE
 
 //Utils
+TEST(Utils, RandomNumberGenerator_32bits) {
+    uint64_t r1, r2;
+
+    //Fixed seed
+    Utils::PRNG prng_fixedSeed_1(100);
+    Utils::PRNG prng_fixedSeed_2(100);
+    r1 = prng_fixedSeed_1.Random32();
+    r2 = prng_fixedSeed_2.Random32();
+    EXPECT_EQ(r1, r2);
+
+    // Limited
+    r1 = prng_fixedSeed_1.Random32(10, 20);
+    r2 = prng_fixedSeed_2.Random32(10, 20);
+    EXPECT_EQ(r1, r2);
+
+    EXPECT_GE(r1, 10);
+    EXPECT_LE(r1, 20);
+
+    //Random seed
+    Utils::PRNG prng_noSeed_1;
+    Utils::PRNG prng_noSeed_2;
+    r1 = prng_noSeed_1.Random32();
+    r2 = prng_noSeed_2.Random32();
+    EXPECT_NE(r1, r2);
+
+    //Random seed, explicit 0
+    Utils::PRNG prng_noSeed_explicit_1(0);
+    Utils::PRNG prng_noSeed_explicit_2(0);
+    r1 = prng_noSeed_explicit_1.Random32();
+    r2 = prng_noSeed_explicit_2.Random32();
+    EXPECT_NE(r1, r2);
+}
+
 TEST(Utils, RandomNumberGenerator_64bits) {
     uint64_t r1, r2;
 
     //Fixed seed
-    Utils::PRNG_64 prng_fixedSeed_1(100);
-    Utils::PRNG_64 prng_fixedSeed_2(100);
-    r1 = prng_fixedSeed_1.Random();
-    r2 = prng_fixedSeed_2.Random();
+    Utils::PRNG prng_fixedSeed_1(100);
+    Utils::PRNG prng_fixedSeed_2(100);
+    r1 = prng_fixedSeed_1.Random64();
+    r2 = prng_fixedSeed_2.Random64();
     EXPECT_EQ(r1, r2);
 
     //Random seed
-    Utils::PRNG_64 prng_noSeed_1;
-    Utils::PRNG_64 prng_noSeed_2;
-    r1 = prng_noSeed_1.Random();
-    r2 = prng_noSeed_2.Random();
-    EXPECT_NE(r1, r2);
-
-    Utils::PRNG_64 prng_noSeed_explicit_1(0);
-    Utils::PRNG_64 prng_noSeed_explicit_2(0);
-    r1 = prng_noSeed_explicit_1.Random();
-    r2 = prng_noSeed_explicit_2.Random();
+    Utils::PRNG prng_noSeed_1;
+    Utils::PRNG prng_noSeed_2;
+    r1 = prng_noSeed_1.Random64();
+    r2 = prng_noSeed_2.Random64();
     EXPECT_NE(r1, r2);
 }
 

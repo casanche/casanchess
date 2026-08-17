@@ -1,6 +1,8 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
+#include <limits>
 #include <random>
 
 namespace Utils {
@@ -8,33 +10,32 @@ namespace Utils {
     //Pseudo-Random Number Generator
     class PRNG {
     public:
-        PRNG(int seed = 0);
-        uint32_t Random(uint32_t min, uint32_t max);
-    private:
-        std::random_device m_device;
-        std::mt19937 m_mersenne;
-    };
+        explicit PRNG(uint64_t seed = 0);
+    
+        uint32_t Random32(uint32_t min = 0, uint32_t max = std::numeric_limits<uint32_t>::max() );
+        uint64_t Random64(uint64_t min = 0, uint64_t max = std::numeric_limits<uint64_t>::max() );
+        double   RandomDouble(double min = 0.0, double max = 1.0);
 
-    //Pseudo-Random Number Generator for 64-bitwords
-    class PRNG_64 {
-    public:
-        PRNG_64(int seed = 0);
-        uint64_t Random();
     private:
-        std::random_device m_device;
         std::mt19937_64 m_mersenne;
-        std::uniform_int_distribution<uint64_t> m_distribution;
     };
 
     //General purpose clock
     //Returns elapsed time in milliseconds
     class Clock {
     public:
+        Clock() { Start(); }
+
         void Start();
         int64_t Elapsed() const;
         int64_t ElapsedNanoseconds() const;
+
+        // auto Now() const {
+        //     return std::chrono::steady_clock::now();
+        // }
+
     private:
-        std::chrono::high_resolution_clock::time_point m_start;
+        std::chrono::steady_clock::time_point m_start;
     };
 
 } //namespace Utils

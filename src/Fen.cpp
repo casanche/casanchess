@@ -131,7 +131,7 @@ std::string Fen::SetRandomPosition(Board& board) {
         for(int c = WHITE; c <= BLACK; c++) {
             for(int p = PAWN; p <= KING; p++) {
 
-            const int max = (p == KING) ? 1 : rng.Random(0, pieceMax[p]);
+            const int max = (p == KING) ? 1 : rng.Random32(0, pieceMax[p]);
 
             for(int m = 1; m <= max; m++) {
                 Bitboard randomSquareBB;
@@ -139,12 +139,12 @@ std::string Fen::SetRandomPosition(Board& board) {
                 int tries = 0;
                 do {
                     tries++;
-                    int random = rng.Random(1,3);
+                    int random = rng.Random32(1,3);
                     int randomSquare;
                     if(random == 3)
-                        randomSquare = (c == WHITE) ? rng.Random(32, 63) : rng.Random(0, 31);
+                        randomSquare = (c == WHITE) ? rng.Random32(32, 63) : rng.Random32(0, 31);
                     else
-                        randomSquare = (c == WHITE) ? rng.Random(0, 31) : rng.Random(32, 63);
+                        randomSquare = (c == WHITE) ? rng.Random32(0, 31) : rng.Random32(32, 63);
                     randomSquareBB = SquareBB(randomSquare);
                     isValid = CheckIsValid((COLOR)c, p, randomSquareBB);
                 } while(!isValid && tries < 100);
@@ -159,7 +159,7 @@ std::string Fen::SetRandomPosition(Board& board) {
 
     } while(board.IsCheckAnyColor() || !board.GetPieces(WHITE, KING) || !board.GetPieces(BLACK, KING));
 
-    int random = rng.Random(0, 1);
+    int random = rng.Random32(0, 1);
     board.m_activePlayer = random ? WHITE : BLACK;
 
     board.InitStateAndHistory();
