@@ -225,8 +225,9 @@ endif()
 if(BUILD_EXECUTABLES_EXTRA)
     # GenSFen executable
     add_executable(gensfen
-        src/gensfen/GenSFen.cpp
         src/gensfen/Main.cpp
+        src/gensfen/GenSFen.cpp
+        src/gensfen/RandomPosition.cpp
     )
     target_compile_options(gensfen PRIVATE ${COMPILER_OPTIONS})
     target_link_libraries(gensfen PRIVATE engine_static)

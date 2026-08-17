@@ -1,4 +1,5 @@
 #include "gensfen/GenSFen.h"
+#include "gensfen/RandomPosition.h"
 
 #include "BitboardUtils.h"
 #include "Constants.h"
@@ -224,12 +225,13 @@ void GenSFen::RandomBenchmark(int maxGames) {
 int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
     TT tt;
     Search search_depth1(tt);
+    RandomPositionGenerator randomPosGen;
 
     bool validScore = false;
     int tries = 0;
 
     do {
-        position = board.SetFenRandom();
+        position = randomPosGen.GenerateV2(board);
         tries++;
 
         int nPieces = PopCount(board.AllPieces());

@@ -66,7 +66,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     UpdateCastlingRights(board, move);
 
     //Change the active player
-    board.m_activePlayer = board.InactivePlayer();
+    board.m_activePlayer = (COLOR)!board.m_activePlayer;
     board.m_zobristKey.UpdateColor();
 
     //Store irreversible information (to help a later TakeMove)
@@ -129,8 +129,8 @@ void MoveMaker::TakeMove(Board& board, Move move) {
     MOVE_TYPE moveType = move.MoveType();
 
     //Change the active player
-    board.m_activePlayer = board.InactivePlayer();
-    COLOR color = board.m_activePlayer;
+    board.m_activePlayer = (COLOR)!board.m_activePlayer;
+    COLOR color = board.ActivePlayer();
     board.m_zobristKey.UpdateColor();
 
     //Decrease the move number if black made the move
@@ -218,7 +218,7 @@ void MoveMaker::MakeNull(Board& board) {
     }
 
     //Change the active player
-    board.m_activePlayer = board.InactivePlayer();
+    board.m_activePlayer = (COLOR)!board.m_activePlayer;
     board.m_zobristKey.UpdateColor();
 
     //Store irreversible information (to help a later TakeMove)
@@ -237,7 +237,7 @@ void MoveMaker::MakeNull(Board& board) {
 
 void MoveMaker::TakeNull(Board& board) {
     //Change the active player
-    board.m_activePlayer = board.InactivePlayer();
+    board.m_activePlayer = (COLOR)!board.m_activePlayer;
 
     assert(board.m_ply != 0);
     board.m_ply--;
@@ -407,7 +407,7 @@ Move MoveMaker::DescriptiveToMove(const Board& board, SQUARES fromSq, SQUARES to
     PIECE_TYPE activePiece = board.GetPieceAtSquare(board.ActivePlayer(), fromSq);
     PIECE_TYPE capturedPiece = board.GetPieceAtSquare(board.InactivePlayer(), toSq);
 
-    int sign = (board.m_activePlayer == WHITE) ? +1 : -1;
+    int sign = (board.ActivePlayer() == WHITE) ? +1 : -1;
 
     bool isCastling = (activePiece == KING)
         && (fromSq == E1 || fromSq == E8)
@@ -418,8 +418,8 @@ Move MoveMaker::DescriptiveToMove(const Board& board, SQUARES fromSq, SQUARES to
         && ~board.Piece(board.InactivePlayer(),ALL_PIECES) & SquareBB(toSq) //no piece in the destination square
         && board.Piece(board.InactivePlayer(),PAWN) & ( SquareBB(toSq - 8 * sign) ); //enemy pawn behind the destination square
     bool isPromotion = (activePiece == PAWN)
-        && ((Rank(toSq) == RANK8 && board.m_activePlayer == WHITE)
-        || (Rank(toSq) == RANK1 && board.m_activePlayer == BLACK));
+        && ((Rank(toSq) == RANK8 && board.ActivePlayer() == WHITE)
+        || (Rank(toSq) == RANK1 && board.ActivePlayer() == BLACK));
     
     if(isDoublePush) {
         move = Move(fromSq, toSq, activePiece, MOVE_TYPE::DOUBLE_PUSH);
