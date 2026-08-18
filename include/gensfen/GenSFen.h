@@ -11,24 +11,55 @@
 using BookPositions = std::vector<std::string>;
 struct CurrentPosition;
 
+struct GenSFenConfig {
+    std::string outputDir;
+    std::string bookFile;
+    uint64_t seed = 0;
+
+    // Behavior
+    int FIXED_NODES = 250000;
+    int SOFT_RANDOMIZE_PLIES = 4;
+
+    // Adjudication configuration
+    int ADJUDICATION_THRESHOLD_WIN = 200;
+    int ADJUDICATION_THRESHOLD_DRAW = 10;
+    int ADJUDICATION_PLIES_WIN = 6;
+    int ADJUDICATION_PLIES_DRAW = 30;
+    uint ADJUDICATION_MAX_PLIES = 400;
+};
+
+struct SavedPosition {
+    std::string fen;
+    std::string bestMove;
+    int eval;
+};
+
 class GenSFen {
 public:
-    GenSFen();
+    explicit GenSFen(GenSFenConfig config);
 
-    void Run(const std::string& gensfen_mode, int concurrency);
+    void Run(const std::string& gensfen_mode, int concurrency, int nodes, int maxGames);
     
 private:
-    void Games(std::string filename);
-    void Random(std::string filename);
-    void RandomBenchmark(int maxGames);
+    void Games(const std::string& filename, int threadIndex);
+    // void Random(const std::string& filename, int threadIndex);
+    // void RandomBenchmark(int maxGames);
 
-    int GenerateRandomPosition(Board& board, std::string& position);
-    void WriteEvals(Board& board, Search& search, std::ofstream& outputFile, CurrentPosition& currentPosition,
-                    int thresholdEval, int thresholdEvalBoth, uint minPly = 0);
+    // int GenerateRandomPosition(Board& board, std::string& position);
 
     bool NoMoves(Board& board);
     BookPositions ReadBook(const std::string& bookPath);
     Move RandomMove(Board& board);
 
-    Utils::PRNG m_rng;
+    ///
+    MoveList SortGoodMoves(Board& board, Search& search);
+    bool SaveEvals(Board& board, Search& search, std::vector<SavedPosition>& savedPositions);
+    void SearchIteration(Board& board, Search& search);
+
+    bool WriteRunMetadata(const std::string& mode, int concurrency) const;
+
+    GenSFenConfig m_config = {};
+    int m_maxGames = 0;
+
+    std::atomic<int> m_gamesPlayed{0};
 };
