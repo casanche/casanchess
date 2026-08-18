@@ -2,6 +2,7 @@ build*
 dev/
 docs/
 testing/
+tools/
 versions/
 
 data/games
@@ -19,6 +20,3 @@ syzygy/
 *.rar
 *.tar
 *.zip
-
-# AI
-.github/copilot-instructions.md

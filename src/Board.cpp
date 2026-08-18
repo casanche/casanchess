@@ -11,6 +11,7 @@ using namespace BitboardUtils;
 #include "MoveGenerator.h"
 #include "NNUE.h"
 
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -31,6 +32,29 @@ Move generation:
 
 Board::Board() {
     Init();
+}
+
+void Board::ClearBits() {
+    std::memset(m_pieces, 0, sizeof(m_pieces));
+
+    for(COLOR color : {WHITE, BLACK}) {
+        m_kingAttackers[color] = 0;
+    }
+
+    for(int i = 0; i < MAX_PLY_HISTORY; ++i) {
+        m_history[i].Clear();
+    }
+
+    m_enPassantSquare = ZERO;
+    m_castlingRights = 0;
+
+    m_activePlayer = WHITE;
+    m_moveNumber = 1;
+    m_ply = 0;
+    m_initialPly = 0;
+    m_fiftyrule = 0;
+
+    UpdateBitboards();
 }
 
 void Board::Init() {
@@ -61,6 +85,22 @@ u64 Board::Perft(int depth) {
     }
 
     return nodes;
+}
+
+void Board::InitStateAndHistory() {
+    UpdateBitboards();
+
+    m_history[m_ply].fiftyrule = m_fiftyrule;
+    m_history[m_ply].castling = m_castlingRights;
+    m_history[m_ply].enpassant = m_enPassantSquare;
+    m_zobristKey.SetKey(*this);
+    m_pawnKey.SetPawnKey(*this);
+    m_history[m_ply].zkey = ZKey();
+
+    m_checkCalculated = false;
+
+    if(!UCI_CLASSICAL_EVAL)
+        m_nnue.Inputs_FullUpdate(m_ply, m_pieces);
 }
 
 void Board::Divide(int depth) {
@@ -380,29 +420,10 @@ Bitboard Board::LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYP
 }
 
 //Private
-void Board::ClearBits() {
-    for(COLOR color : {WHITE, BLACK}) {
-        m_kingAttackers[color] = 0;
 
-        for(PIECE_TYPE pieceType = PAWN; pieceType <= KING; ++pieceType) {
-            m_pieces[color][pieceType] = 0;
-        }
-    }
-
-    for(int i = 0; i < MAX_PLY_HISTORY; ++i) {
-        m_history[i].Clear();
-    }
-
-    m_enPassantSquare = ZERO;
-    m_castlingRights = 0;
-
-    m_activePlayer = WHITE;
-    m_moveNumber = 1;
-    m_ply = 0;
-    m_initialPly = 0;
-    m_fiftyrule = 0;
-
-    UpdateBitboards();
+void Board::PutPiece(COLOR color, PIECE_TYPE pieceType, int square) {
+    assert( !(m_allpieces & SquareBB(square)) );
+    m_pieces[color][pieceType] ^= SquareBB(square);
 }
 
 void Board::UpdateBitboards() {
@@ -428,20 +449,4 @@ void Board::UpdateKingAttackers(COLOR color) {
     int kingSquare = BitscanForward(theKing);
 
     m_kingAttackers[color] = AttackersTo(color, kingSquare);
-}
-
-void Board::InitStateAndHistory() {
-    UpdateBitboards();
-
-    m_history[m_ply].fiftyrule = m_fiftyrule;
-    m_history[m_ply].castling = m_castlingRights;
-    m_history[m_ply].enpassant = m_enPassantSquare;
-    m_zobristKey.SetKey(*this);
-    m_pawnKey.SetPawnKey(*this);
-    m_history[m_ply].zkey = ZKey();
-
-    m_checkCalculated = false;
-
-    if(!UCI_CLASSICAL_EVAL)
-        m_nnue.Inputs_FullUpdate(m_ply, m_pieces);
 }

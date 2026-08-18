@@ -27,8 +27,8 @@ struct BoardHistory {
 class Board {
 public:
     Board();
+
     void Init();
-    void InitStateAndHistory();
     
     u64 Perft(int depth);
     void Divide(int depth);
@@ -40,7 +40,6 @@ public:
 
     // Fen
     void SetFen(std::string fenString) { Fen::SetPosition(*this, fenString); }
-    std::string SetFenRandom() { return Fen::SetRandomPosition(*this); }
     std::string GetFen() const { return Fen::GetFen(*this); }
     std::string GetSimplifiedFen() const { return Fen::GetSimplifiedFen(*this); }
 
@@ -88,10 +87,17 @@ public:
     inline unsigned int Ply() const         { return m_ply; }
     inline u64 ZKey() const                 { return m_zobristKey.Key(); }
 
+    // void SetActivePlayer(COLOR color) { m_activePlayer = color; }
+
 private:
     void ClearBits();
+    void InitStateAndHistory();
+
     void UpdateBitboards();
     void UpdateKingAttackers(COLOR color);
+
+    //Setters
+    void PutPiece(COLOR color, PIECE_TYPE pieceType, int square);
 
     //Static Exchange Evaluation
     Bitboard LeastValuableAttacker(Bitboard attackers, COLOR color, PIECE_TYPE& pieceType) const;
@@ -123,4 +129,5 @@ private:
 
     friend class Fen;
     friend class MoveMaker;
+    friend class RandomPositionGenerator;
 };
