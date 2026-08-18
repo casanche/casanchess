@@ -62,7 +62,8 @@ const bool TURNOFF_FUTILITY = false;
 
 // Draw contempt to discourage premature draws
 constexpr int DrawScore(int ply) {
-    return (ply & 1) ? 10 : -10;
+    return 0;
+    // return (ply & 1) ? 10 : -10;
 }
 
 // Called once when the UCI interface starts up.
