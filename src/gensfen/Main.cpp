@@ -63,7 +63,6 @@ int main(int argc, char** argv) {
     ZobristKeys::Init();
     NNUE::Load();
 
-    // Desactivar la evaluación clásica para asegurar que el engine funciona bajo NNUE en el datagen
     UCI_CLASSICAL_EVAL = false;
 
     GenSFenConfig config;

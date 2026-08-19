@@ -8,6 +8,7 @@
 
 #include <filesystem>
 #include <format>
+#include <cmath>
 #include <syncstream>
 #include <sstream>
 #include <thread>
@@ -24,15 +25,38 @@ GenSFen::GenSFen(GenSFenConfig config) : m_config(std::move(config)) {
 void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int nodes, int maxGames) {
     std::vector<std::thread> threads;
 
+    if(gensfen_mode != "games" && gensfen_mode != "random" && gensfen_mode != "benchmark") {
+        std::cerr << "Error: Unsupported GenSFen mode: " << gensfen_mode << std::endl;
+        return;
+    }
+
     if(m_config.seed == 0) {
         Utils::PRNG rng(0);
         m_config.seed = rng.Random64();
     }
 
     m_maxGames = maxGames == 0 ? INFINITE : maxGames;
+    m_gamesPlayed.store(0);
     if(nodes > 0) m_config.FIXED_NODES = nodes;
-    if(!concurrency) concurrency = std::thread::hardware_concurrency() - 1;
-    
+    if(concurrency <= 0) {
+        const unsigned int hardwareThreads = std::thread::hardware_concurrency();
+        concurrency = hardwareThreads > 1 ? static_cast<int>(hardwareThreads - 1) : 1;
+    }
+
+    if(gensfen_mode == "benchmark") {
+        RandomBenchmark(m_maxGames == INFINITE ? 100 : m_maxGames);
+        return;
+    }
+
+    // Book
+    if(gensfen_mode == "games") {
+        m_bookPositions = ReadBook(m_config.bookFile);
+        if(m_bookPositions.empty()) {
+            std::cerr << "Error: Book is empty or missing. Bookfile: " << m_config.bookFile << std::endl;
+            return;
+        }
+    }
+
     // Timestamped directory
     std::filesystem::path timestampPath(m_config.outputDir);
     timestampPath /= std::format("{}/{}_{:%Y%m%d}", gensfen_mode, gensfen_mode, Utils::Clock::Now());
@@ -50,8 +74,7 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int nodes, i
 
     void (GenSFen::*function)(const std::string&, int) = nullptr;
     if(gensfen_mode == "games") function = &GenSFen::Games;
-    // else if(gensfen_mode == "random") function = &GenSFen::Random;
-    // else if(gensfen_mode == "benchmark") { RandomBenchmark(m_maxGames == INFINITE ? 100 : m_maxGames); return; }
+    else if(gensfen_mode == "random") function = &GenSFen::Random;
 
     for(int i = 0; i < concurrency; i++) {
         std::string filename = m_config.outputDir + "/evals_generated_" + std::to_string(i + 1) + ".epd";
@@ -62,20 +85,22 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int nodes, i
 
 void GenSFen::Games(const std::string& filename, int threadIndex) {
     std::ofstream outputFile(filename);
-    BookPositions bookPositions = ReadBook(m_config.bookFile);
     
     TT tt;
+    tt.SetSize(8);
     Search search(tt);
     Board board;
     Utils::PRNG rng(m_config.seed + threadIndex);
 
-    while(m_gamesPlayed.fetch_add(1) < m_maxGames) {
-        int n_game = m_gamesPlayed.load();
+    for(;;) {
+        const int n_game = m_gamesPlayed.fetch_add(1) + 1;
+        if(n_game > m_maxGames)
+            break;
 
         tt.Clear();
         search.ClearSearch(true);
 
-        std::string startingFen = bookPositions[rng.Random32(0, static_cast<uint32_t>(bookPositions.size()) - 1)];
+        std::string startingFen = m_bookPositions[rng.Random32(0, static_cast<uint32_t>(m_bookPositions.size()) - 1)];
         board.SetFen(startingFen);
 
         const uint initialPly = board.Ply();
@@ -83,23 +108,39 @@ void GenSFen::Games(const std::string& filename, int threadIndex) {
         std::vector<SavedPosition> savedPositions;
         savedPositions.reserve(512);
 
-        int gameResult = 0; // 1 (Blanco gana), 0 (Empate), -1 (Negro gana)
+        int gameResult = 0; // 1 (White wins), 0 (draw), -1 (Black wins)
         int adjWinCounter = 0, adjDrawCounter = 0;
         bool exitGame = false;
 
         while(!exitGame) {
             COLOR color = board.ActivePlayer();
-            int playedPlies = board.Ply() - initialPly;
-            bool softRandomize = playedPlies < m_config.SOFT_RANDOMIZE_PLIES;
 
+            // Natural game endings
+            if(NoMoves(board)) {
+                if(board.IsCheck())
+                    gameResult = color == WHITE ? -1 : 1;
+                else
+                    gameResult = 0;
+                break;
+            }
+            if(board.FiftyRule() >= 100 || board.IsRepetitionDraw()) {
+                gameResult = 0;
+                break;
+            }
+
+            int playedPlies = board.Ply() - initialPly;
+            
             SearchIteration(board, search);
             int score = search.BestScore();
             Move bestMove = search.BestMove();
             Move nextMove = bestMove;
 
-            // Soft-randomization
-            if(softRandomize) {
-                MoveList moves = SortGoodMoves(board, search);
+            if(nextMove == Move())
+                break;
+
+            // Soft randomization
+            if(playedPlies < m_config.SOFT_RANDOMIZE_PLIES) {
+                MoveList moves = SortFilteredMoves(board, search);
                 if(moves.size() >= 3)
                     nextMove = moves[rng.Random32(0, 2)];
             } else {
@@ -108,37 +149,30 @@ void GenSFen::Games(const std::string& filename, int threadIndex) {
 
             board.MakeMove(nextMove);
 
-            if(NoMoves(board)) {
-                gameResult = board.IsCheck() ? (color == WHITE ? -1 : 1) : 0;
-                exitGame = true; break;
-            }
-            if(board.FiftyRule() >= 100 || board.IsRepetitionDraw()) {
-                gameResult = 0; exitGame = true; break;
-            }
-
-            // 3. Adjudicación de Victoria/Derrota
+            // Win/loss adjudication
             int scoreWhitePOV = (color == WHITE) ? score : -score;
-            if(std::abs(score) >= m_config.ADJUDICATION_THRESHOLD_WIN) {
+            if(std::abs(score) >= m_config.ADJUDICATION_EVAL_WIN) {
                 if(++adjWinCounter >= m_config.ADJUDICATION_PLIES_WIN) {
                     gameResult = scoreWhitePOV > 0 ? 1 : -1;
                     exitGame = true; break;
                 }
             } else adjWinCounter = 0;
 
-            // 4. Adjudicación de Empate
-            if(std::abs(score) <= m_config.ADJUDICATION_THRESHOLD_DRAW) {
+            // Draw adjudication
+            if(board.Ply() >= m_config.ADJUDICATION_THRESHOLD_PLIES_DRAW &&
+               std::abs(score) <= m_config.ADJUDICATION_EVAL_DRAW) {
                 if(++adjDrawCounter >= m_config.ADJUDICATION_PLIES_DRAW) {
                     gameResult = 0; exitGame = true; break;
                 }
             } else adjDrawCounter = 0;
 
-            // 5. Partida demasiado larga
+            // Maximum game length
             if(board.Ply() > m_config.ADJUDICATION_MAX_PLIES) {
                 gameResult = 0; exitGame = true; break;
             }
         } // Game finished
 
-        // Collect game global metrics
+        // Collect game-level metrics
         int gameLength = board.Ply();
         int pawnCount = PopCount(board.Piece(WHITE, PAWN) | board.Piece(BLACK, PAWN));
         int heavyPiecesCount = PopCount(board.AllPieces()) - pawnCount - 2;
@@ -150,141 +184,149 @@ void GenSFen::Games(const std::string& filename, int threadIndex) {
                << ";r " << gameResult << ";l " << gameLength 
                << ";pC " << pawnCount << ";PC " << heavyPiecesCount << "\n";
         }
-        outputFile << ss.view(); // write to file
+        outputFile << ss.view();
 
-        // Logs to standard output
+        // Log to standard output
         std::osyncstream syncedLog(std::cout);
-        syncedLog << "Thread: " << threadIndex << " | Game: " << n_game 
+        syncedLog << "Thread: " << threadIndex + 1 << " | Game: " << n_game 
                   << " | Result: " << gameResult << " | Length: " << gameLength 
                   << " | Saved: " << savedPositions.size() << "\n";
     }
 }
 
-// void GenSFen::Random(std::string filename) {
-//     std::ofstream outputFile;
-//     outputFile.open(filename);
+void GenSFen::Random(const std::string& filename, int threadIndex) {
+    std::ofstream outputFile(filename);
 
-//     TT tt;
-//     Search search(tt);
-//     Board board;
-//     State state;
+    TT tt;
+    tt.SetSize(8);
+    Search search(tt);
+    Search validationSearch(tt);
+    Board board;
 
-//     const int maxGames = INFINITE;
-//     for(int n_game = 0; n_game < maxGames; n_game++) {
-//         std::string position;
-//         GenerateRandomPosition(board, position);
+    Utils::PRNG rng(m_config.seed + threadIndex);
+    RandomPositionGenerator randomPosGen(m_config.seed + threadIndex);
 
-//         //To avoid overlap in standard output due to multiple threads
-//         std::stringstream ss;
-//         ss << "thread: " << std::this_thread::get_id()
-//            << " random position " << std::to_string(n_game)
-//            << ", " << position << ", ";
+    for(;;) {
+        const int n_game = m_gamesPlayed.fetch_add(1) + 1;
+        if(n_game > m_maxGames)
+            break;
 
-//         //Game loop
-//         state.NewGame();
-//         bool exitGame;
-//         do {
-//             CurrentPosition currentPosition;
-//             WriteEvals(board, search, outputFile, currentPosition, 100, 250, 0);
+        tt.Clear();
+        search.ClearSearch(true);
 
-//             board.MakeMove(currentPosition.bestMove);
+        std::string startingFen;
+        GenerateRandomPosition(board, startingFen, randomPosGen, validationSearch);
 
-//             state.UpdateGame(currentPosition.evalPass, currentPosition.evalFail);
+        const uint initialPly = board.Ply();
+        std::vector<SavedPosition> savedPositions;
+        savedPositions.reserve(128);
 
-//             int nPieces = PopCount(board.AllPieces());
-//             exitGame = (NoMoves(board) || nPieces <= 6 || board.Ply() > 40 || board.IsRepetitionDraw() || state.consecutiveFailedEvals >= 6);
-//         } while(!exitGame);
+        int gameResult = 0;
+        int adjWinCounter = 0;
+        int adjDrawCounter = 0;
 
-//         state.FinishGame();
-//         ss << "writtenEvals: " << state.gameWrittenEvals
-//            << ", consecutive fails: " << state.consecutiveFailedEvals
-//            << ", totalWrittenEvals: " << state.totalWrittenEvals
-//            << std::endl;
-//         std::cout << ss.str();
+        for(;;) {
+            if(NoMoves(board)) {
+                gameResult = board.IsCheck() ? (board.ActivePlayer() == WHITE ? -1 : 1) : 0;
+                break;
+            }
+            if(board.FiftyRule() >= 100 || board.IsRepetitionDraw()) {
+                break;
+            }
 
-//     } //games
+            const COLOR color = board.ActivePlayer();
 
-//     outputFile.close();
-// }
+            SearchIteration(board, search);
+            const int score = search.BestScore();
+            Move nextMove = search.BestMove();
+            if(nextMove == Move())
+                break;
 
-// void GenSFen::RandomBenchmark(int maxGames) {
-//     Utils::Clock clock, global_clock;
-//     global_clock.Start();
-//     int64_t time_choose = 0;
-//     int64_t time_search = 0;
-//     int passed = 0;
+            SaveEvals(board, search, savedPositions);
 
-//     TT tt;
-//     Search search(tt);
-//     Board board;
-//     UCI_Limits limits = UCI_Limits::FixDepth(7);
+            board.MakeMove(nextMove);
 
-//     for(int n_game = 1; n_game <= maxGames; n_game++) {
-//         clock.Start();
-//         std::string position;
-//         int tries = GenerateRandomPosition(board, position);
-//         time_choose = clock.Elapsed();
+            // Adjudication
+            const int scoreWhitePOV = color == WHITE ? score : -score;
+            if(std::abs(score) >= m_config.ADJUDICATION_EVAL_WIN) {
+                if(++adjWinCounter >= m_config.ADJUDICATION_PLIES_WIN) {
+                    gameResult = scoreWhitePOV > 0 ? 1 : -1;
+                    break;
+                }
+            } else {
+                adjWinCounter = 0;
+            }
 
-//         clock.Start();
+            if(board.Ply() >= m_config.ADJUDICATION_THRESHOLD_PLIES_DRAW &&
+               std::abs(score) <= m_config.ADJUDICATION_EVAL_DRAW) {
+                if(++adjDrawCounter >= m_config.ADJUDICATION_PLIES_DRAW) {
+                    break;
+                }
+            } else {
+                adjDrawCounter = 0;
+            }
 
-//         search.IterativeDeepening(board, limits);
-//         int score_active = search.BestScore();
+            if(board.Ply() > m_config.ADJUDICATION_MAX_PLIES)
+                break;
+        }
 
-//         board.MakeNull();
-//         search.IterativeDeepening(board, limits);
-//         int score_inactive = search.BestScore();
-//         board.TakeNull();
+        const int gameLength = board.Ply() - initialPly;
+        const int pawnCount = PopCount(board.Piece(WHITE, PAWN) | board.Piece(BLACK, PAWN));
+        const int heavyPiecesCount = PopCount(board.AllPieces()) - pawnCount - 2;
 
-//         time_search = clock.Elapsed();
+        std::stringstream ss;
+        for(const auto& sp : savedPositions) {
+            ss << sp.fen << ";bm " << sp.bestMove << ";ev " << sp.eval
+               << ";r " << gameResult << ";l " << gameLength
+               << ";pC " << pawnCount << ";PC " << heavyPiecesCount << "\n";
+        }
+        outputFile << ss.view();
 
-//         bool evalPass = (abs(score_active) < 100) || (abs(score_inactive) < 100);
-//         bool evalPassBoth = abs(score_active) < 250 && abs(score_inactive) < 250;
-//         if(evalPass && evalPassBoth) {
-//             passed++;
-//         }
+        std::osyncstream syncedLog(std::cout);
+        syncedLog << "Thread: " << threadIndex + 1 << " | Random Game: " << n_game
+                  << " | Result: " << gameResult << " | Length: " << gameLength
+                  << " | Saved: " << savedPositions.size() << "\n";
+    }
+}
 
-//         P("game " << n_game << " tries " << tries
-//                   << " time_choose " << time_choose
-//                   << " time_search " << time_search);
+void GenSFen::RandomBenchmark(int maxGames) {
+    std::cout << "--- Random Benchmark Start (" << maxGames << " positions) ---" << std::endl;
 
-//     } //games
+    Utils::Clock clock;
+    Utils::Clock globalClock;
+    int64_t totalGenerationTime = 0;
+    int64_t totalSearchTime = 0;
+    int totalTries = 0;
 
-//     P("passed: " << passed << " total time " << global_clock.Elapsed() );
-// }
+    TT tt;
+    tt.SetSize(16);
+    Search validationSearch(tt);
+    Board board;
+    RandomPositionGenerator posGen(m_config.seed);
 
-// int GenSFen::GenerateRandomPosition(Board& board, std::string& position) {
-//     TT tt;
-//     Search search_depth1(tt);
-//     RandomPositionGenerator randomPosGen;
+    for(int n_game = 1; n_game <= maxGames; ++n_game) {
+        clock.Start();
+        std::string position;
+        totalTries += GenerateRandomPosition(board, position, posGen, validationSearch);
+        totalGenerationTime += clock.Elapsed();
 
-//     bool validScore = false;
-//     int tries = 0;
+        clock.Start();
+        validationSearch.ClearSearch(true);
+        validationSearch.IterativeDeepening(board, UCI_Limits::FixDepth(7));
+        totalSearchTime += clock.Elapsed();
 
-//     do {
-//         position = randomPosGen.GenerateV2(board);
-//         tries++;
+        if(n_game % 10 == 0 || n_game == maxGames) {
+            std::cout << "Benchmark: " << n_game << "/" << maxGames
+                      << " (Average tries: " << totalTries / n_game << ")" << std::endl;
+        }
+    }
 
-//         int nPieces = PopCount(board.AllPieces());
-//         if(NoMoves(board) || nPieces <= 6)
-//             continue;
-//         search_depth1.IterativeDeepening(board, UCI_Limits::FixDepth(1));
-//         int score_active = search_depth1.BestScore();
-
-//         board.MakeNull();
-//         if(NoMoves(board))
-//             continue;
-//         search_depth1.IterativeDeepening(board, UCI_Limits::FixDepth(1));
-//         int score_inactive = search_depth1.BestScore();
-
-//         bool evalPass = (abs(score_active) < 66) || (abs(score_inactive) < 66);
-//         bool evalPassBoth = abs(score_active) < 150 && abs(score_inactive) < 150;
-//         validScore = evalPass && evalPassBoth;
-//         if(validScore)
-//             board.TakeNull();
-//     } while(!validScore);
-
-//     return tries;
-// }
+    std::cout << "--- Benchmark Results ---" << std::endl;
+    std::cout << "Total Passed      : " << maxGames << std::endl;
+    std::cout << "Time Generating   : " << totalGenerationTime << " ms" << std::endl;
+    std::cout << "Time Searching d7 : " << totalSearchTime << " ms" << std::endl;
+    std::cout << "Total Time        : " << globalClock.Elapsed() << " ms" << std::endl;
+}
 
 bool GenSFen::NoMoves(Board& board) {
     return MoveGenerator::GenerateMoves(board).empty();
@@ -305,19 +347,21 @@ BookPositions GenSFen::ReadBook(const std::string& bookPath) {
     }
 
     std::string position;
-    while( std::getline(bookFile, position) ) {
+    while(std::getline(bookFile, position)) {
+        if(!position.empty() && position.back() == '\r')
+            position.pop_back();
         if(!position.empty())
             bookPositions.push_back(position);
     }
     return bookPositions;
 }
 
-// Filtra malas jugadas (capturas negativas) para la soft-randomization
-MoveList GenSFen::SortGoodMoves(Board& board, Search& search) {
+// Filter bad captures for soft-randomization
+MoveList GenSFen::SortFilteredMoves(Board& board, Search& search) {
     MoveList allMoves = MoveGenerator::GenerateMoves(board);
     MoveList goodMoves;
 
-    Move hashMove;
+    Move hashMove = Move();
     TTEntry* ttEntry = search.m_tt.Probe(board.ZKey());
     if(ttEntry)
         hashMove = ttEntry->bestMove;
@@ -332,7 +376,7 @@ MoveList GenSFen::SortGoodMoves(Board& board, Search& search) {
     return goodMoves;
 }
 
-// Guardar evaluación con filtros (evitar mates, posiciones tácticas inestables, etc.)
+// Save positions with filters: quiets, no-check, no-mate
 bool GenSFen::SaveEvals(Board& board, Search& search, std::vector<SavedPosition>& savedPositions) {
     if(board.IsCheck() || !search.BestMove().IsQuiet() || IsWinValue(search.BestScore()))
         return false;
@@ -347,6 +391,28 @@ bool GenSFen::SaveEvals(Board& board, Search& search, std::vector<SavedPosition>
     savedPositions.push_back(sp);
 
     return true;
+}
+
+bool GenSFen::ValidateRandomPosition(Board& board, Search& search) {
+    const int nPieces = PopCount(board.AllPieces());
+    if(NoMoves(board) || nPieces <= 6 || board.IsCheck())
+        return false;
+
+    search.ClearSearch(false);
+    search.IterativeDeepening(board, UCI_Limits::FixNodes(m_config.RANDOM_VALIDATION_NODES));
+    return std::abs(search.BestScore()) <= m_config.RANDOM_SCORE_FILTER;
+}
+
+int GenSFen::GenerateRandomPosition(Board& board, std::string& position,
+                                    RandomPositionGenerator& posGen, Search& validationSearch) {
+    int tries = 0;
+
+    do {
+        position = posGen.GenerateV2(board);
+        ++tries;
+    } while(!ValidateRandomPosition(board, validationSearch));
+
+    return tries;
 }
 
 void GenSFen::SearchIteration(Board& board, Search& search) {
@@ -369,19 +435,21 @@ bool GenSFen::WriteRunMetadata(const std::string& mode, int concurrency) const {
              << "# Input data\n"
              << "book_file=" << (mode == "games" ? m_config.bookFile : "-") << "\n\n"
              << "# Behavior\n"
-             << "soft_randomize_plies=" << m_config.SOFT_RANDOMIZE_PLIES << "\n\n"
+             << "soft_randomize_plies=" << m_config.SOFT_RANDOMIZE_PLIES << '\n'
+             << "random_score_filter=" << m_config.RANDOM_SCORE_FILTER << '\n'
+             << "random_validation_nodes=" << m_config.RANDOM_VALIDATION_NODES << "\n\n"
              << "# Adjudication\n"
-             << "adj_threshold_win=" << m_config.ADJUDICATION_THRESHOLD_WIN << '\n'
-             << "adj_threshold_draw=" << m_config.ADJUDICATION_THRESHOLD_DRAW << '\n'
+             << "adj_eval_win=" << m_config.ADJUDICATION_EVAL_WIN << '\n'
+             << "adj_threshold_plies_draw=" << m_config.ADJUDICATION_THRESHOLD_PLIES_DRAW << '\n'
+             << "adj_eval_draw=" << m_config.ADJUDICATION_EVAL_DRAW << '\n'
              << "adj_plies_win=" << m_config.ADJUDICATION_PLIES_WIN << '\n'
              << "adj_plies_draw=" << m_config.ADJUDICATION_PLIES_DRAW << '\n'
              << "adj_max_plies=" << m_config.ADJUDICATION_MAX_PLIES << "\n\n"
              << "# Threads\n";
 
     if(mode == "games" || mode == "random") {
-        for(int i = 0; i < concurrency; i++) {
-            metadata << "thread_" << i << ".seed=" << m_config.seed + i
-                     << " file=evals_generated_" << (i + 1) << ".epd\n";
+        for(int i = 1; i <= concurrency; i++) {
+            metadata << "thread_" << i << " file=evals_generated_" << i << ".epd\n";
         }
     }
 
