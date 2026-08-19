@@ -18,13 +18,13 @@ struct GenSFenConfig {
 
     // Behavior
     int FIXED_NODES = 250000;
-    int SOFT_RANDOMIZE_PLIES = 4;
+    int SOFT_RANDOMIZE_PLIES = 0;
 
     // Adjudication configuration
     int ADJUDICATION_THRESHOLD_WIN = 200;
-    int ADJUDICATION_THRESHOLD_DRAW = 10;
+    int ADJUDICATION_THRESHOLD_DRAW = 5;
     int ADJUDICATION_PLIES_WIN = 6;
-    int ADJUDICATION_PLIES_DRAW = 30;
+    int ADJUDICATION_PLIES_DRAW = 24;
     uint ADJUDICATION_MAX_PLIES = 400;
 };
 
