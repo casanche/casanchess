@@ -87,5 +87,5 @@ private:
     // Debug
     SearchDebug m_debug;
 
-    friend class GenSFen;
+    friend class Datagen;
 };

@@ -1,4 +1,4 @@
-#include "gensfen/RandomPosition.h"
+#include "RandomPosition.h"
 
 #include "Attacks.h"
 #include "BitboardUtils.h"

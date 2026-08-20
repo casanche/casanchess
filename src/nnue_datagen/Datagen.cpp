@@ -1,5 +1,5 @@
-#include "gensfen/GenSFen.h"
-#include "gensfen/RandomPosition.h"
+#include "Datagen.h"
+#include "RandomPosition.h"
 
 #include "BitboardUtils.h"
 #include "Constants.h"
@@ -13,7 +13,7 @@
 #include <sstream>
 #include <thread>
 
-GenSFen::GenSFen(GenSFenConfig config) : m_config(std::move(config)) {
+Datagen::Datagen(DatagenConfig config) : m_config(std::move(config)) {
     if(m_config.outputDir.empty())
         m_config.outputDir = "gensfen_output";
     if(m_config.bookFile.empty())
@@ -22,7 +22,7 @@ GenSFen::GenSFen(GenSFenConfig config) : m_config(std::move(config)) {
     UCI_OUTPUT = false;
 }
 
-void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int nodes, int maxGames) {
+void Datagen::Run(const std::string& gensfen_mode, int concurrency, int nodes, int maxGames) {
     std::vector<std::thread> threads;
 
     if(gensfen_mode != "games" && gensfen_mode != "random" && gensfen_mode != "benchmark") {
@@ -72,9 +72,9 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int nodes, i
         return;
     }
 
-    void (GenSFen::*function)(const std::string&, int) = nullptr;
-    if(gensfen_mode == "games") function = &GenSFen::Games;
-    else if(gensfen_mode == "random") function = &GenSFen::Random;
+    void (Datagen::*function)(const std::string&, int) = nullptr;
+    if(gensfen_mode == "games") function = &Datagen::Games;
+    else if(gensfen_mode == "random") function = &Datagen::Random;
 
     for(int i = 0; i < concurrency; i++) {
         std::string filename = m_config.outputDir + "/evals_generated_" + std::to_string(i + 1) + ".epd";
@@ -83,7 +83,7 @@ void GenSFen::Run(const std::string& gensfen_mode, int concurrency, int nodes, i
     for(auto& th : threads) th.join();
 }
 
-void GenSFen::Games(const std::string& filename, int threadIndex) {
+void Datagen::Games(const std::string& filename, int threadIndex) {
     std::ofstream outputFile(filename);
     
     TT tt;
@@ -194,7 +194,7 @@ void GenSFen::Games(const std::string& filename, int threadIndex) {
     }
 }
 
-void GenSFen::Random(const std::string& filename, int threadIndex) {
+void Datagen::Random(const std::string& filename, int threadIndex) {
     std::ofstream outputFile(filename);
 
     TT tt;
@@ -289,7 +289,7 @@ void GenSFen::Random(const std::string& filename, int threadIndex) {
     }
 }
 
-void GenSFen::RandomBenchmark(int maxGames) {
+void Datagen::RandomBenchmark(int maxGames) {
     std::cout << "--- Random Benchmark Start (" << maxGames << " positions) ---" << std::endl;
 
     Utils::Clock clock;
@@ -328,16 +328,16 @@ void GenSFen::RandomBenchmark(int maxGames) {
     std::cout << "Total Time        : " << globalClock.Elapsed() << " ms" << std::endl;
 }
 
-bool GenSFen::NoMoves(Board& board) {
+bool Datagen::NoMoves(Board& board) {
     return MoveGenerator::GenerateMoves(board).empty();
 }
 
-Move GenSFen::RandomMove(Board& board) {
+Move Datagen::RandomMove(Board& board) {
     MoveList moves = MoveGenerator::GenerateMoves(board);
     return MoveGenerator::RandomMove(moves);
 }
 
-BookPositions GenSFen::ReadBook(const std::string& bookPath) {
+BookPositions Datagen::ReadBook(const std::string& bookPath) {
     std::ifstream bookFile(bookPath);
 
     BookPositions bookPositions;
@@ -357,7 +357,7 @@ BookPositions GenSFen::ReadBook(const std::string& bookPath) {
 }
 
 // Filter bad captures for soft-randomization
-MoveList GenSFen::SortFilteredMoves(Board& board, Search& search) {
+MoveList Datagen::SortFilteredMoves(Board& board, Search& search) {
     MoveList allMoves = MoveGenerator::GenerateMoves(board);
     MoveList goodMoves;
 
@@ -377,7 +377,7 @@ MoveList GenSFen::SortFilteredMoves(Board& board, Search& search) {
 }
 
 // Save positions with filters: quiets, no-check, no-mate
-bool GenSFen::SaveEvals(Board& board, Search& search, std::vector<SavedPosition>& savedPositions) {
+bool Datagen::SaveEvals(Board& board, Search& search, std::vector<SavedPosition>& savedPositions) {
     if(board.IsCheck() || !search.BestMove().IsQuiet() || IsWinValue(search.BestScore()))
         return false;
 
@@ -393,7 +393,7 @@ bool GenSFen::SaveEvals(Board& board, Search& search, std::vector<SavedPosition>
     return true;
 }
 
-bool GenSFen::ValidateRandomPosition(Board& board, Search& search) {
+bool Datagen::ValidateRandomPosition(Board& board, Search& search) {
     const int nPieces = PopCount(board.AllPieces());
     if(NoMoves(board) || nPieces <= 6 || board.IsCheck())
         return false;
@@ -403,7 +403,7 @@ bool GenSFen::ValidateRandomPosition(Board& board, Search& search) {
     return std::abs(search.BestScore()) <= m_config.RANDOM_SCORE_FILTER;
 }
 
-int GenSFen::GenerateRandomPosition(Board& board, std::string& position,
+int Datagen::GenerateRandomPosition(Board& board, std::string& position,
                                     RandomPositionGenerator& posGen, Search& validationSearch) {
     int tries = 0;
 
@@ -415,11 +415,11 @@ int GenSFen::GenerateRandomPosition(Board& board, std::string& position,
     return tries;
 }
 
-void GenSFen::SearchIteration(Board& board, Search& search) {
+void Datagen::SearchIteration(Board& board, Search& search) {
     search.IterativeDeepening(board, UCI_Limits::FixNodes(m_config.FIXED_NODES));
 }
 
-bool GenSFen::WriteRunMetadata(const std::string& mode, int concurrency) const {
+bool Datagen::WriteRunMetadata(const std::string& mode, int concurrency) const {
     const std::filesystem::path metadataPath = std::filesystem::path(m_config.outputDir) / "run_metadata.txt";
     std::ofstream metadata(metadataPath);
     

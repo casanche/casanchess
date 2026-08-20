@@ -1,4 +1,4 @@
-#include "gensfen/GenSFen.h"
+#include "Datagen.h"
 
 #include "Attacks.h"
 #include "Evaluation.h"
@@ -65,12 +65,12 @@ int main(int argc, char** argv) {
 
     UCI_CLASSICAL_EVAL = false;
 
-    GenSFenConfig config;
+    DatagenConfig config;
     config.outputDir = args.outputDir;
     config.bookFile = args.bookFile;
     config.seed = args.seed;
 
-    GenSFen gensfen(config);
+    Datagen gensfen(config);
     gensfen.Run(args.mode, args.concurrency, args.nodes, args.maxGames);
 
     Syzygy::Free();

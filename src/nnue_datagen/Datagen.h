@@ -13,7 +13,7 @@ using BookPositions = std::vector<std::string>;
 struct CurrentPosition;
 class RandomPositionGenerator;
 
-struct GenSFenConfig {
+struct DatagenConfig {
     std::string outputDir;
     std::string bookFile;
     uint64_t seed = 0;
@@ -41,9 +41,9 @@ struct SavedPosition {
     int eval;
 };
 
-class GenSFen {
+class Datagen {
 public:
-    explicit GenSFen(GenSFenConfig config);
+    explicit Datagen(DatagenConfig config);
 
     void Run(const std::string& gensfen_mode, int concurrency, int nodes, int maxGames);
     
@@ -65,7 +65,7 @@ private:
     void SearchIteration(Board& board, Search& search);
     bool WriteRunMetadata(const std::string& mode, int concurrency) const;
 
-    GenSFenConfig m_config = {};
+    DatagenConfig m_config = {};
     int m_maxGames = 0;
 
     BookPositions m_bookPositions;

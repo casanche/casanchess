@@ -21,7 +21,7 @@ endif()
 # =============================================================================
 option(BUILD_TESTS "Build standard tests" OFF)
 option(BUILD_TESTS_EXTRA "Build extra tests (Perft and Searcht)" OFF)
-option(BUILD_EXECUTABLES_EXTRA "Build extra executables (GenSFen and NNUE_Convert)" OFF)
+option(BUILD_NNUE_TOOLS "Build NNUE tools (NNUE_Datagen and NNUE_Convert)" OFF)
 option(ENABLE_LTO "Enable Link Time Optimization for Release builds" ON)
 option(ENABLE_STATIC "Enable static compilation" ON)
 
@@ -222,20 +222,21 @@ endif()
 # =============================================================================
 # Extra Executables
 # =============================================================================
-if(BUILD_EXECUTABLES_EXTRA)
-    # GenSFen executable
-    add_executable(gensfen
-        src/gensfen/Main.cpp
-        src/gensfen/GenSFen.cpp
-        src/gensfen/RandomPosition.cpp
+if(BUILD_NNUE_TOOLS)
+    # nnue-datagen executable
+    add_executable(nnue-datagen
+        src/nnue_datagen/Main.cpp
+        src/nnue_datagen/Datagen.cpp
+        src/nnue_datagen/RandomPosition.cpp
     )
-    target_compile_options(gensfen PRIVATE ${COMPILER_OPTIONS})
-    target_link_libraries(gensfen PRIVATE engine_static)
+    target_compile_options(nnue-datagen PRIVATE ${COMPILER_OPTIONS})
+    target_link_libraries(nnue-datagen PRIVATE engine_static)
 
-    # NNUE_Convert executable
-    add_executable(nnue_convert
-        src/nnue_convert/NNUE_Convert.cpp
+    # nnue-convert executable
+    add_executable(nnue-convert
+        src/nnue_convert/Main.cpp
+        src/nnue_convert/Convert.cpp
     )
-    target_compile_options(nnue_convert PRIVATE ${COMPILER_OPTIONS})
-    target_link_libraries(nnue_convert PRIVATE engine_static)
+    target_compile_options(nnue-convert PRIVATE ${COMPILER_OPTIONS})
+    target_link_libraries(nnue-convert PRIVATE engine_static)
 endif()
