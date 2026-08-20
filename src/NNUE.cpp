@@ -107,7 +107,7 @@ int NNUE::Evaluate(int color, int ply) const {
     ComputeLayer<i16, true>(o2, o3, s_shared.network.b3, s_shared.network.w3, ARCH[L3][ROW], ARCH[L3][COL]);
     ComputeLayer<i32, false>(o3, o4, s_shared.network.b4, s_shared.network.w4, ARCH[L4][ROW], ARCH[L4][COL]);
 
-    return (o4[0] * 100) / NNUEConstants::QUANT_FACTOR_B;
+    return (o4[0] * 120) / NNUEConstants::QUANT_FACTOR_B;
 }
 
 void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {
