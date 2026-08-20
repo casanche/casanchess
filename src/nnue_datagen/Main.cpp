@@ -13,7 +13,8 @@
 struct CliArgs {
     std::string mode = "games";
     int concurrency = 0;
-    int nodes = 250000;
+    int fixedNodes = 250000;
+    int softRandomizePlies = 0;
     int maxGames = 0;
     std::string outputDir;
     std::string bookFile;
@@ -22,7 +23,8 @@ struct CliArgs {
 };
 
 void PrintUsage() {
-    std::cout << "Usage: gensfen -m <games|random|benchmark> [-c threads] [-n nodes]"
+    std::cout << "Usage: gensfen -m <games|random|benchmark> [-c threads] [-n fixed_nodes]"
+              << " [--soft-randomize-plies N]"
               << " [--max-games N] [-o output_dir] [-b book_file] [-s seed]\n";
 }
 
@@ -31,7 +33,8 @@ bool ParseArgs(int argc, char** argv, CliArgs& argsOut) {
         std::string_view arg = argv[i];
         if(arg == "-m" && i + 1 < argc) argsOut.mode = argv[++i];
         else if(arg == "-c" && i + 1 < argc) argsOut.concurrency = std::atoi(argv[++i]);
-        else if(arg == "-n" && i + 1 < argc) argsOut.nodes = std::atoi(argv[++i]);
+        else if(arg == "-n" && i + 1 < argc) argsOut.fixedNodes = std::atoi(argv[++i]);
+        else if(arg == "--soft-randomize-plies" && i + 1 < argc) argsOut.softRandomizePlies = std::atoi(argv[++i]);
         else if(arg == "--max-games" && i + 1 < argc) argsOut.maxGames = std::atoi(argv[++i]);
         else if((arg == "-o" || arg == "--output-dir") && i + 1 < argc) argsOut.outputDir = argv[++i];
         else if((arg == "-b" || arg == "--book-file") && i + 1 < argc) argsOut.bookFile = argv[++i];
@@ -69,9 +72,11 @@ int main(int argc, char** argv) {
     config.outputDir = args.outputDir;
     config.bookFile = args.bookFile;
     config.seed = args.seed;
+    config.FIXED_NODES = args.fixedNodes;
+    config.SOFT_RANDOMIZE_PLIES = args.softRandomizePlies;
 
     Datagen gensfen(config);
-    gensfen.Run(args.mode, args.concurrency, args.nodes, args.maxGames);
+    gensfen.Run(args.mode, args.concurrency, args.maxGames);
 
     Syzygy::Free();
     return 0;

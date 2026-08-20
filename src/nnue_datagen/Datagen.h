@@ -20,7 +20,7 @@ struct DatagenConfig {
 
     // Behavior
     int FIXED_NODES = 250000;
-    int SOFT_RANDOMIZE_PLIES = 8;
+    int SOFT_RANDOMIZE_PLIES = 0;
 
     // Random generator
     int RANDOM_SCORE_FILTER = 250;
@@ -45,7 +45,7 @@ class Datagen {
 public:
     explicit Datagen(DatagenConfig config);
 
-    void Run(const std::string& gensfen_mode, int concurrency, int nodes, int maxGames);
+    void Run(const std::string& gensfen_mode, int concurrency, int maxGames);
     
 private:
     void Games(const std::string& filename, int threadIndex);

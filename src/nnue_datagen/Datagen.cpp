@@ -22,7 +22,7 @@ Datagen::Datagen(DatagenConfig config) : m_config(std::move(config)) {
     UCI_OUTPUT = false;
 }
 
-void Datagen::Run(const std::string& gensfen_mode, int concurrency, int nodes, int maxGames) {
+void Datagen::Run(const std::string& gensfen_mode, int concurrency, int maxGames) {
     std::vector<std::thread> threads;
 
     if(gensfen_mode != "games" && gensfen_mode != "random" && gensfen_mode != "benchmark") {
@@ -37,7 +37,6 @@ void Datagen::Run(const std::string& gensfen_mode, int concurrency, int nodes, i
 
     m_maxGames = maxGames == 0 ? INFINITE : maxGames;
     m_gamesPlayed.store(0);
-    if(nodes > 0) m_config.FIXED_NODES = nodes;
     if(concurrency <= 0) {
         const unsigned int hardwareThreads = std::thread::hardware_concurrency();
         concurrency = hardwareThreads > 1 ? static_cast<int>(hardwareThreads - 1) : 1;
