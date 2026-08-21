@@ -91,21 +91,25 @@ void Datagen::Games(const std::string& filename, int threadIndex) {
     Board board;
     Utils::PRNG rng(m_config.seed + threadIndex);
 
+    std::vector<SavedPosition> savedPositions;
+    savedPositions.reserve(512);
+    std::stringstream ss;
+
     for(;;) {
         const int n_game = m_gamesPlayed.fetch_add(1) + 1;
         if(n_game > m_maxGames)
             break;
 
-        tt.Clear();
         search.ClearSearch(true);
 
-        std::string startingFen = m_bookPositions[rng.Random32(0, static_cast<uint32_t>(m_bookPositions.size()) - 1)];
+        savedPositions.clear();
+        ss.str("");
+        ss.clear();
+
+        const std::string& startingFen = m_bookPositions[rng.Random32(0, static_cast<uint32_t>(m_bookPositions.size()) - 1)];
         board.SetFen(startingFen);
 
         const uint initialPly = board.Ply();
-
-        std::vector<SavedPosition> savedPositions;
-        savedPositions.reserve(512);
 
         int gameResult = 0; // 1 (White wins), 0 (draw), -1 (Black wins)
         int adjWinCounter = 0, adjDrawCounter = 0;
@@ -177,7 +181,6 @@ void Datagen::Games(const std::string& filename, int threadIndex) {
         int heavyPiecesCount = PopCount(board.AllPieces()) - pawnCount - 2;
 
         // Write the batch
-        std::stringstream ss;
         for(const auto& sp : savedPositions) {
             ss << sp.fen << ";bm " << sp.bestMove << ";ev " << sp.eval 
                << ";r " << gameResult << ";l " << gameLength 
@@ -205,20 +208,25 @@ void Datagen::Random(const std::string& filename, int threadIndex) {
     Utils::PRNG rng(m_config.seed + threadIndex);
     RandomPositionGenerator randomPosGen(m_config.seed + threadIndex);
 
+    std::vector<SavedPosition> savedPositions;
+    savedPositions.reserve(512);
+    std::stringstream ss;
+
     for(;;) {
         const int n_game = m_gamesPlayed.fetch_add(1) + 1;
         if(n_game > m_maxGames)
             break;
 
-        tt.Clear();
         search.ClearSearch(true);
+
+        savedPositions.clear();
+        ss.str("");
+        ss.clear();
 
         std::string startingFen;
         GenerateRandomPosition(board, startingFen, randomPosGen, validationSearch);
 
         const uint initialPly = board.Ply();
-        std::vector<SavedPosition> savedPositions;
-        savedPositions.reserve(128);
 
         int gameResult = 0;
         int adjWinCounter = 0;
@@ -273,7 +281,6 @@ void Datagen::Random(const std::string& filename, int threadIndex) {
         const int pawnCount = PopCount(board.Piece(WHITE, PAWN) | board.Piece(BLACK, PAWN));
         const int heavyPiecesCount = PopCount(board.AllPieces()) - pawnCount - 2;
 
-        std::stringstream ss;
         for(const auto& sp : savedPositions) {
             ss << sp.fen << ";bm " << sp.bestMove << ";ev " << sp.eval
                << ";r " << gameResult << ";l " << gameLength
@@ -383,11 +390,7 @@ bool Datagen::SaveEvals(Board& board, Search& search, std::vector<SavedPosition>
     int score = search.BestScore();
     int scoreWhitePOV = board.ActivePlayer() == WHITE ? score : -score;
 
-    SavedPosition sp;
-    sp.fen = board.GetFen();
-    sp.bestMove = search.BestMove().Notation();
-    sp.eval = scoreWhitePOV;
-    savedPositions.push_back(sp);
+    savedPositions.push_back( {board.GetFen(), search.BestMove().Notation(), scoreWhitePOV} );
 
     return true;
 }
