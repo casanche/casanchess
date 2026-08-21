@@ -45,7 +45,7 @@ class Datagen {
 public:
     explicit Datagen(DatagenConfig config);
 
-    void Run(const std::string& gensfen_mode, int concurrency, int maxGames);
+    void Run(const std::string& datagen_mode, int concurrency, int maxGames);
     
 private:
     void Games(const std::string& filename, int threadIndex);

@@ -15,18 +15,18 @@
 
 Datagen::Datagen(DatagenConfig config) : m_config(std::move(config)) {
     if(m_config.outputDir.empty())
-        m_config.outputDir = "gensfen_output";
+        m_config.outputDir = "datagen_output";
     if(m_config.bookFile.empty())
         m_config.bookFile = "bookfile.epd";
 
     UCI_OUTPUT = false;
 }
 
-void Datagen::Run(const std::string& gensfen_mode, int concurrency, int maxGames) {
+void Datagen::Run(const std::string& datagen_mode, int concurrency, int maxGames) {
     std::vector<std::thread> threads;
 
-    if(gensfen_mode != "games" && gensfen_mode != "random" && gensfen_mode != "benchmark") {
-        std::cerr << "Error: Unsupported GenSFen mode: " << gensfen_mode << std::endl;
+    if(datagen_mode != "games" && datagen_mode != "random" && datagen_mode != "benchmark") {
+        std::cerr << "Error: Unsupported Datagen mode: " << datagen_mode << std::endl;
         return;
     }
 
@@ -42,13 +42,13 @@ void Datagen::Run(const std::string& gensfen_mode, int concurrency, int maxGames
         concurrency = hardwareThreads > 1 ? static_cast<int>(hardwareThreads - 1) : 1;
     }
 
-    if(gensfen_mode == "benchmark") {
+    if(datagen_mode == "benchmark") {
         RandomBenchmark(m_maxGames == INFINITE ? 100 : m_maxGames);
         return;
     }
 
     // Book
-    if(gensfen_mode == "games") {
+    if(datagen_mode == "games") {
         m_bookPositions = ReadBook(m_config.bookFile);
         if(m_bookPositions.empty()) {
             std::cerr << "Error: Book is empty or missing. Bookfile: " << m_config.bookFile << std::endl;
@@ -58,22 +58,22 @@ void Datagen::Run(const std::string& gensfen_mode, int concurrency, int maxGames
 
     // Timestamped directory
     std::filesystem::path timestampPath(m_config.outputDir);
-    timestampPath /= std::format("{}/{}_{:%Y%m%d}", gensfen_mode, gensfen_mode, Utils::Clock::Now());
+    timestampPath /= std::format("{}/{}_{:%Y%m%d}", datagen_mode, datagen_mode, Utils::Clock::Now());
     std::filesystem::create_directories(timestampPath);
     m_config.outputDir = timestampPath.string();
 
-    std::cout << "Starting GenSFen | Mode: " << gensfen_mode 
+    std::cout << "Starting Datagen | Mode: " << datagen_mode
               << " | Concurrency: " << concurrency 
               << " | Output: " << m_config.outputDir << std::endl;
 
-    if(!WriteRunMetadata(gensfen_mode, concurrency)) {
+    if(!WriteRunMetadata(datagen_mode, concurrency)) {
         std::cerr << "Error: Cannot write run metadata." << std::endl;
         return;
     }
 
     void (Datagen::*function)(const std::string&, int) = nullptr;
-    if(gensfen_mode == "games") function = &Datagen::Games;
-    else if(gensfen_mode == "random") function = &Datagen::Random;
+    if(datagen_mode == "games") function = &Datagen::Games;
+    else if(datagen_mode == "random") function = &Datagen::Random;
 
     for(int i = 0; i < concurrency; i++) {
         std::string filename = m_config.outputDir + "/evals_generated_" + std::to_string(i + 1) + ".epd";

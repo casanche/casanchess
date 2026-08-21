@@ -23,7 +23,7 @@ struct CliArgs {
 };
 
 void PrintUsage() {
-    std::cout << "Usage: gensfen -m <games|random|benchmark> [-c threads] [-n fixed_nodes]"
+    std::cout << "Usage: nnue-datagen -m <games|random|benchmark> [-c threads] [-n fixed_nodes]"
               << " [--soft-randomize-plies N]"
               << " [--max-games N] [-o output_dir] [-b book_file] [-s seed]\n";
 }
@@ -75,8 +75,8 @@ int main(int argc, char** argv) {
     config.FIXED_NODES = args.fixedNodes;
     config.SOFT_RANDOMIZE_PLIES = args.softRandomizePlies;
 
-    Datagen gensfen(config);
-    gensfen.Run(args.mode, args.concurrency, args.maxGames);
+    Datagen datagen(config);
+    datagen.Run(args.mode, args.concurrency, args.maxGames);
 
     Syzygy::Free();
     return 0;
