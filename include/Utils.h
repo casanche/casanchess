@@ -30,9 +30,9 @@ namespace Utils {
         int64_t Elapsed() const;
         int64_t ElapsedNanoseconds() const;
 
-        // auto Now() const {
-        //     return std::chrono::steady_clock::now();
-        // }
+        static auto Now() {
+            return std::chrono::system_clock::now();
+        }
 
     private:
         std::chrono::steady_clock::time_point m_start;
