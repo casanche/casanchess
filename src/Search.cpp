@@ -60,10 +60,11 @@ const int NULLMOVE_REDUCTION_FACTOR = 3;
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
 
-// Draw contempt to discourage premature draws
-constexpr int DrawScore(int ply) {
-    return 0;
-    // return (ply & 1) ? 10 : -10;
+namespace {
+    // Draw contempt to discourage premature draws.
+    int DrawScore(int ply) {
+        return (ply & 1) ? UCI_DRAW_CONTEMPT : -UCI_DRAW_CONTEMPT;
+    }
 }
 
 // Called once when the UCI interface starts up.

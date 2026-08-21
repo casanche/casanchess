@@ -430,6 +430,7 @@ bool Datagen::WriteRunMetadata(const std::string& mode, int concurrency) const {
              << "max_games=" << (m_maxGames == INFINITE ? "infinite" : std::to_string(m_maxGames)) << '\n'
              << "seed=" << m_config.seed << '\n'
              << "concurrency=" << concurrency << '\n'
+             << "draw_contempt=" << UCI_DRAW_CONTEMPT << '\n'
              << "timestamp_unix=" << static_cast<long long>(std::time(nullptr)) << "\n\n"
              << "# Input data\n"
              << "book_file=" << (mode == "games" ? m_config.bookFile : "-") << "\n\n"

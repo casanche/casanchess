@@ -7,6 +7,7 @@
 #include "SearchLimits.h"
 #include "Syzygy.h"
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -51,6 +52,7 @@ void Uci::Launch() {
             //Options
             std::cout << "option name ClassicalEval type check default false" << std::endl;
             std::cout << "option name ClearHash type button" << std::endl;
+            std::cout << "option name Contempt type spin default 10 min -100 max 100" << std::endl;
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
             std::cout << "option name NNUE_Path type string default " << NNUE::GetPath() << std::endl;
             std::cout << "option name Ponder type check default false" << std::endl;
@@ -312,6 +314,14 @@ void Uci::SetOption(std::istringstream &stream) {
         }
         else if(token == "ClearHash") {
             m_tt.Clear();
+        }
+        else if(token == "Contempt") {
+            stream >> token; // should be 'value'
+            if(token != "value")
+                return;
+            stream >> token;
+
+            UCI_DRAW_CONTEMPT = std::clamp(std::stoi(token), -100, 100);
         }
         else if(token == "ClassicalEval") {
             stream >> token;

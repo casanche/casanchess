@@ -10,6 +10,7 @@
 inline bool UCI_PONDER = false;
 inline bool UCI_CLASSICAL_EVAL = false;
 inline uint UCI_SYZYGY_PROBE_LIMIT = 7;
+inline int UCI_DRAW_CONTEMPT = 10;
 
 inline bool UCI_OUTPUT = true;
 
