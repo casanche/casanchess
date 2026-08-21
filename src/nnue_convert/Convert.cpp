@@ -23,96 +23,72 @@ T Quantize(float decimal, float factor) {
 
     if(integer < min || integer > max) {
         std::cerr << "Warning: Quantization overflow for value " << decimal
-                  << " with factor " << factor
-                  << " --> Clamping to limits!"
-                  << std::endl;
+                  << " with factor " << factor << " --> Clamping to limits!" << std::endl;
         integer = std::clamp(integer, min, max);
     }
-
     return static_cast<T>(integer);
 }
 
 void Convert(std::string ifilename, std::string ofilename) {
-    //Read model parameters from plain .txt
     std::ifstream ifile;
     ifile.open(ifilename);
 
-    if(!ifile.is_open())
-        return;
+    if(!ifile.is_open()) return;
 
-    std::cout << "Converting network: " << ifilename << std::endl;
+    std::cout << "Converting V2 network: " << ifilename << std::endl;
 
     auto nnue_storage = std::make_unique<Network>();
 
-    //L1
+    // L1
     for(uint col = 0; col < ARCH[L1][COL]; col++) {
         for(uint row = 0; row < ARCH[L1][ROW]; row++) {
-            float decimal = GetNumber(ifile);
-            i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_L1);
-            nnue_storage->w1[row * ARCH[L1][COL] + col] = quantized;
+            nnue_storage->w1[row * ARCH[L1][COL] + col] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_L1);
         }
     }
     for(uint col = 0; col < ARCH[L1][COL]; col++) {
-        float decimal = GetNumber(ifile);
-        i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_L1);
-        nnue_storage->b1[col] = quantized;
+        nnue_storage->b1[col] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_L1);
     }
 
-    //L2
+    // L2
     for(uint col = 0; col < ARCH[L2][COL]; col++) {
         for(uint row = 0; row < ARCH[L2][ROW]; row++) {
-            float decimal = GetNumber(ifile);
-            i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_W);
-            nnue_storage->w2[col * ARCH[L2][ROW] + row] = quantized; //transposition
+            nnue_storage->w2[col * ARCH[L2][ROW] + row] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_W);
         }
     }
     for(uint col = 0; col < ARCH[L2][COL]; col++) {
-        float decimal = GetNumber(ifile);
-        i32 quantized = Quantize<i32>(decimal, NNUEConstants::QUANT_FACTOR_B);
-        nnue_storage->b2[col] = quantized;
+        nnue_storage->b2[col] = Quantize<i32>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_B);
     }
 
-    //L3
+    // L3 (Head 0: Eval)
     for(uint col = 0; col < ARCH[L3][COL]; col++) {
         for(uint row = 0; row < ARCH[L3][ROW]; row++) {
-            float decimal = GetNumber(ifile);
-            i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_W);
-            nnue_storage->w3[col * ARCH[L3][ROW] + row] = quantized; //transposition
+            nnue_storage->w3[col * ARCH[L3][ROW] + row] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_W);
         }
     }
     for(uint col = 0; col < ARCH[L3][COL]; col++) {
-        float decimal = GetNumber(ifile);
-        i32 quantized = Quantize<i32>(decimal, NNUEConstants::QUANT_FACTOR_B);
-        nnue_storage->b3[col] = quantized;
+        nnue_storage->b3[col] = Quantize<i32>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_B);
     }
 
-    //L4
-    for(uint col = 0; col < ARCH[L4][COL]; col++) {
-        for(uint row = 0; row < ARCH[L4][ROW]; row++) {
-            float decimal = GetNumber(ifile);
-            i16 quantized = Quantize<i16>(decimal, NNUEConstants::QUANT_FACTOR_W);
-            nnue_storage->w4[row * ARCH[L4][COL] + col] = quantized;
-        }
-    }
-    for(uint col = 0; col < ARCH[L4][COL]; col++) {
-        float decimal = GetNumber(ifile);
-        i32 quantized = Quantize<i32>(decimal, NNUEConstants::QUANT_FACTOR_B);
-        nnue_storage->b4[col] = quantized;
+    // DISCARD: Head 1 (Chaos / DTE) - 64 weights and 1 bias
+    for(int i = 0; i < 64; i++) GetNumber(ifile); // fc3_chaos.weight
+    GetNumber(ifile);                             // fc3_chaos.bias
+
+    // Bypass (direct accumulator to Eval) - Weight-only, no bias
+    for(int i = 0; i < 2 * NNUE_SIZE; i++) {
+        nnue_storage->bypass[i] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_W);
     }
 
     ifile.close();
 
-    //Write binary file
+    // Write binary file
     std::ofstream ofile;
     ofile.open(ofilename, std::ios::binary);
-
     if(!ofile.is_open()) {
         std::cerr << "ERROR: Could not open output file for writing: " << ofilename << std::endl;
         return;
     }
 
-    std::cout << "Writing binary to: " << ofilename << std::endl;
-
+    std::cout << "Writing V2 binary to: " << ofilename << std::endl;
     ofile.write((char*)nnue_storage.get(), sizeof(Network));
     ofile.close();
 }
