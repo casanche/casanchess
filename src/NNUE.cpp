@@ -5,21 +5,20 @@
 //
 // Optimized for incremental updates of the first layer (basically the point of NNUE).
 //
-// Architecture: HalfKP
+// Architecture: HalfKP + bypass
 //   Features: 32 king buckets × 64 squares × 5 piece types × 2 colors = 20480 features
-//   Layers: (128x2) → 32 → 32 → 1
-//      L1 (128x2): White and black accumulatores are concatenated
-//      L2, L3: 2 hidden layers of 32 neurons each, to account for non-linearities
-//      L4: 1 output neuron, representing the evaluation score in centipawns
+//   Layers: (128x2) → 64 → 1 + bypass
+//      L1 (128x2): White and black accumulatores are concatenated (and ReLU'ed)
+//      L2 (64): Hidden layer, to account for non-linearities
+//      L3 (1): Output node representing the base evaluation
+//      Bypass: Direct connection (256 → 1) from the accumulator to the output.
+//              Efficient way for the network to learn material values (similar to PSQT)
 //
 // Key concepts:
-//   - King buckets: 32 partitions of king position for learning king-relative patterns
-//   - Accumulator: Cached first layer output, updated incrementally on piece moves
-//   - Perspective: Each side has its own accumulator (white/black view of the board)
-//   - SIMD: Uses AVX2 intrinsics for vectorized layer computation (integer quantization)
-//
-// Efficiency: Only the first layer (largest) needs incremental updates.
-// On most moves, we add/remove a few features instead of recomputing all the inputs.
+//   - King buckets: 32 partitions of king position for learning king-relative patterns.
+//   - Accumulator: Cached first layer output, updated incrementally on piece moves.
+//   - Perspective: Each side has its own accumulator (us/them perspective).
+//   - SIMD: Use AVX2 intrinsics for fast vectorized layer computation.
 
 #include "NNUE.h"
 #include "BitboardUtils.h"
@@ -35,8 +34,8 @@
 #endif
 
 namespace {
-   constexpr int KING_BUCKET_MULTIPLIER = 640;
-   constexpr int PIECE_INDEX_MULTIPLIER = 64;
+    constexpr int KING_BUCKET_MULTIPLIER = 640;
+    constexpr int PIECE_INDEX_MULTIPLIER = 64;
 }
 
 // =========================
@@ -92,29 +91,27 @@ NNUE& NNUE::operator=(const NNUE& other) {
 }
 
 int NNUE::Evaluate(int color, int ply) const {
-    //Layer 1
-    i16 outputLayer1[NNUE_SIZE * 2];
+    i16 o1[NNUE_SIZE * 2]; //Layer 1 (ReLU'ed accumulator)
 
-    ActivateReLU(m_state->accumulator[ply][color], outputLayer1, NNUE_SIZE);
-    ActivateReLU(m_state->accumulator[ply][1-color], outputLayer1 + NNUE_SIZE, NNUE_SIZE);
+    ActivateReLU(m_state->accumulator[ply][color], o1, NNUE_SIZE);
+    ActivateReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE, NNUE_SIZE);
 
-    //Layers 2,3,4
-    i16 o2[ ARCH[L3][ROW] ];
-    i16 o3[ ARCH[L4][ROW] ];
-    i32 o4[1];
+    i16 o2[ ARCH[L2][COL] ]; //Layer 2
+    i32 o3[ ARCH[L3][COL] ]; //Layer 3
 
-    ComputeLayer<i16, true>(outputLayer1, o2, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
-    ComputeLayer<i16, true>(o2, o3, s_shared.network.b3, s_shared.network.w3, ARCH[L3][ROW], ARCH[L3][COL]);
-    ComputeLayer<i32, false>(o3, o4, s_shared.network.b4, s_shared.network.w4, ARCH[L4][ROW], ARCH[L4][COL]);
+    ComputeLayer<i16, true>(o1, o2, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
+    ComputeLayer<i32, false>(o2, o3, s_shared.network.b3, s_shared.network.w3, ARCH[L3][ROW], ARCH[L3][COL]);
 
-    return (o4[0] * 120) / NNUEConstants::QUANT_FACTOR_B;
+    i32 oBypass = ComputeBypass(o1, s_shared.network.bypass);
+
+    return (o3[0] + oBypass) * 120 / NNUEConstants::QUANT_FACTOR_B;
 }
 
 void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {
     i16* acc_w = m_state->accumulator[ply][0];
     i16* acc_b = m_state->accumulator[ply][1];
 
-    for(int i=0; i < NNUE_SIZE; i++) {
+    for(int i = 0; i < NNUE_SIZE; i++) {
         acc_w[i] = s_shared.network.b1[i];
         acc_b[i] = s_shared.network.b1[i];
     }
@@ -169,7 +166,7 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply, int
     kingSquare_b ^= NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int square_w = square;
-	const int square_b = square ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
+    const int square_b = square ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int feature_w = GetFeatureIndex(color,   pieceType, square_w, kingSquare_w);
     const int feature_b = GetFeatureIndex(1-color, pieceType, square_b, kingSquare_b);
@@ -193,10 +190,10 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
     kingSquare_b ^= NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int fromSq_w = fromSq;
-	const int fromSq_b = fromSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
+    const int fromSq_b = fromSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int toSq_w = toSq;
-	const int toSq_b = toSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
+    const int toSq_b = toSq ^ NNUEConstants::BLACK_PERSPECTIVE_XOR;
 
     const int feature_from_w = GetFeatureIndex(color,   pieceType, fromSq_w, kingSquare_w);
     const int feature_from_b = GetFeatureIndex(1-color, pieceType, fromSq_b, kingSquare_b);
@@ -261,6 +258,32 @@ namespace {
         return _mm_cvtsi128_si32(x);
     }
     #endif
+}
+
+i32 NNUE::ComputeBypass(const i16* input, const i16* weights) const {
+    i32 sum = 0;
+    constexpr int bypassSize = NNUE_SIZE * 2;
+
+    #if defined(__AVX2__)
+        __m256i dot = _mm256_setzero_si256();
+
+        for(int i = 0; i < bypassSize; i += 16) {
+            __m256i inputVec = _mm256_loadu_si256((__m256i*)&input[i]);
+            __m256i weightsVec = _mm256_loadu_si256((__m256i*)&weights[i]);
+
+            __m256i product = _mm256_madd_epi16(inputVec, weightsVec);
+            dot = _mm256_add_epi32(dot, product);
+        }
+
+        __m128i x = _mm_add_epi32(_mm256_castsi256_si128(dot), _mm256_extracti128_si256(dot, 1));
+        sum += HorizontalSum128(x);
+    #else
+        for(int i = 0; i < bypassSize; i++) {
+            sum += input[i] * weights[i];
+        }
+    #endif
+
+    return sum;
 }
 
 template <typename T, bool with_ReLU>

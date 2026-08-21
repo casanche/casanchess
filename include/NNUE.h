@@ -46,6 +46,8 @@ public:
 private:
     void ActivateReLU(const i16* input, i16* output, int size) const;
 
+    i32 ComputeBypass(const i16* input, const i16* weights) const;
+
     template <typename T, bool with_ReLU>
     void ComputeLayer(const i16* inputLayer, T* outputLayer,
                       const i32* biases, const i16* weights,
