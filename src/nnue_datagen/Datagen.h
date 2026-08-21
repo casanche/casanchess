@@ -27,12 +27,12 @@ struct DatagenConfig {
     int RANDOM_VALIDATION_NODES = 5000;
 
     // Adjudication configuration
-    int ADJUDICATION_EVAL_WIN = 200;
-    int ADJUDICATION_PLIES_WIN = 4;
+    int ADJUDICATION_EVAL_WIN = 400;
+    int ADJUDICATION_PLIES_WIN = 6;
     uint ADJUDICATION_THRESHOLD_PLIES_DRAW = 140;
     int ADJUDICATION_EVAL_DRAW = 5;
     int ADJUDICATION_PLIES_DRAW = 14;
-    uint ADJUDICATION_MAX_PLIES = 260;
+    uint ADJUDICATION_MAX_PLIES = 280;
 };
 
 struct SavedPosition {
