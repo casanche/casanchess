@@ -495,8 +495,11 @@ bool Datagen::WriteRunMetadata(const std::string& mode, int concurrency) const {
              << "timestamp_unix=" << static_cast<long long>(std::time(nullptr)) << "\n\n"
              << "# Input data\n"
              << "book_file=" << (mode == "games" ? m_config.bookFile : "-") << "\n\n"
-             << "# Behavior\n"
+             << "# Soft randomization\n"
              << "soft_randomize_plies=" << m_config.SOFT_RANDOMIZE_PLIES << '\n'
+             << "soft_randomize_nodes=" << m_config.SOFT_RANDOMIZE_NODES << '\n'
+             << "soft_randomize_score_threshold=" << m_config.SOFT_RANDOMIZE_SCORE_THRESHOLD << "\n\n"
+             << "# Random generator\n"
              << "random_score_filter=" << m_config.RANDOM_SCORE_FILTER << '\n'
              << "random_validation_nodes=" << m_config.RANDOM_VALIDATION_NODES << "\n\n"
              << "# Adjudication\n"
