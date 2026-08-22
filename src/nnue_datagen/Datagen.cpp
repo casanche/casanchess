@@ -6,12 +6,21 @@
 #include "MoveGenerator.h"
 #include "Uci.h"
 
+#include <algorithm>
+#include <array>
 #include <filesystem>
 #include <format>
 #include <cmath>
 #include <syncstream>
 #include <sstream>
 #include <thread>
+
+namespace {
+    struct ScoredMove {
+        Move move;
+        int score;
+    };
+}
 
 Datagen::Datagen(DatagenConfig config) : m_config(std::move(config)) {
     if(m_config.outputDir.empty())
@@ -89,6 +98,7 @@ void Datagen::Games(const std::string& filename, int threadIndex) {
     tt.SetSize(8);
     Search search(tt);
     Board board;
+
     Utils::PRNG rng(m_config.seed + threadIndex);
 
     std::vector<SavedPosition> savedPositions;
@@ -116,7 +126,13 @@ void Datagen::Games(const std::string& filename, int threadIndex) {
         bool exitGame = false;
 
         while(!exitGame) {
-            COLOR color = board.ActivePlayer();
+            const COLOR color = board.ActivePlayer();
+            const int playedPlies = board.Ply() - initialPly;
+            int score = NO_SCORE;
+            Move nextMove;
+
+            // Activate soft randomization (SR)
+            bool softRandomize = (playedPlies < m_config.SOFT_RANDOMIZE_PLIES);
 
             // Natural game endings
             if(NoMoves(board)) {
@@ -131,26 +147,25 @@ void Datagen::Games(const std::string& filename, int threadIndex) {
                 break;
             }
 
-            int playedPlies = board.Ply() - initialPly;
-            
-            SearchIteration(board, search);
-            int score = search.BestScore();
-            Move bestMove = search.BestMove();
-            Move nextMove = bestMove;
+            // Soft randomization
+            if(softRandomize) {
+                nextMove = SoftRandomize(board, search, rng);
+            } else {
+                SearchIteration(board, search);
+
+                score = search.BestScore();
+                Move bestMove = search.BestMove();
+                nextMove = bestMove;
+
+                SaveEvals(board, search, savedPositions);
+            }
 
             if(nextMove == Move())
                 break;
 
-            // Soft randomization
-            if(playedPlies < m_config.SOFT_RANDOMIZE_PLIES) {
-                MoveList moves = SortFilteredMoves(board, search);
-                if(moves.size() >= 3)
-                    nextMove = moves[rng.Random32(0, 2)];
-            } else {
-                SaveEvals(board, search, savedPositions);
-            }
-
             board.MakeMove(nextMove);
+
+            if(softRandomize) continue; // Skip adjudication
 
             // Win/loss adjudication
             int scoreWhitePOV = (color == WHITE) ? score : -score;
@@ -196,13 +211,58 @@ void Datagen::Games(const std::string& filename, int threadIndex) {
     }
 }
 
+Move Datagen::SoftRandomize(Board& board, Search& search, Utils::PRNG& rng) {
+    MoveList moves = MoveGenerator::GenerateMoves(board);
+
+    // Safety net
+    if(moves.empty())
+        return Move();
+
+    std::array<ScoredMove, MAX_MOVES_RESERVE> scoredMoves;
+    size_t scoredCount = 0;
+
+    for(const Move move : moves) {
+        board.MakeMove(move);
+
+        search.ClearSearch(false);
+        search.IterativeDeepening(board, UCI_Limits::FixNodes(m_config.SOFT_RANDOMIZE_NODES));
+
+        const int score = -search.BestScore();
+
+        board.TakeMove(move);
+
+        scoredMoves[scoredCount++] = {move, score};
+    }
+
+    std::ranges::sort(
+        scoredMoves.begin(),
+        scoredMoves.begin() + scoredCount,
+        std::greater{},
+        &ScoredMove::score
+    );
+
+    const int bestScore = scoredMoves.front().score;
+
+    size_t candidateCount = 1;
+    while(candidateCount < scoredCount && bestScore - scoredMoves[candidateCount].score <= m_config.SOFT_RANDOMIZE_SCORE_THRESHOLD) {
+        ++candidateCount;
+    }
+
+    const size_t selected = rng.Random32(0, static_cast<uint32_t>(candidateCount - 1));
+    return scoredMoves[selected].move;
+}
+
 void Datagen::Random(const std::string& filename, int threadIndex) {
     std::ofstream outputFile(filename);
 
     TT tt;
     tt.SetSize(8);
     Search search(tt);
-    Search validationSearch(tt);
+
+    TT ttValidation;
+    ttValidation.SetSize(2);
+    Search validationSearch(ttValidation);
+    
     Board board;
 
     Utils::PRNG rng(m_config.seed + threadIndex);
@@ -225,8 +285,6 @@ void Datagen::Random(const std::string& filename, int threadIndex) {
 
         std::string startingFen;
         GenerateRandomPosition(board, startingFen, randomPosGen, validationSearch);
-
-        const uint initialPly = board.Ply();
 
         int gameResult = 0;
         int adjWinCounter = 0;
@@ -277,7 +335,7 @@ void Datagen::Random(const std::string& filename, int threadIndex) {
                 break;
         }
 
-        const int gameLength = board.Ply() - initialPly;
+        const int gameLength = board.Ply();
         const int pawnCount = PopCount(board.Piece(WHITE, PAWN) | board.Piece(BLACK, PAWN));
         const int heavyPiecesCount = PopCount(board.AllPieces()) - pawnCount - 2;
 
@@ -410,7 +468,7 @@ int Datagen::GenerateRandomPosition(Board& board, std::string& position,
     int tries = 0;
 
     do {
-        position = posGen.GenerateV2(board);
+        position = posGen.Generate(board);
         ++tries;
     } while(!ValidateRandomPosition(board, validationSearch));
 

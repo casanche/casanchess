@@ -20,7 +20,11 @@ struct DatagenConfig {
 
     // Behavior
     int FIXED_NODES = 250000;
+    
+    // Soft randomize (SR)
     int SOFT_RANDOMIZE_PLIES = 0;
+    int SOFT_RANDOMIZE_NODES = 5000;
+    int SOFT_RANDOMIZE_SCORE_THRESHOLD = 30;
 
     // Random generator
     int RANDOM_SCORE_FILTER = 250;
@@ -64,6 +68,9 @@ private:
     bool SaveEvals(Board& board, Search& search, std::vector<SavedPosition>& savedPositions);
     void SearchIteration(Board& board, Search& search);
     bool WriteRunMetadata(const std::string& mode, int concurrency) const;
+
+    // Soft randomization
+    Move SoftRandomize(Board& board, Search& search, Utils::PRNG& rng);
 
     DatagenConfig m_config = {};
     int m_maxGames = 0;
