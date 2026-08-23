@@ -26,7 +26,7 @@ public:
 
     // Generate a random position and set it on the board.
     // Returns the complete FEN string.
-    std::string GenerateV2(Board& board, const RandomPositionConfig& config = {});
+    std::string Generate(Board& board, const RandomPositionConfig& config = {});
 
 private:
     int PopBiasedSquare(Bitboard& globalMask, Bitboard preferredMask, uint biasPercent);

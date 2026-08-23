@@ -14,7 +14,7 @@ RandomPositionGenerator::RandomPositionGenerator(uint64_t seed)
     : m_rng(seed) {
 }
 
-std::string RandomPositionGenerator::GenerateV2(Board& board, const RandomPositionConfig& config) {
+std::string RandomPositionGenerator::Generate(Board& board, const RandomPositionConfig& config) {
     constexpr int MAX_PIECES[8] = {0, 8, 2, 2, 2, 1, 1, 0};  // -, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, -
 
     constexpr Bitboard WHITE_HALF = MaskRank[RANK1] | MaskRank[RANK2] | MaskRank[RANK3] | MaskRank[RANK4];
