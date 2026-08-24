@@ -20,6 +20,7 @@ struct SharedNetwork {
 
 struct NNUE_State {
     alignas(32) i16 accumulator[MAX_PLY_HISTORY][2][NNUE_SIZE]; // [PLY][COLOR][NNUE_SIZE]
+    i32 linearAccumulator[MAX_PLY_HISTORY][2]; // [PLY][COLOR]
 };
 
 class NNUE {

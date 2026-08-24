@@ -35,7 +35,7 @@ void Convert(std::string ifilename, std::string ofilename) {
 
     if(!ifile.is_open()) return;
 
-    std::cout << "Converting V1.1 network: " << ifilename << std::endl;
+    std::cout << "Converting V1.2 network: " << ifilename << std::endl;
 
     auto nnue_storage = std::make_unique<Network>();
 
@@ -45,9 +45,13 @@ void Convert(std::string ifilename, std::string ofilename) {
             nnue_storage->w1[row * ARCH[L1][COL] + col] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_L1);
         }
     }
+    for(uint row = 0; row < ARCH[L1][ROW]; row++) {
+        nnue_storage->linearW[row] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_L1);
+    }
     for(uint col = 0; col < ARCH[L1][COL]; col++) {
         nnue_storage->b1[col] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_L1);
     }
+    GetNumber(ifile); // Linear bias cancels in the us-them subtraction
 
     // L2
     for(uint col = 0; col < ARCH[L2][COL]; col++) {
@@ -79,7 +83,7 @@ void Convert(std::string ifilename, std::string ofilename) {
         return;
     }
 
-    std::cout << "Writing V1.1 binary to: " << ofilename << std::endl;
+    std::cout << "Writing V1.2 binary to: " << ofilename << std::endl;
     ofile.write((char*)nnue_storage.get(), sizeof(Network));
     ofile.close();
 }
