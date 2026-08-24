@@ -35,7 +35,7 @@ void Convert(std::string ifilename, std::string ofilename) {
 
     if(!ifile.is_open()) return;
 
-    std::cout << "Converting V2 network: " << ifilename << std::endl;
+    std::cout << "Converting V1.1 network: " << ifilename << std::endl;
 
     auto nnue_storage = std::make_unique<Network>();
 
@@ -59,7 +59,7 @@ void Convert(std::string ifilename, std::string ofilename) {
         nnue_storage->b2[col] = Quantize<i32>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_B);
     }
 
-    // L3 (Head 0: Eval)
+    // L3
     for(uint col = 0; col < ARCH[L3][COL]; col++) {
         for(uint row = 0; row < ARCH[L3][ROW]; row++) {
             nnue_storage->w3[col * ARCH[L3][ROW] + row] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_W);
@@ -67,15 +67,6 @@ void Convert(std::string ifilename, std::string ofilename) {
     }
     for(uint col = 0; col < ARCH[L3][COL]; col++) {
         nnue_storage->b3[col] = Quantize<i32>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_B);
-    }
-
-    // DISCARD: Head 1 (Chaos / DTE) - 64 weights and 1 bias
-    for(int i = 0; i < 64; i++) GetNumber(ifile); // fc3_chaos.weight
-    GetNumber(ifile);                             // fc3_chaos.bias
-
-    // Bypass (direct accumulator to Eval) - Weight-only, no bias
-    for(int i = 0; i < 2 * NNUE_SIZE; i++) {
-        nnue_storage->bypass[i] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_W);
     }
 
     ifile.close();
@@ -88,7 +79,7 @@ void Convert(std::string ifilename, std::string ofilename) {
         return;
     }
 
-    std::cout << "Writing V2 binary to: " << ofilename << std::endl;
+    std::cout << "Writing V1.1 binary to: " << ofilename << std::endl;
     ofile.write((char*)nnue_storage.get(), sizeof(Network));
     ofile.close();
 }

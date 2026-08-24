@@ -19,19 +19,19 @@ namespace NNUEConstants {
    };
    // Quantization scale factors to convert weights to integers
    constexpr int QUANT_FACTOR_L1 = 256; // W1, B1
-   constexpr int QUANT_FACTOR_W = 64; // W2, W3_eval, Bypass
-   constexpr int QUANT_FACTOR_B = QUANT_FACTOR_L1 * QUANT_FACTOR_W; // B2, B3_eval
+   constexpr int QUANT_FACTOR_W = 64; // W2, W3
+   constexpr int QUANT_FACTOR_B = QUANT_FACTOR_L1 * QUANT_FACTOR_W; // B2, B3
 }
 
-//Network architecture (V2)
+//Network architecture (V1.1: single 32-neuron hidden layer)
 enum NNUE_LAYER { L1, L2, L3, NNUE_LAYERS };
 enum PARAMETER_TYPE { W, B, PARAMETER_TYPES };
 enum DIMENSIONS { ROW, COL, DIMENSIONS };
 
 constexpr uint ARCH[NNUE_LAYERS][DIMENSIONS] = {
-    {NNUE_FEATURES, NNUE_SIZE}, // Layer1: Accumulator
-    {2*NNUE_SIZE, 64},          // Layer2: Hidden
-    {64, 1}                     // Layer3: Eval Head
+    {NNUE_FEATURES, NNUE_SIZE}, //Layer1
+    {2*NNUE_SIZE, 32},          //Layer2
+    {32, 1}                     //Layer3
 };
 
 constexpr uint ARCH_DIMENSIONS[NNUE_LAYERS][PARAMETER_TYPES] = {
@@ -47,8 +47,6 @@ struct alignas(32) Network {
     i16 w2[ ARCH_DIMENSIONS[L2][0] ];
     i32 b2[ ARCH_DIMENSIONS[L2][1] ];
 
-    i16 w3[ ARCH_DIMENSIONS[L3][0] ]; // Head Eval W
-    i32 b3[ ARCH_DIMENSIONS[L3][1] ]; // Head Eval B
-
-    i16 bypass[ 2 * NNUE_SIZE ];      // Skip connection (256 -> 1)
+    i16 w3[ ARCH_DIMENSIONS[L3][0] ];
+    i32 b3[ ARCH_DIMENSIONS[L3][1] ];
 };
