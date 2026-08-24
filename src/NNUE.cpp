@@ -5,14 +5,12 @@
 //
 // Optimized for incremental updates of the first layer (basically the point of NNUE).
 //
-// Architecture: HalfKP + bypass
+// Architecture: HalfKP V1.1
 //   Features: 32 king buckets × 64 squares × 5 piece types × 2 colors = 20480 features
-//   Layers: (128x2) → 64 → 1 + bypass
+//   Layers: (128x2) → 32 → 1
 //      L1 (128x2): White and black accumulatores are concatenated (and ReLU'ed)
-//      L2 (64): Hidden layer, to account for non-linearities
-//      L3 (1): Output node representing the base evaluation
-//      Bypass: Direct connection (256 → 1) from the accumulator to the output.
-//              Efficient way for the network to learn material values (similar to PSQT)
+//      L2 (32): Hidden layer, to account for non-linearities
+//      L3 (1): Output node representing the evaluation
 //
 // Key concepts:
 //   - King buckets: 32 partitions of king position for learning king-relative patterns.
@@ -102,9 +100,7 @@ int NNUE::Evaluate(int color, int ply) const {
     ComputeLayer<i16, true>(o1, o2, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
     ComputeLayer<i32, false>(o2, o3, s_shared.network.b3, s_shared.network.w3, ARCH[L3][ROW], ARCH[L3][COL]);
 
-    i32 oBypass = ComputeBypass(o1, s_shared.network.bypass);
-
-    return (o3[0] + oBypass) * 120 / NNUEConstants::QUANT_FACTOR_B;
+    return o3[0] * 120 / NNUEConstants::QUANT_FACTOR_B;
 }
 
 void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {
@@ -258,32 +254,6 @@ namespace {
         return _mm_cvtsi128_si32(x);
     }
     #endif
-}
-
-i32 NNUE::ComputeBypass(const i16* input, const i16* weights) const {
-    i32 sum = 0;
-    constexpr int bypassSize = NNUE_SIZE * 2;
-
-    #if defined(__AVX2__)
-        __m256i dot = _mm256_setzero_si256();
-
-        for(int i = 0; i < bypassSize; i += 16) {
-            __m256i inputVec = _mm256_loadu_si256((__m256i*)&input[i]);
-            __m256i weightsVec = _mm256_loadu_si256((__m256i*)&weights[i]);
-
-            __m256i product = _mm256_madd_epi16(inputVec, weightsVec);
-            dot = _mm256_add_epi32(dot, product);
-        }
-
-        __m128i x = _mm_add_epi32(_mm256_castsi256_si128(dot), _mm256_extracti128_si256(dot, 1));
-        sum += HorizontalSum128(x);
-    #else
-        for(int i = 0; i < bypassSize; i++) {
-            sum += input[i] * weights[i];
-        }
-    #endif
-
-    return sum;
 }
 
 template <typename T, bool with_ReLU>
