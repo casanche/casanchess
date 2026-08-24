@@ -23,7 +23,7 @@ namespace NNUEConstants {
    constexpr int QUANT_FACTOR_B = QUANT_FACTOR_L1 * QUANT_FACTOR_W; // B2, B3
 }
 
-//Network architecture (V1.1: single 32-neuron hidden layer)
+//Network architecture (V1.2: V1.1 + linear feature bypass)
 enum NNUE_LAYER { L1, L2, L3, NNUE_LAYERS };
 enum PARAMETER_TYPE { W, B, PARAMETER_TYPES };
 enum DIMENSIONS { ROW, COL, DIMENSIONS };
@@ -43,6 +43,7 @@ constexpr uint ARCH_DIMENSIONS[NNUE_LAYERS][PARAMETER_TYPES] = {
 struct alignas(32) Network {
     i16 w1[ ARCH_DIMENSIONS[L1][0] ];
     i16 b1[ ARCH_DIMENSIONS[L1][1] ];
+    i16 linearW[ NNUE_FEATURES ];
 
     i16 w2[ ARCH_DIMENSIONS[L2][0] ];
     i32 b2[ ARCH_DIMENSIONS[L2][1] ];

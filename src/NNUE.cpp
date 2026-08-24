@@ -5,12 +5,13 @@
 //
 // Optimized for incremental updates of the first layer (basically the point of NNUE).
 //
-// Architecture: HalfKP V1.1
+// Architecture: HalfKP V1.2
 //   Features: 32 king buckets × 64 squares × 5 piece types × 2 colors = 20480 features
-//   Layers: (128x2) → 32 → 1
-//      L1 (128x2): White and black accumulatores are concatenated (and ReLU'ed)
+//   Layers: (128x2) → 32 → 1 + linear feature bypass
+//      L1 (128x2): White and black accumulators feed the nonlinear branch
+//      Linear: Separate scalar accumulator updated from the same active features
 //      L2 (32): Hidden layer, to account for non-linearities
-//      L3 (1): Output node representing the evaluation
+//      L3 (1): Output node added to the linear us-them score
 //
 // Key concepts:
 //   - King buckets: 32 partitions of king position for learning king-relative patterns.
@@ -71,11 +72,13 @@ bool SharedNetwork::Load(const std::string& path) {
 
 NNUE::NNUE() {
     std::memset(m_state->accumulator, 0, sizeof(m_state->accumulator));
+    std::memset(m_state->linearAccumulator, 0, sizeof(m_state->linearAccumulator));
 }
 
 // Deep copy
 NNUE::NNUE(const NNUE& other) {
     std::memcpy(m_state->accumulator, other.m_state->accumulator, sizeof(m_state->accumulator));
+    std::memcpy(m_state->linearAccumulator, other.m_state->linearAccumulator, sizeof(m_state->linearAccumulator));
 }
 
 // Deep assignment
@@ -84,6 +87,7 @@ NNUE& NNUE::operator=(const NNUE& other) {
         if(!m_state)
             m_state = std::make_unique<NNUE_State>();
         std::memcpy(m_state->accumulator, other.m_state->accumulator, sizeof(m_state->accumulator));
+        std::memcpy(m_state->linearAccumulator, other.m_state->linearAccumulator, sizeof(m_state->linearAccumulator));
     }
     return *this;
 }
@@ -100,7 +104,11 @@ int NNUE::Evaluate(int color, int ply) const {
     ComputeLayer<i16, true>(o1, o2, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
     ComputeLayer<i32, false>(o2, o3, s_shared.network.b3, s_shared.network.w3, ARCH[L3][ROW], ARCH[L3][COL]);
 
-    return o3[0] * 120 / NNUEConstants::QUANT_FACTOR_B;
+    const i32 linear = m_state->linearAccumulator[ply][color]
+                     - m_state->linearAccumulator[ply][1-color];
+
+    return (o3[0] + linear * NNUEConstants::QUANT_FACTOR_W)
+           * 120 / NNUEConstants::QUANT_FACTOR_B;
 }
 
 void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {
@@ -111,6 +119,8 @@ void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {
         acc_w[i] = s_shared.network.b1[i];
         acc_b[i] = s_shared.network.b1[i];
     }
+    m_state->linearAccumulator[ply][WHITE] = 0;
+    m_state->linearAccumulator[ply][BLACK] = 0;
 
     int kingSquare_w = BitscanForward(pieces[WHITE][KING]);
     int kingSquare_b = BitscanForward(pieces[BLACK][KING]);
@@ -156,6 +166,8 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply, int ki
         acc_w[i] += weights_w[i];
         acc_b[i] += weights_b[i];
     }
+    m_state->linearAccumulator[ply][WHITE] += s_shared.network.linearW[feature_w];
+    m_state->linearAccumulator[ply][BLACK] += s_shared.network.linearW[feature_b];
 }
 
 void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b) {
@@ -180,6 +192,8 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply, int
         acc_w[i] -= weights_w[i];
         acc_b[i] -= weights_b[i];
     }
+    m_state->linearAccumulator[ply][WHITE] -= s_shared.network.linearW[feature_w];
+    m_state->linearAccumulator[ply][BLACK] -= s_shared.network.linearW[feature_b];
 }
 
 void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int ply, int kingSquare_w, int kingSquare_b) {
@@ -219,10 +233,15 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
         acc_b[i] += weights_to_b[i];
 
     }
+    m_state->linearAccumulator[ply][WHITE] -= s_shared.network.linearW[feature_from_w];
+    m_state->linearAccumulator[ply][BLACK] -= s_shared.network.linearW[feature_from_b];
+    m_state->linearAccumulator[ply][WHITE] += s_shared.network.linearW[feature_to_w];
+    m_state->linearAccumulator[ply][BLACK] += s_shared.network.linearW[feature_to_b];
 }
 
 void NNUE::CopyAccumulator(int fromPly, int toPly) {
     std::memcpy(&m_state->accumulator[toPly], m_state->accumulator[fromPly], sizeof(m_state->accumulator[0]));
+    std::memcpy(&m_state->linearAccumulator[toPly], m_state->linearAccumulator[fromPly], sizeof(m_state->linearAccumulator[0]));
 }
 
 // Clamps the input to the range [0,255]
