@@ -107,8 +107,7 @@ int NNUE::Evaluate(int color, int ply) const {
     const i32 linear = m_state->linearAccumulator[ply][color]
                      - m_state->linearAccumulator[ply][1-color];
 
-    return (o3[0] + linear * NNUEConstants::QUANT_FACTOR_W)
-           * 120 / NNUEConstants::QUANT_FACTOR_B;
+    return (o3[0] + linear * NNUEConstants::QUANT_FACTOR_W) * 100 / NNUEConstants::QUANT_FACTOR_B;
 }
 
 void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {
