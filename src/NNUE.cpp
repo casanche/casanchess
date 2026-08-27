@@ -5,13 +5,14 @@
 //
 // Optimized for incremental updates of the first layer (basically the point of NNUE).
 //
-// Architecture: HalfKP V1.2
+// Architecture: HalfKP V1.3 (V1.2 Eval + Drawishness residual)
 //   Features: 32 king buckets × 64 squares × 5 piece types × 2 colors = 20480 features
 //   Layers: (128x2) → 32 → 1 + linear feature bypass
 //      L1 (128x2): White and black accumulators feed the nonlinear branch
 //      Linear: Separate scalar accumulator updated from the same active features
 //      L2 (32): Hidden layer, to account for non-linearities
 //      L3 (1): Output node added to the linear us-them score
+//      Drawishness (1): x_clamp256 residual, evaluated on demand
 //
 // Key concepts:
 //   - King buckets: 32 partitions of king position for learning king-relative patterns.
@@ -108,6 +109,18 @@ int NNUE::Evaluate(int color, int ply) const {
                      - m_state->linearAccumulator[ply][1-color];
 
     return (o3[0] + linear * NNUEConstants::QUANT_FACTOR_W) * 100 / NNUEConstants::QUANT_FACTOR_B;
+}
+
+int NNUE::Drawishness(int color, int ply) const {
+    i16 o1[NNUE_SIZE * 2];
+    ActivateReLU(m_state->accumulator[ply][color], o1, NNUE_SIZE);
+    ActivateReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE, NNUE_SIZE);
+
+    i64 residual = s_shared.network.drawB;
+    for(uint i = 0; i < ARCH[L2][ROW]; i++)
+        residual += static_cast<i64>(o1[i]) * s_shared.network.drawW[i];
+
+    return static_cast<int>(residual * 100 / NNUEConstants::QUANT_FACTOR_B);
 }
 
 void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {

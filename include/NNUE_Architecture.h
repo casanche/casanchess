@@ -23,7 +23,7 @@ namespace NNUEConstants {
    constexpr int QUANT_FACTOR_B = QUANT_FACTOR_L1 * QUANT_FACTOR_W; // B2, B3
 }
 
-//Network architecture (V1.2: V1.1 + linear feature bypass)
+// Network architecture (V1.3: V1.2 Eval + Drawishness residual head)
 enum NNUE_LAYER { L1, L2, L3, NNUE_LAYERS };
 enum PARAMETER_TYPE { W, B, PARAMETER_TYPES };
 enum DIMENSIONS { ROW, COL, DIMENSIONS };
@@ -50,4 +50,7 @@ struct alignas(32) Network {
 
     i16 w3[ ARCH_DIMENSIONS[L3][0] ];
     i32 b3[ ARCH_DIMENSIONS[L3][1] ];
+
+    i16 drawW[ ARCH[L2][ROW] ];
+    i32 drawB;
 };

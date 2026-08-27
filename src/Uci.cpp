@@ -127,7 +127,8 @@ void Uci::Launch() {
             int epSquare = enpassant ? BitscanForward(enpassant) : -1;
             P("Enpassant square: " << epSquare);
             P("ZKey: " << m_board.ZKey());
-            P("Static evaluation: " << Evaluation::Evaluate(m_board));
+            P("Static evaluation: " << m_board.NNUE_Evaluate());
+            P("Drawishness: " << m_board.NNUE_Drawishness());
             std::cout << "Move history: "; m_board.ShowHistory(); std::cout << std::endl;
         }
         else {

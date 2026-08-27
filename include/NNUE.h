@@ -32,6 +32,7 @@ public:
     ~NNUE() = default;
 
     int Evaluate(int color, int ply) const;
+    int Drawishness(int color, int ply) const;
 
     void Inputs_FullUpdate(int ply, const PieceBitboards pieces);
     void Inputs_AddPiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b);
