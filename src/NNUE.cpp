@@ -5,12 +5,12 @@
 //
 // Optimized for incremental updates of the first layer (basically the point of NNUE).
 //
-// Architecture: HalfKP V1.3 (V1.2 Eval + Drawishness residual)
+// Architecture: HalfKP V1.4 (V1.3 with a wider hidden layer)
 //   Features: 32 king buckets × 64 squares × 5 piece types × 2 colors = 20480 features
-//   Layers: (128x2) → 32 → 1 + linear feature bypass
+//   Layers: (128x2) → 48 → 1 + linear feature bypass
 //      L1 (128x2): White and black accumulators feed the nonlinear branch
 //      Linear: Separate scalar accumulator updated from the same active features
-//      L2 (32): Hidden layer, to account for non-linearities
+//      L2 (48): Hidden layer, to account for non-linearities
 //      L3 (1): Output node added to the linear us-them score
 //      Drawishness (1): x_clamp256 residual, evaluated on demand
 //
@@ -55,8 +55,10 @@ bool SharedNetwork::Load(const std::string& path) {
     }
 
     file.read(reinterpret_cast<char*>(&network), sizeof(Network));
+    const bool exactSize = file.gcount() == sizeof(Network)
+                        && file.peek() == std::ifstream::traits_type::eof();
 
-    if(file.gcount() == sizeof(Network)) {
+    if(exactSize) {
         std::cout << "info string NNUE loaded: " << filepath << std::endl;
         isLoaded = true;
     } else {
