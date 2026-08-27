@@ -35,7 +35,7 @@ void Convert(std::string ifilename, std::string ofilename) {
 
     if(!ifile.is_open()) return;
 
-    std::cout << "Converting V1.3 network: " << ifilename << std::endl;
+    std::cout << "Converting V1.4 network: " << ifilename << std::endl;
 
     auto nnue_storage = std::make_unique<Network>();
 
@@ -73,12 +73,16 @@ void Convert(std::string ifilename, std::string ofilename) {
         nnue_storage->b3[col] = Quantize<i32>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_B);
     }
 
-    // Drawishness residual head from x_clamp256
+    // Drawishness residual head from the concatenated, clipped accumulators
     for(uint row = 0; row < ARCH[L2][ROW]; row++) {
         nnue_storage->drawW[row] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_W);
     }
     nnue_storage->drawB = Quantize<i32>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_B);
 
+    if(ifile.peek() != std::ifstream::traits_type::eof()) {
+        std::cerr << "ERROR: Input contains more parameters than the V1.4 architecture expects" << std::endl;
+        return;
+    }
     ifile.close();
 
     // Write binary file
@@ -89,7 +93,7 @@ void Convert(std::string ifilename, std::string ofilename) {
         return;
     }
 
-    std::cout << "Writing V1.3 binary to: " << ofilename << std::endl;
+    std::cout << "Writing V1.4 binary to: " << ofilename << std::endl;
     ofile.write((char*)nnue_storage.get(), sizeof(Network));
     ofile.close();
 }

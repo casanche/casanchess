@@ -3,6 +3,7 @@
 #include "Constants.h"
 
 constexpr int NNUE_SIZE = 128;
+constexpr int NNUE_HIDDEN_SIZE = 48;
 constexpr int NNUE_FEATURES = 32*64*5*2; //kingBuckets * square * pieceType * color
 
 namespace NNUEConstants {
@@ -23,15 +24,15 @@ namespace NNUEConstants {
    constexpr int QUANT_FACTOR_B = QUANT_FACTOR_L1 * QUANT_FACTOR_W; // B2, B3
 }
 
-// Network architecture (V1.3: V1.2 Eval + Drawishness residual head)
+// Network architecture (V1.4: 128 accumulators, 48 hidden neurons, Drawishness head)
 enum NNUE_LAYER { L1, L2, L3, NNUE_LAYERS };
 enum PARAMETER_TYPE { W, B, PARAMETER_TYPES };
 enum DIMENSIONS { ROW, COL, DIMENSIONS };
 
 constexpr uint ARCH[NNUE_LAYERS][DIMENSIONS] = {
-    {NNUE_FEATURES, NNUE_SIZE}, //Layer1
-    {2*NNUE_SIZE, 32},          //Layer2
-    {32, 1}                     //Layer3
+    {NNUE_FEATURES, NNUE_SIZE},        //Layer1
+    {2*NNUE_SIZE, NNUE_HIDDEN_SIZE},   //Layer2
+    {NNUE_HIDDEN_SIZE, 1}              //Layer3
 };
 
 constexpr uint ARCH_DIMENSIONS[NNUE_LAYERS][PARAMETER_TYPES] = {
