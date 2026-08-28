@@ -444,7 +444,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --- Reverse Futility Pruning ---
     // Prune if static evaluation is too good (eval >> beta)
-    const int staticMargin = 120;
+    const int staticMargin = 90;
     if(depth <= 4 && !isPV && !inCheck) {
         int staticEval = eval - depth * staticMargin;
         if(staticEval >= beta) {
