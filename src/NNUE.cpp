@@ -5,12 +5,12 @@
 //
 // Optimized for incremental updates of the first layer (basically the point of NNUE).
 //
-// Architecture: HalfKP V1.4 (V1.3 with a wider hidden layer)
+// Architecture: HalfKP with linear bypass and Drawishness head
 //   Features: 32 king buckets × 64 squares × 5 piece types × 2 colors = 20480 features
-//   Layers: (128x2) → 48 → 1 + linear feature bypass
-//      L1 (128x2): White and black accumulators feed the nonlinear branch
+//   Layers: (NNUE_SIZE x 2) → NNUE_HIDDEN_SIZE → 1 + linear feature bypass
+//      L1: White and black accumulators feed the nonlinear branch
 //      Linear: Separate scalar accumulator updated from the same active features
-//      L2 (48): Hidden layer, to account for non-linearities
+//      L2: Hidden layer, to account for non-linearities
 //      L3 (1): Output node added to the linear us-them score
 //      Drawishness (1): x_clamp256 residual, evaluated on demand
 //

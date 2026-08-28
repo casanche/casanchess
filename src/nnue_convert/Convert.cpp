@@ -29,13 +29,16 @@ T Quantize(float decimal, float factor) {
     return static_cast<T>(integer);
 }
 
-void Convert(std::string ifilename, std::string ofilename) {
+bool Convert(std::string ifilename, std::string ofilename) {
     std::ifstream ifile;
     ifile.open(ifilename);
 
-    if(!ifile.is_open()) return;
+    if(!ifile.is_open()) {
+        std::cerr << "ERROR: Could not open input file: " << ifilename << std::endl;
+        return false;
+    }
 
-    std::cout << "Converting V1.4 network: " << ifilename << std::endl;
+    std::cout << "Converting network: " << ifilename << std::endl;
 
     auto nnue_storage = std::make_unique<Network>();
 
@@ -80,8 +83,8 @@ void Convert(std::string ifilename, std::string ofilename) {
     nnue_storage->drawB = Quantize<i32>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_B);
 
     if(ifile.peek() != std::ifstream::traits_type::eof()) {
-        std::cerr << "ERROR: Input contains more parameters than the V1.4 architecture expects" << std::endl;
-        return;
+        std::cerr << "ERROR: Input contains more parameters than the network architecture expects" << std::endl;
+        return false;
     }
     ifile.close();
 
@@ -90,10 +93,11 @@ void Convert(std::string ifilename, std::string ofilename) {
     ofile.open(ofilename, std::ios::binary);
     if(!ofile.is_open()) {
         std::cerr << "ERROR: Could not open output file for writing: " << ofilename << std::endl;
-        return;
+        return false;
     }
 
-    std::cout << "Writing V1.4 binary to: " << ofilename << std::endl;
+    std::cout << "Writing binary to: " << ofilename << std::endl;
     ofile.write((char*)nnue_storage.get(), sizeof(Network));
     ofile.close();
+    return true;
 }
