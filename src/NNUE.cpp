@@ -6,7 +6,7 @@
 // Optimized for incremental updates of the first layer (basically the point of NNUE).
 //
 // Architecture: HalfKP with linear bypass and Drawishness head
-//   Features: 30 king buckets × 64 squares × 5 piece types × 2 colors = 19200 features
+//   Features: 28 king buckets × 64 squares × 5 piece types × 2 colors = 17920 features
 //   Layers: (NNUE_SIZE x 2) → NNUE_HIDDEN_SIZE → 1 + linear feature bypass
 //      L1: White and black accumulators feed the nonlinear branch
 //      Linear: Separate scalar accumulator updated from the same active features
@@ -15,7 +15,7 @@
 //      Drawishness (1): x_clamp256 residual, evaluated on demand
 //
 // Key concepts:
-//   - King buckets: 30 partitions of king position for learning king-relative patterns.
+//   - King buckets: 28 partitions of king position for learning king-relative patterns.
 //   - Accumulator: Cached first layer output, updated incrementally on piece moves.
 //   - Perspective: Each side has its own accumulator (us/them perspective).
 //   - SIMD: Use AVX2 intrinsics for fast vectorized layer computation.
