@@ -1,4 +1,6 @@
 #include "MoveMaker.h"
+
+#include "Attacks.h"
 #include "Board.h"
 #include "NNUE_Architecture.h"
 #include "Uci.h"
@@ -42,8 +44,15 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     }
     else if(moveType == DOUBLE_PUSH) {
         int squareShift = color == WHITE ? -8 : 8;
-        board.m_enPassantSquare = SquareBB(toSq + squareShift);
-        board.m_zobristKey.UpdateEnpassant(board.m_enPassantSquare);
+        Bitboard epSquare = SquareBB(toSq + squareShift);
+
+        // Is capture possible?
+        const Bitboard epThreats = Attacks::AttacksPawns(board.ActivePlayer(), toSq + squareShift);
+        const Bitboard enemyPawns = board.Piece(board.InactivePlayer(), PAWN);
+        if(epThreats & enemyPawns) {
+            board.m_enPassantSquare = epSquare;
+            board.m_zobristKey.UpdateEnpassant(board.m_enPassantSquare);
+        }
     }
     else if(moveType == ENPASSANT) {
         COLOR enemyColor = board.InactivePlayer();
