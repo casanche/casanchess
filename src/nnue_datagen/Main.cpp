@@ -6,6 +6,7 @@
 #include "Uci.h"
 #include "ZobristKeys.h"
 
+#include <algorithm>
 #include <iostream>
 #include <span>
 #include <string_view>
@@ -15,6 +16,7 @@ struct CliArgs {
     int concurrency = 0;
     int fixedNodes = 250000;
     int softRandomizePlies = 0;
+    int softRandomizeEvalDelta = 30;
     int maxGames = 0;
     std::string outputDir;
     std::string bookFile;
@@ -25,6 +27,7 @@ struct CliArgs {
 void PrintUsage() {
     std::cout << "Usage: nnue-datagen -m <games|random|benchmark> [-c threads] [-n fixed_nodes]"
               << " [--soft-randomize-plies N]"
+              << " [--soft-randomize-eval-delta N]"
               << " [--max-games N] [-o output_dir] [-b book_file] [-s seed]\n";
 }
 
@@ -35,6 +38,7 @@ bool ParseArgs(int argc, char** argv, CliArgs& argsOut) {
         else if(arg == "-c" && i + 1 < argc) argsOut.concurrency = std::atoi(argv[++i]);
         else if(arg == "-n" && i + 1 < argc) argsOut.fixedNodes = std::atoi(argv[++i]);
         else if(arg == "--soft-randomize-plies" && i + 1 < argc) argsOut.softRandomizePlies = std::atoi(argv[++i]);
+        else if(arg == "--soft-randomize-eval-delta" && i + 1 < argc) argsOut.softRandomizeEvalDelta = std::atoi(argv[++i]);
         else if(arg == "--max-games" && i + 1 < argc) argsOut.maxGames = std::atoi(argv[++i]);
         else if((arg == "-o" || arg == "--output-dir") && i + 1 < argc) argsOut.outputDir = argv[++i];
         else if((arg == "-b" || arg == "--book-file") && i + 1 < argc) argsOut.bookFile = argv[++i];
@@ -62,7 +66,7 @@ int main(int argc, char** argv) {
 
     Attacks::Init();
     Evaluation::Init(); 
-    Syzygy::Init(Syzygy::DEFAULT_PATH);
+    const unsigned int syzygyMaxPieces = Syzygy::Init(Syzygy::DEFAULT_PATH);
     ZobristKeys::Init();
     NNUE::Load();
 
@@ -74,7 +78,9 @@ int main(int argc, char** argv) {
     config.bookFile = args.bookFile;
     config.seed = args.seed;
     config.FIXED_NODES = args.fixedNodes;
+    config.SYZYGY_PROBE_LIMIT = static_cast<int>(std::min(syzygyMaxPieces, UCI_SYZYGY_PROBE_LIMIT));
     config.SOFT_RANDOMIZE_PLIES = args.softRandomizePlies;
+    config.SOFT_RANDOMIZE_SCORE_THRESHOLD = args.softRandomizeEvalDelta;
 
     Datagen datagen(config);
     datagen.Run(args.mode, args.concurrency, args.maxGames);
