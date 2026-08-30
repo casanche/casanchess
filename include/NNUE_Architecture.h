@@ -4,20 +4,20 @@
 
 constexpr int NNUE_SIZE = 128;
 constexpr int NNUE_HIDDEN_SIZE = 48;
-constexpr int NNUE_FEATURES = 28*64*5*2; //kingBuckets * square * pieceType * color
+constexpr int NNUE_FEATURES = 26*64*5*2; //kingBuckets * square * pieceType * color
 
 namespace NNUEConstants {
     constexpr int BLACK_PERSPECTIVE_XOR = 56;
-    // B28: B30 plus a7-d8 and e7-h8.
+    // B26: B28 plus a2-b2 and g2-h2.
     constexpr u8 KING_BUCKETS[64] = {
         0, 1, 2, 3, 4, 5, 6, 7,
-        8, 9,10,11,12,13,14,15,
-       16,16,17,17,18,18,19,19,
-       16,16,20,20,21,21,19,19,
-       22,22,23,23,24,24,25,25,
-       22,22,23,23,24,24,25,25,
-       26,26,26,26,27,27,27,27,
-       26,26,26,26,27,27,27,27
+        8, 8, 9,10,11,12,13,13,
+       14,14,15,15,16,16,17,17,
+       14,14,18,18,19,19,17,17,
+       20,20,21,21,22,22,23,23,
+       20,20,21,21,22,22,23,23,
+       24,24,24,24,25,25,25,25,
+       24,24,24,24,25,25,25,25
    };
    // Quantization scale factors to convert weights to integers
    constexpr int QUANT_FACTOR_L1 = 256; // W1, B1
