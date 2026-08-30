@@ -493,6 +493,9 @@ bool Datagen::WriteRunMetadata(const std::string& mode, int concurrency) const {
              << "concurrency=" << concurrency << '\n'
              << "draw_contempt=" << UCI_DRAW_CONTEMPT << '\n'
              << "timestamp_unix=" << static_cast<long long>(std::time(nullptr)) << "\n\n"
+             << "# Syzygy\n"
+             << "syzygy_enabled=" << (m_config.SYZYGY_PROBE_LIMIT > 0 ? "true" : "false") << '\n'
+             << "syzygy_probe_limit=" << m_config.SYZYGY_PROBE_LIMIT << "\n\n"
              << "# Input data\n"
              << "book_file=" << (mode == "games" ? m_config.bookFile : "-") << "\n\n"
              << "# Soft randomization\n"

@@ -20,6 +20,9 @@ struct DatagenConfig {
 
     // Behavior
     int FIXED_NODES = 250000;
+
+    // Syzygy
+    int SYZYGY_PROBE_LIMIT = 0;
     
     // Soft randomize (SR)
     int SOFT_RANDOMIZE_PLIES = 0;
