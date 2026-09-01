@@ -25,7 +25,7 @@ namespace NNUEConstants {
    constexpr int QUANT_FACTOR_B = QUANT_FACTOR_L1 * QUANT_FACTOR_W; // B2, B3
 }
 
-// Network architecture: linear bypass and Drawishness head
+// Network architecture: SCReLU, linear bypass and Drawishness head
 enum NNUE_LAYER { L1, L2, L3, NNUE_LAYERS };
 enum PARAMETER_TYPE { W, B, PARAMETER_TYPES };
 enum DIMENSIONS { ROW, COL, DIMENSIONS };

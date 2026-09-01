@@ -8,11 +8,11 @@
 // Architecture: HalfKP with linear bypass and Drawishness head
 //   Features: 26 king buckets × 64 squares × 5 piece types × 2 colors = 16640 features
 //   Layers: (NNUE_SIZE x 2) → NNUE_HIDDEN_SIZE → 1 + linear feature bypass
-//      L1: White and black accumulators feed the nonlinear branch
+//      L1: White and black accumulators feed the activated branch
 //      Linear: Separate scalar accumulator updated from the same active features
 //      L2: Hidden layer, to account for non-linearities
 //      L3 (1): Output node added to the linear us-them score
-//      Drawishness (1): x_clamp256 residual, evaluated on demand
+//      Drawishness (1): activated accumulator residual, evaluated on demand
 //
 // Key concepts:
 //   - King buckets: 26 partitions of king position for learning king-relative patterns.
@@ -36,6 +36,22 @@
 namespace {
     constexpr int KING_BUCKET_MULTIPLIER = 640;
     constexpr int PIECE_INDEX_MULTIPLIER = 64;
+    constexpr int SCRELU_SHIFT = 8;
+
+    static_assert(
+        NNUEConstants::QUANT_FACTOR_L1 == (1 << SCRELU_SHIFT),
+        "SCReLU rescaling requires QUANT_FACTOR_L1 == 256"
+    );
+
+    constexpr i32 SCReLU(i32 value) {
+        const i32 clipped = std::clamp(
+            value,
+            0,
+            NNUEConstants::QUANT_FACTOR_L1
+        );
+        return (clipped * clipped + NNUEConstants::QUANT_FACTOR_L1 / 2)
+             / NNUEConstants::QUANT_FACTOR_L1;
+    }
 }
 
 // =========================
@@ -96,10 +112,10 @@ NNUE& NNUE::operator=(const NNUE& other) {
 }
 
 int NNUE::Evaluate(int color, int ply) const {
-    i16 o1[NNUE_SIZE * 2]; //Layer 1 (ReLU'ed accumulator)
+    i16 o1[NNUE_SIZE * 2]; //Layer 1 activated accumulator
 
-    ActivateReLU(m_state->accumulator[ply][color], o1, NNUE_SIZE);
-    ActivateReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE, NNUE_SIZE);
+    ActivateSCReLU(m_state->accumulator[ply][color], o1, NNUE_SIZE);
+    ActivateSCReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE, NNUE_SIZE);
 
     i16 o2[ ARCH[L2][COL] ]; //Layer 2
     i32 o3[ ARCH[L3][COL] ]; //Layer 3
@@ -115,8 +131,8 @@ int NNUE::Evaluate(int color, int ply) const {
 
 int NNUE::Drawishness(int color, int ply) const {
     i16 o1[NNUE_SIZE * 2];
-    ActivateReLU(m_state->accumulator[ply][color], o1, NNUE_SIZE);
-    ActivateReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE, NNUE_SIZE);
+    ActivateSCReLU(m_state->accumulator[ply][color], o1, NNUE_SIZE);
+    ActivateSCReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE, NNUE_SIZE);
 
     i64 residual = s_shared.network.drawB;
     for(uint i = 0; i < ARCH[L2][ROW]; i++)
@@ -258,22 +274,28 @@ void NNUE::CopyAccumulator(int fromPly, int toPly) {
     std::memcpy(&m_state->linearAccumulator[toPly], m_state->linearAccumulator[fromPly], sizeof(m_state->linearAccumulator[0]));
 }
 
-// Clamps the input to the range [0,255]
-void NNUE::ActivateReLU(const i16* input, i16* output, int size) const {
+// Clamp, square and restore the L1 scale.
+void NNUE::ActivateSCReLU(const i16* input, i16* output, int size) const {
     #if defined(__AVX2__)
         __m256i zero = _mm256_setzero_si256();
-        __m256i max = _mm256_set1_epi16(255);
+        __m256i max = _mm256_set1_epi16(NNUEConstants::QUANT_FACTOR_L1);
+        __m256i rounding = _mm256_set1_epi16(NNUEConstants::QUANT_FACTOR_L1 / 2);
 
         for(int i = 0; i < size; i += 16) {
             __m256i val = _mm256_loadu_si256((__m256i*)&input[i]);
             val = _mm256_max_epi16(val, zero);
             val = _mm256_min_epi16(val, max);
+            const __m256i saturated = _mm256_cmpeq_epi16(val, max);
+            val = _mm256_mullo_epi16(val, val);
+            val = _mm256_add_epi16(val, rounding);
+            val = _mm256_srli_epi16(val, SCRELU_SHIFT);
+            val = _mm256_blendv_epi8(val, max, saturated);
 
             _mm256_storeu_si256((__m256i*)&output[i], val);
         }
     #else
         for(int i = 0; i < size; i++) {
-            output[i] = std::clamp(input[i], (i16)0, (i16)255);
+            output[i] = static_cast<i16>(SCReLU(input[i]));
         }
     #endif
 }
@@ -289,7 +311,7 @@ namespace {
     #endif
 }
 
-template <typename T, bool with_ReLU>
+template <typename T, bool with_Activation>
 void NNUE::ComputeLayer(const i16* inputLayer, T* outputLayer,
                         const i32* biases, const i16* weights,
                         int dimInput, int dimOutput) const
@@ -318,9 +340,9 @@ void NNUE::ComputeLayer(const i16* inputLayer, T* outputLayer,
             }
         #endif
 
-        if constexpr (with_ReLU) {
+        if constexpr (with_Activation) {
             sum /= NNUEConstants::QUANT_FACTOR_W; // Revert scaling
-            outputLayer[o] = static_cast<T>(std::clamp(sum, 0, 255));
+            outputLayer[o] = static_cast<T>(SCReLU(sum));
         } else {
             outputLayer[o] = static_cast<T>(sum);
         }

@@ -39,7 +39,10 @@ bool Convert(std::string ifilename, std::string ofilename) {
     }
 
     std::cout << "Converting network: " << ifilename << std::endl;
+    std::cout << "Activations: SCReLU -> SCReLU" << std::endl;
 
+    // Both activations return values at QUANT_FACTOR_L1 scale, so SCReLU does
+    // not change the quantization factors of the following layers.
     auto nnue_storage = std::make_unique<Network>();
 
     // L1
@@ -76,7 +79,7 @@ bool Convert(std::string ifilename, std::string ofilename) {
         nnue_storage->b3[col] = Quantize<i32>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_B);
     }
 
-    // Drawishness residual head from the concatenated, clipped accumulators
+    // Drawishness residual head from the concatenated, activated accumulators
     for(uint row = 0; row < ARCH[L2][ROW]; row++) {
         nnue_storage->drawW[row] = Quantize<i16>(GetNumber(ifile), NNUEConstants::QUANT_FACTOR_W);
     }

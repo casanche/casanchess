@@ -46,9 +46,9 @@ public:
     static std::string GetPath() { return s_shared.filepath; }
 
 private:
-    void ActivateReLU(const i16* input, i16* output, int size) const;
+    void ActivateSCReLU(const i16* input, i16* output, int size) const;
 
-    template <typename T, bool with_ReLU>
+    template <typename T, bool with_Activation>
     void ComputeLayer(const i16* inputLayer, T* outputLayer,
                       const i32* biases, const i16* weights,
                       int dimInput, int dimOutput) const;
