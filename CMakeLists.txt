@@ -45,6 +45,9 @@ if(MSVC)
 else()
     set(WARNING_FLAGS -Wall -Wextra -Wshadow)
     set(ARCH_FLAGS -march=haswell -mtune=generic)
+    if(MINGW)
+        list(APPEND ARCH_FLAGS -mno-avx -mno-avx2)
+    endif()
     set(OPTIMIZATION_FLAGS -O3 -ffast-math -DNDEBUG -fomit-frame-pointer -funroll-loops)
     set(COMPILER_OPTIONS
         ${WARNING_FLAGS} ${ARCH_FLAGS}
