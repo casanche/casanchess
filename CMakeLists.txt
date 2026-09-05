@@ -33,14 +33,17 @@ endif()
 # =============================================================================
 # Compiler Configuration
 # =============================================================================
-if(MSVC)
-    message(STATUS "Compiler: MSVC")
+if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    message(STATUS "Compiler frontend: MSVC-compatible")
     set(COMPILER_OPTIONS
-        /W4 /EHsc /arch:AVX2 /MP
+        /W4 /EHsc /arch:AVX2
         $<$<CONFIG:RELEASE>:/O2 /fp:fast /DNDEBUG>
         $<$<CONFIG:RELWITHDEBINFO>:/O2 /fp:fast /DNDEBUG /Zi>
         $<$<CONFIG:DEBUG>:/Od /DDEBUG /Zi>
     )
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        list(APPEND COMPILER_OPTIONS /MP)
+    endif()
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
 else()
     set(WARNING_FLAGS -Wall -Wextra -Wshadow)
