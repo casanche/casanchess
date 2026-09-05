@@ -45,9 +45,6 @@ if(MSVC)
 else()
     set(WARNING_FLAGS -Wall -Wextra -Wshadow)
     set(ARCH_FLAGS -march=haswell -mtune=generic)
-    if(MINGW)
-        list(APPEND ARCH_FLAGS -mno-avx -mno-avx2)
-    endif()
     set(OPTIMIZATION_FLAGS -O3 -ffast-math -DNDEBUG -fomit-frame-pointer -funroll-loops)
     set(COMPILER_OPTIONS
         ${WARNING_FLAGS} ${ARCH_FLAGS}
@@ -151,6 +148,14 @@ set(ENGINE_SOURCES
     src/Utils.cpp
     src/ZobristKeys.cpp
 )
+
+# Diagnostic: isolate MinGW/Win64 AVX stack-alignment failures to the
+# std::thread trampoline instantiated in Uci.cpp.
+if(MINGW)
+    set_property(SOURCE src/Uci.cpp APPEND PROPERTY
+        COMPILE_OPTIONS -mno-avx -mno-avx2
+    )
+endif()
 
 # Create OBJECT library for main executable (single file distribution)
 add_library(engine_obj OBJECT ${ENGINE_SOURCES})
