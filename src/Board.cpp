@@ -161,6 +161,7 @@ int Board::SEE(Move move) const {
 
     // Array to store the captured piece value at each depth
     int gain[32];
+    constexpr int MAX_SEE_DEPTH = 31;
     int depth = 0;
 
     // Piece value of the captured piece
@@ -192,13 +193,14 @@ int Board::SEE(Move move) const {
     }
 
     // Keep iterating until there are no more attackers on the target square
-    while(true) {
+    while(depth < MAX_SEE_DEPTH) {
         Bitboard attackers = AttackersTo((COLOR)!sideToMove, moveData.toSq, occupied) & occupied;
 
         if(!attackers) break;
 
         PIECE_TYPE lvaPiece;
         Bitboard lvaBitboard = LeastValuableAttacker(attackers, sideToMove, lvaPiece);
+        if(!lvaBitboard) break;
 
         gain[depth + 1] = SEE::MATERIAL_VALUES[attackingPiece];
 

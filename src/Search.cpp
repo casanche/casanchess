@@ -231,10 +231,6 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         if(DEBUG_SEARCH_TREE)
             P( "RootMax: " << move.Notation() );
 
-        // Display the root move under analysis and update the counters
-        elapsedTime = m_limits.UpdatedElapsedTime();
-        Uci::RootUpdate(m_depth, m_selPly, moveNumber, move.Notation(), m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits);
-
         board.MakeMove(move);
         m_ply++;
 
@@ -653,9 +649,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     if(m_limits.LimitsReached(m_nodes))
         return 0;
 
-    // Prevent infinite recursion in rare cases (unlikely to occur)
-    if (m_plyqs >= MAX_QS_PLIES) {
-        D( m_debug.Increment("Quiescence: MAX_QS_PLIES reached (unlikely)") );
+    // Prevent excessive recursion in both total search ply and quiescence ply.
+    if(m_ply >= MAX_PLY - 1 || m_plyqs >= MAX_QS_PLIES) {
+        D( m_debug.Increment("Quiescence: Maximum ply reached") );
         return Evaluation::Evaluate(board);
     }
 

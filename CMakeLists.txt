@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(Casanchess 
-    VERSION 1.1.0
+    VERSION 1.1.1
     LANGUAGES CXX
 )
 
@@ -171,6 +171,10 @@ add_executable(casanchess Main.cpp)
 
 target_link_libraries(casanchess PRIVATE $<TARGET_OBJECTS:engine_obj> engine)
 target_link_options(casanchess PRIVATE ${LINK_FLAGS})
+
+if(MINGW)
+    target_link_options(casanchess PRIVATE "-Wl,--stack,8388608")
+endif()
 
 # =============================================================================
 # Data Files

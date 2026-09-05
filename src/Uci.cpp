@@ -7,6 +7,7 @@
 #include "SearchLimits.h"
 #include "Syzygy.h"
 
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -19,7 +20,7 @@ namespace {
     const std::string AUTHOR = "Carlos Sanchez Mayordomo";
     const std::string VERSION_MAJOR = "1";
     const std::string VERSION_MINOR = "1";
-    const std::string VERSION_PATCH = "0";
+    const std::string VERSION_PATCH = "1";
 }
 
 Uci::Uci() :
@@ -69,12 +70,11 @@ void Uci::Launch() {
         }
         else if(token == "position") { Position(stream); }
         else if(token == "go") { Go(stream); }
-        else if(token == "stop") { StopAndJoin(); }
+        else if(token == "stop") { m_search.Stop(); }
         else if(token == "ponderhit") { m_search.PonderHit(); }
         else if(token == "quit" || token == "q") {
-            std::cout << "info string quitting" << std::endl;
-            StopAndJoin();
-            break;
+            m_search.Stop();
+            std::_Exit(EXIT_SUCCESS);
         }
         //Non-UCI commands
         else if(token == "perft" || token == "divide") {
