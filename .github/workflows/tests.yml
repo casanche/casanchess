@@ -120,6 +120,15 @@ jobs:
         
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }} --parallel
+
+    - name: Verify LLVM-MinGW runtime is statically linked
+      if: ${{ matrix.toolchain == 'llvm-mingw' }}
+      working-directory: ./build
+      run: |
+        if llvm-objdump -p casanchess.exe | grep -Eiq 'DLL Name: (libc\+\+|libunwind|libgcc|libstdc\+\+|libwinpthread|libomp)'; then
+          echo "Unexpected LLVM-MinGW runtime DLL dependency"
+          exit 1
+        fi
         
     - name: Fix permissions (Linux)
       if: ${{ runner.os == 'Linux' }}

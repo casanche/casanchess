@@ -35,8 +35,9 @@ endif()
 # =============================================================================
 if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     message(STATUS "Compiler frontend: MSVC-compatible")
+    set(ARCH_FLAGS /arch:AVX2)
     set(COMPILER_OPTIONS
-        /W4 /EHsc /arch:AVX2
+        /W4 /EHsc ${ARCH_FLAGS}
         $<$<CONFIG:RELEASE>:/O2 /fp:fast /DNDEBUG>
         $<$<CONFIG:RELWITHDEBINFO>:/O2 /fp:fast /DNDEBUG /Zi>
         $<$<CONFIG:DEBUG>:/Od /DDEBUG /Zi>
@@ -75,7 +76,9 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif()
 
     # Static Compilation
-    if(ENABLE_STATIC AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(ENABLE_STATIC AND
+       (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
+        (WIN32 AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")))
         message(STATUS "STATIC linking mode enabled")
         set(LINK_FLAGS ${LINK_FLAGS} -static)
     endif()
@@ -111,6 +114,7 @@ set_source_files_properties(
     external/fathom/src/tbprobe.c
     PROPERTIES LANGUAGE CXX
 )
+target_compile_options(fathom PRIVATE ${ARCH_FLAGS})
 target_include_directories(fathom PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/fathom/src>
 )
