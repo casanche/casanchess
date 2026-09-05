@@ -149,14 +149,6 @@ set(ENGINE_SOURCES
     src/ZobristKeys.cpp
 )
 
-# Diagnostic: isolate MinGW/Win64 AVX stack-alignment failures to the
-# std::thread trampoline instantiated in Uci.cpp.
-if(MINGW)
-    set_property(SOURCE src/Uci.cpp APPEND PROPERTY
-        COMPILE_OPTIONS -mno-avx -mno-avx2
-    )
-endif()
-
 # Create OBJECT library for main executable (single file distribution)
 add_library(engine_obj OBJECT ${ENGINE_SOURCES})
 target_include_directories(engine_obj PUBLIC ${INCLUDE_PATHS})
