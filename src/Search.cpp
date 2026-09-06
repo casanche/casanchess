@@ -642,7 +642,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 // in tactical sequences (captures and checks).
 int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
-    assert(m_ply < MAX_PLY);
+    assert(m_plyqs >= 0 && m_plyqs <= MAX_QS_PLIES);
 
     D( m_debug.Increment("Quiescence: _: Hits"); );
     D( if(m_plyqs <= 2 || m_plyqs % 5 == 0) m_debug.Increment("Quiescence: QPly " + std::to_string(m_plyqs)) );
