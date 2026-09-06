@@ -24,6 +24,8 @@ option(BUILD_TESTS_EXTRA "Build extra tests (Perft and Searcht)" OFF)
 option(BUILD_EXECUTABLES_EXTRA "Build extra executables (GenSFen and NNUE_Convert)" OFF)
 option(ENABLE_LTO "Enable Link Time Optimization for Release builds" ON)
 option(ENABLE_STATIC "Enable static compilation" ON)
+set(LTO_MODE "AUTO" CACHE STRING "LTO mode for Clang: AUTO, THIN or FULL")
+set_property(CACHE LTO_MODE PROPERTY STRINGS AUTO THIN FULL)
 
 # Set Release as default build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -65,10 +67,20 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 
     # IPO/LTO Configuration
     if(ENABLE_LTO)
+        string(TOUPPER "${LTO_MODE}" LTO_MODE_NORMALIZED)
+        if(NOT LTO_MODE_NORMALIZED MATCHES "^(AUTO|THIN|FULL)$")
+            message(FATAL_ERROR "Invalid LTO_MODE=${LTO_MODE}. Use AUTO, THIN or FULL.")
+        endif()
+
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT LTO_MODE_NORMALIZED STREQUAL "AUTO")
+            string(TOLOWER "${LTO_MODE_NORMALIZED}" CLANG_LTO_MODE)
+            set(CMAKE_CXX_COMPILE_OPTIONS_IPO "-flto=${CLANG_LTO_MODE}")
+        endif()
+
         include(CheckIPOSupported)
         check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
         if(ipo_supported)
-            message(STATUS "IPO/LTO enabled")
+            message(STATUS "IPO/LTO enabled (${LTO_MODE_NORMALIZED})")
             set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
         else()
             message(STATUS "IPO/LTO not supported: ${ipo_error}")

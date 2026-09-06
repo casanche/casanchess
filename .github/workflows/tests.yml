@@ -33,27 +33,39 @@ jobs:
             build_type: Release
             compiler: cl
           - os: windows-2025
-            name: Windows Release (MinGW GCC)
-            build_type: Release
-            compiler: g++
-          - os: windows-2025
             name: Windows Release (clang-cl + LLD + ThinLTO)
             build_type: Release
             compiler: clang-cl
             c_compiler: clang-cl
             toolchain: clang-cl
             linker: lld-link
+            lto_mode: thin
+            artifact_name: windows-clang-cl-thin-engine
+          - os: windows-2025
+            name: Windows Release (clang-cl + LLD + FullLTO)
+            build_type: Release
+            compiler: clang-cl
+            c_compiler: clang-cl
+            toolchain: clang-cl
+            linker: lld-link
+            lto_mode: full
+            artifact_name: windows-clang-cl-full-engine
           - os: windows-2025
             name: Windows Release (LLVM-MinGW + LLD + ThinLTO)
             build_type: Release
             compiler: x86_64-w64-mingw32-clang++
             c_compiler: x86_64-w64-mingw32-clang
             toolchain: llvm-mingw
-          # DEBUG - Windows
+            lto_mode: thin
+            artifact_name: windows-llvm-mingw-thin-engine
           - os: windows-2025
-            name: Windows Debug (MinGW GCC)
-            build_type: Debug
-            compiler: g++
+            name: Windows Release (LLVM-MinGW + LLD + FullLTO)
+            build_type: Release
+            compiler: x86_64-w64-mingw32-clang++
+            c_compiler: x86_64-w64-mingw32-clang
+            toolchain: llvm-mingw
+            lto_mode: full
+            artifact_name: windows-llvm-mingw-full-engine
           # DEBUG - Linux
           - os: ubuntu-latest
             name: Linux Debug (GCC)
@@ -108,15 +120,16 @@ jobs:
         ${{ matrix.linker && format('-DCMAKE_LINKER={0}', matrix.linker) || '' }}
         -DENABLE_STATIC=ON
         -DENABLE_LTO=ON
+        -DLTO_MODE=${{ matrix.lto_mode || 'auto' }}
         -DBUILD_TESTS=ON
         -DBUILD_TESTS_EXTRA=ON
         -DBUILD_EXECUTABLES_EXTRA=ON
 
-    - name: Verify AVX2 and ThinLTO for candidate toolchains
+    - name: Verify AVX2 and requested LTO mode
       if: ${{ matrix.toolchain == 'clang-cl' || matrix.toolchain == 'llvm-mingw' }}
       run: |
         grep -Eq -- '(/arch:AVX2|-march=haswell)' build/build.ninja
-        grep -q -- '-flto=thin' build/build.ninja
+        grep -q -- '-flto=${{ matrix.lto_mode }}' build/build.ninja
         
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }} --parallel
@@ -197,7 +210,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v7
       with:
-        name: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.compiler }}-engine
+        name: ${{ matrix.artifact_name || format('{0}-{1}-{2}-engine', matrix.os, matrix.build_type, matrix.compiler) }}
         path: |
           build/casanchess*
           build/Release/casanchess*
