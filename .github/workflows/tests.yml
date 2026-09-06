@@ -1,11 +1,15 @@
 name: Build and Test
 
+env:
+  LLVM_MINGW_VERSION: "20260826"
+
 on:
   push:
     branches: [ "master", "*/**" ]
 
 jobs:
   build_and_test:
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -14,31 +18,64 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # RELEASE - Linux
-          - os: ubuntu-latest
+          # Linux
+          - os: ubuntu-24.04
+            name: Linux Release (GCC)
             build_type: Release
             compiler: g++
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
+            name: Linux Release (Clang)
             build_type: Release
             compiler: clang++
-          # RELEASE - Windows
-          - os: windows-latest
+          - os: ubuntu-24.04
+            name: Linux Debug (GCC)
+            build_type: Debug
+            compiler: g++
+          # Windows
+          - os: windows-2025
+            name: Windows Release (MSVC)
             build_type: Release
             compiler: cl
           - os: windows-2025
+            name: Windows Release (clang-cl)
             build_type: Release
-            compiler: g++
-          # DEBUG - Windows
+            compiler: clang-cl
+            c_compiler: clang-cl
+            toolchain: clang-cl
           - os: windows-2025
+            name: Windows Release (LLVM-MinGW)
+            build_type: Release
+            compiler: x86_64-w64-mingw32-clang++
+            c_compiler: x86_64-w64-mingw32-clang
+            toolchain: llvm-mingw
+          - os: windows-2025
+            name: Windows Debug (clang-cl)
             build_type: Debug
-            compiler: g++
-          # DEBUG - Linux
-          - os: ubuntu-latest
-            build_type: Debug
-            compiler: g++
+            compiler: clang-cl
+            c_compiler: clang-cl
+            toolchain: clang-cl
     
     steps:
     - uses: actions/checkout@v7
+
+    - name: Set up MSVC environment for clang-cl
+      if: ${{ matrix.toolchain == 'clang-cl' }}
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Set up LLVM-MinGW
+      if: ${{ matrix.toolchain == 'llvm-mingw' }}
+      shell: pwsh
+      run: |
+        $archive = Join-Path $env:RUNNER_TEMP "llvm-mingw.zip"
+        $destination = Join-Path $env:RUNNER_TEMP "llvm-mingw"
+        $package = "llvm-mingw-$env:LLVM_MINGW_VERSION-ucrt-x86_64"
+        $url = "https://github.com/mstorsjo/llvm-mingw/releases/download/$env:LLVM_MINGW_VERSION/$package.zip"
+
+        Invoke-WebRequest -Uri $url -OutFile $archive
+        Expand-Archive -Path $archive -DestinationPath $destination
+        (Join-Path $destination "$package/bin") | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
     - name: Setup dependencies (Linux)
       if: ${{ runner.os == 'Linux' }}
@@ -53,17 +90,20 @@ jobs:
       run: >
         cmake -B build
         -S .
-        ${{ runner.os == 'Windows' && matrix.compiler == 'g++' && '-G Ninja' || '' }}
+        ${{ runner.os == 'Windows' && matrix.compiler != 'cl' && '-G Ninja' || '' }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+        ${{ matrix.c_compiler && format('-DCMAKE_C_COMPILER={0}', matrix.c_compiler) || '' }}
+        ${{ matrix.toolchain == 'clang-cl' && '-DCMAKE_LINKER_TYPE=LLD' || '' }}
         -DENABLE_STATIC=ON
+        -DENABLE_LTO=ON
         -DBUILD_TESTS=ON
         -DBUILD_TESTS_EXTRA=ON
         -DBUILD_EXECUTABLES_EXTRA=ON
-        
+
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }} --parallel
-        
+
     - name: Fix permissions (Linux)
       if: ${{ runner.os == 'Linux' }}
       working-directory: ./build
@@ -129,6 +169,7 @@ jobs:
         "
 
     - name: Upload artifacts
+      if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.compiler }}-engine

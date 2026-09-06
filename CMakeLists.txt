@@ -33,15 +33,23 @@ endif()
 # =============================================================================
 # Compiler Configuration
 # =============================================================================
-if(MSVC)
-    message(STATUS "Compiler: MSVC")
+if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    message(STATUS "Compiler frontend: MSVC-compatible")
+    set(ARCH_FLAGS /arch:AVX2)
     set(COMPILER_OPTIONS
-        /W4 /EHsc /arch:AVX2 /MP
+        /W4 /EHsc ${ARCH_FLAGS}
         $<$<CONFIG:RELEASE>:/O2 /fp:fast /DNDEBUG>
         $<$<CONFIG:RELWITHDEBINFO>:/O2 /fp:fast /DNDEBUG /Zi>
         $<$<CONFIG:DEBUG>:/Od /DDEBUG /Zi>
     )
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        list(APPEND COMPILER_OPTIONS /MP)
+    endif()
+    if(ENABLE_STATIC)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "" FORCE)
+    else()
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
+    endif()
 else()
     set(WARNING_FLAGS -Wall -Wextra -Wshadow)
     set(ARCH_FLAGS -march=haswell -mtune=generic)
@@ -57,26 +65,27 @@ endif()
 # =============================================================================
 # Linker Configuration
 # =============================================================================
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-
-    # IPO/LTO Configuration
-    if(ENABLE_LTO)
-        include(CheckIPOSupported)
-        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
-        if(ipo_supported)
-            message(STATUS "IPO/LTO enabled")
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-        else()
-            message(STATUS "IPO/LTO not supported: ${ipo_error}")
-        endif()
+# IPO/LTO Configuration
+if(ENABLE_LTO)
+    if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(CMAKE_CXX_COMPILE_OPTIONS_IPO "-flto=full")
     endif()
 
-    # Static Compilation
-    if(ENABLE_STATIC AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        message(STATUS "STATIC linking mode enabled")
-        set(LINK_FLAGS ${LINK_FLAGS} -static)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+    if(ipo_supported)
+        message(STATUS "IPO/LTO enabled for Release builds")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE)
+    else()
+        message(STATUS "IPO/LTO not supported: ${ipo_error}")
     endif()
-    
+endif()
+
+# Static GNU/MinGW builds
+if(ENABLE_STATIC AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR MINGW))
+    message(STATUS "STATIC linking mode enabled")
+    list(APPEND LINK_FLAGS -static)
 endif()
 
 # =============================================================================
@@ -98,8 +107,10 @@ if(BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
     
     # Disable LTO for GoogleTest targets
-    set_property(TARGET gtest PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
-    set_property(TARGET gtest_main PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+    set_target_properties(gtest gtest_main PROPERTIES
+        INTERPROCEDURAL_OPTIMIZATION_RELEASE FALSE
+        INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO FALSE
+    )
 endif()
 
 # Fathom
@@ -108,6 +119,7 @@ set_source_files_properties(
     external/fathom/src/tbprobe.c
     PROPERTIES LANGUAGE CXX
 )
+target_compile_options(fathom PRIVATE ${ARCH_FLAGS})
 target_include_directories(fathom PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/fathom/src>
 )
