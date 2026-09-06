@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # RELEASE - Linux
+          # Linux
           - os: ubuntu-latest
             name: Linux Release (GCC)
             build_type: Release
@@ -27,50 +27,35 @@ jobs:
             name: Linux Release (Clang)
             build_type: Release
             compiler: clang++
-          # RELEASE - Windows
+          - os: ubuntu-latest
+            name: Linux Debug (GCC)
+            build_type: Debug
+            compiler: g++
+          # Windows
           - os: windows-latest
             name: Windows Release (MSVC)
             build_type: Release
             compiler: cl
           - os: windows-2025
-            name: Windows Release (clang-cl + LLD + ThinLTO)
+            name: Windows Release (clang-cl)
             build_type: Release
             compiler: clang-cl
             c_compiler: clang-cl
             toolchain: clang-cl
             linker: lld-link
-            lto_mode: thin
-            artifact_name: windows-clang-cl-thin-engine
           - os: windows-2025
-            name: Windows Release (clang-cl + LLD + FullLTO)
-            build_type: Release
-            compiler: clang-cl
-            c_compiler: clang-cl
-            toolchain: clang-cl
-            linker: lld-link
-            lto_mode: full
-            artifact_name: windows-clang-cl-full-engine
-          - os: windows-2025
-            name: Windows Release (LLVM-MinGW + LLD + ThinLTO)
+            name: Windows Release (LLVM-MinGW)
             build_type: Release
             compiler: x86_64-w64-mingw32-clang++
             c_compiler: x86_64-w64-mingw32-clang
             toolchain: llvm-mingw
-            lto_mode: thin
-            artifact_name: windows-llvm-mingw-thin-engine
           - os: windows-2025
-            name: Windows Release (LLVM-MinGW + LLD + FullLTO)
-            build_type: Release
-            compiler: x86_64-w64-mingw32-clang++
-            c_compiler: x86_64-w64-mingw32-clang
-            toolchain: llvm-mingw
-            lto_mode: full
-            artifact_name: windows-llvm-mingw-full-engine
-          # DEBUG - Linux
-          - os: ubuntu-latest
-            name: Linux Debug (GCC)
+            name: Windows Debug (clang-cl)
             build_type: Debug
-            compiler: g++
+            compiler: clang-cl
+            c_compiler: clang-cl
+            toolchain: clang-cl
+            linker: lld-link
     
     steps:
     - uses: actions/checkout@v7
@@ -120,26 +105,19 @@ jobs:
         ${{ matrix.linker && format('-DCMAKE_LINKER={0}', matrix.linker) || '' }}
         -DENABLE_STATIC=ON
         -DENABLE_LTO=ON
-        -DLTO_MODE=${{ matrix.lto_mode || 'auto' }}
         -DBUILD_TESTS=ON
         -DBUILD_TESTS_EXTRA=ON
         -DBUILD_EXECUTABLES_EXTRA=ON
 
-    - name: Verify AVX2 and requested LTO mode
-      if: ${{ matrix.toolchain == 'clang-cl' || matrix.toolchain == 'llvm-mingw' }}
-      run: |
-        grep -Eq -- '(/arch:AVX2|-march=haswell)' build/build.ninja
-        grep -q -- '-flto=${{ matrix.lto_mode }}' build/build.ninja
-        
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }} --parallel
 
-    - name: Verify LLVM-MinGW runtime is statically linked
-      if: ${{ matrix.toolchain == 'llvm-mingw' }}
+    - name: Verify static runtime
+      if: ${{ matrix.toolchain == 'clang-cl' || matrix.toolchain == 'llvm-mingw' }}
       working-directory: ./build
       run: |
-        if llvm-objdump -p casanchess.exe | grep -Eiq 'DLL Name: (libc\+\+|libunwind|libgcc|libstdc\+\+|libwinpthread|libomp)'; then
-          echo "Unexpected LLVM-MinGW runtime DLL dependency"
+        if llvm-objdump -p casanchess.exe | grep -Eiq 'DLL Name: (libc\+\+|libunwind|libgcc|libstdc\+\+|libwinpthread|libomp|msvcp|vcruntime)'; then
+          echo "Unexpected runtime DLL dependency"
           exit 1
         fi
         
@@ -210,7 +188,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v7
       with:
-        name: ${{ matrix.artifact_name || format('{0}-{1}-{2}-engine', matrix.os, matrix.build_type, matrix.compiler) }}
+        name: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.compiler }}-engine
         path: |
           build/casanchess*
           build/Release/casanchess*
