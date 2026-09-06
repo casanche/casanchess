@@ -33,12 +33,10 @@ private:
     void Position(std::istringstream &stream);
     void SetOption(std::istringstream &stream);
     
-    void StartSearch();
+    void StartSearch(UCI_Limits limits);
 
     void ShowHashMoves();
     void StopAndJoin();
-
-    UCI_Limits m_limits;
     
     TT m_tt;
     Search m_search;
