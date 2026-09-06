@@ -65,32 +65,27 @@ endif()
 # =============================================================================
 # Linker Configuration
 # =============================================================================
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-
-    # IPO/LTO Configuration
-    if(ENABLE_LTO)
-        if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            set(CMAKE_CXX_COMPILE_OPTIONS_IPO "-flto=full")
-        endif()
-
-        include(CheckIPOSupported)
-        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
-        if(ipo_supported)
-            message(STATUS "IPO/LTO enabled")
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-        else()
-            message(STATUS "IPO/LTO not supported: ${ipo_error}")
-        endif()
+# IPO/LTO Configuration
+if(ENABLE_LTO)
+    if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(CMAKE_CXX_COMPILE_OPTIONS_IPO "-flto=full")
     endif()
 
-    # Static Compilation
-    if(ENABLE_STATIC AND
-       (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
-        (WIN32 AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")))
-        message(STATUS "STATIC linking mode enabled")
-        set(LINK_FLAGS ${LINK_FLAGS} -static)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+    if(ipo_supported)
+        message(STATUS "IPO/LTO enabled for Release builds")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE)
+    else()
+        message(STATUS "IPO/LTO not supported: ${ipo_error}")
     endif()
-    
+endif()
+
+# Static GNU/MinGW builds
+if(ENABLE_STATIC AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR MINGW))
+    message(STATUS "STATIC linking mode enabled")
+    list(APPEND LINK_FLAGS -static)
 endif()
 
 # =============================================================================
@@ -112,8 +107,10 @@ if(BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
     
     # Disable LTO for GoogleTest targets
-    set_property(TARGET gtest PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
-    set_property(TARGET gtest_main PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+    set_target_properties(gtest gtest_main PROPERTIES
+        INTERPROCEDURAL_OPTIMIZATION_RELEASE FALSE
+        INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO FALSE
+    )
 endif()
 
 # Fathom

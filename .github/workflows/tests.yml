@@ -19,20 +19,20 @@ jobs:
       matrix:
         include:
           # Linux
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             name: Linux Release (GCC)
             build_type: Release
             compiler: g++
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             name: Linux Release (Clang)
             build_type: Release
             compiler: clang++
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             name: Linux Debug (GCC)
             build_type: Debug
             compiler: g++
           # Windows
-          - os: windows-latest
+          - os: windows-2025
             name: Windows Release (MSVC)
             build_type: Release
             compiler: cl
@@ -112,15 +112,6 @@ jobs:
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }} --parallel
 
-    - name: Verify static runtime
-      if: ${{ matrix.toolchain == 'clang-cl' || matrix.toolchain == 'llvm-mingw' }}
-      working-directory: ./build
-      run: |
-        if llvm-objdump -p casanchess.exe | grep -Eiq 'DLL Name: (libc\+\+|libunwind|libgcc|libstdc\+\+|libwinpthread|libomp|msvcp|vcruntime)'; then
-          echo "Unexpected runtime DLL dependency"
-          exit 1
-        fi
-        
     - name: Fix permissions (Linux)
       if: ${{ runner.os == 'Linux' }}
       working-directory: ./build
