@@ -86,10 +86,8 @@ if(ENABLE_LTO)
     endif()
 endif()
 
-# Fully static Linux and MinGW builds. Clang on Linux was previously excluded,
-# so ENABLE_STATIC=ON silently produced a dynamically linked executable.
 if(ENABLE_STATIC AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND
-   ((CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang") OR MINGW))
+   (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR MINGW))
     message(STATUS "STATIC linking mode enabled (${CMAKE_CXX_COMPILER_ID} on ${CMAKE_SYSTEM_NAME})")
     add_link_options(-static)
 endif()
