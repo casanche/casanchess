@@ -11,6 +11,9 @@ jobs:
   build_and_test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    env:
+      EXE_SUFFIX: ${{ startsWith(matrix.os, 'windows-') && '.exe' || '' }}
+      CONFIG_DIR: ${{ matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
     defaults:
       run:
         shell: bash
@@ -27,6 +30,7 @@ jobs:
             name: Linux Release (Clang)
             build_type: Release
             compiler: clang++
+            c_compiler: clang # GoogleTest enables C and C++, so keep both compilers aligned
             toolchain: clang-musl
           - os: ubuntu-24.04
             name: Linux Debug (GCC)
@@ -90,8 +94,9 @@ jobs:
             clang++ --version
             cmake --version
             cmake -S . -B build -G Ninja \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_CXX_COMPILER=clang++ \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+              -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+              -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
               -DCMAKE_LINKER_TYPE=LLD \
               -DENABLE_STATIC=ON \
               -DENABLE_LTO=ON \
@@ -131,28 +136,18 @@ jobs:
     - name: Tests - Unit and Perft
       working-directory: ./build
       run: |
-        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
-        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
-
         for exe_name in tests perft; do
-          ./${BASE_PATH}${exe_name}${EXTENSION_SUFFIX}
+          ./${CONFIG_DIR}${exe_name}${EXE_SUFFIX}
         done
 
     - name: Bench
       working-directory: ./build
-      run: |
-        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
-        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
-
-        echo bench | ./${BASE_PATH}casanchess${EXTENSION_SUFFIX}
+      run: echo bench | ./${CONFIG_DIR}casanchess${EXE_SUFFIX}
 
     - name: Smoke Test - UCI
       working-directory: ./build
       run: |
-        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
-        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
-        
-        ENGINE_BIN="./${BASE_PATH}casanchess${EXTENSION_SUFFIX}"
+        ENGINE_BIN="./${CONFIG_DIR}casanchess${EXE_SUFFIX}"
 
         timeout 30s bash -c "
         (
