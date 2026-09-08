@@ -11,6 +11,9 @@ jobs:
   build_and_test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    env:
+      EXE_SUFFIX: ${{ startsWith(matrix.os, 'windows-') && '.exe' || '' }}
+      CONFIG_DIR: ${{ matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
     defaults:
       run:
         shell: bash
@@ -27,6 +30,8 @@ jobs:
             name: Linux Release (Clang)
             build_type: Release
             compiler: clang++
+            c_compiler: clang # GoogleTest enables C and C++, so keep both compilers aligned
+            toolchain: clang-musl
           - os: ubuntu-24.04
             name: Linux Debug (GCC)
             build_type: Debug
@@ -43,7 +48,7 @@ jobs:
             c_compiler: clang-cl
             toolchain: clang-cl
           - os: windows-2025
-            name: Windows Release (LLVM-MinGW)
+            name: Windows Release (clang-mingw)
             build_type: Release
             compiler: x86_64-w64-mingw32-clang++
             c_compiler: x86_64-w64-mingw32-clang
@@ -77,63 +82,72 @@ jobs:
         Expand-Archive -Path $archive -DestinationPath $destination
         (Join-Path $destination "$package/bin") | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-    - name: Setup dependencies (Linux)
-      if: ${{ runner.os == 'Linux' }}
-      shell: bash
+    - name: Configure and build with Clang and musl
+      if: ${{ matrix.toolchain == 'clang-musl' }}
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake
-        ${{ matrix.compiler }} --version
-        cmake --version
+        docker run --rm \
+          --volume "$GITHUB_WORKSPACE:/workspace" \
+          --workdir /workspace \
+          alpine:3.24 \
+          sh -euxc '
+            apk add --no-cache build-base clang cmake file git lld llvm ninja binutils
+            clang++ --version
+            cmake --version
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+              -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+              -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+              -DCMAKE_LINKER_TYPE=LLD \
+              -DENABLE_STATIC=ON \
+              -DENABLE_LTO=ON \
+              -DBUILD_TESTS=ON \
+              -DBUILD_TESTS_EXTRA=ON \
+              -DBUILD_EXECUTABLES_EXTRA=ON
+            cmake --build build --parallel
 
-    - name: Configure with CMake
-      run: >
-        cmake -B build
-        -S .
-        ${{ runner.os == 'Windows' && matrix.compiler != 'cl' && '-G Ninja' || '' }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
-        ${{ matrix.c_compiler && format('-DCMAKE_C_COMPILER={0}', matrix.c_compiler) || '' }}
-        ${{ matrix.toolchain == 'clang-cl' && '-DCMAKE_LINKER_TYPE=LLD' || '' }}
-        -DENABLE_STATIC=ON
-        -DENABLE_LTO=ON
-        -DBUILD_TESTS=ON
-        -DBUILD_TESTS_EXTRA=ON
-        -DBUILD_EXECUTABLES_EXTRA=ON
+            file build/casanchess | grep "statically linked"
+            ! readelf -l build/casanchess | grep -q INTERP
+            ! readelf -d build/casanchess | grep -q NEEDED
+          '
 
-    - name: Build
-      run: cmake --build build --config ${{ matrix.build_type }} --parallel
+    - name: Configure and build with CMake
+      if: ${{ matrix.toolchain != 'clang-musl' }}
+      run: |
+        if [[ "${{ runner.os }}" == "Linux" ]]; then
+          ${{ matrix.compiler }} --version
+          cmake --version
+        fi
 
-    - name: Fix permissions (Linux)
-      if: ${{ runner.os == 'Linux' }}
-      working-directory: ./build
-      run: chmod +x casanchess tests perft
+        cmake -B build \
+          -S . \
+          ${{ runner.os == 'Windows' && matrix.compiler != 'cl' && '-G Ninja' || '' }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          ${{ matrix.c_compiler && format('-DCMAKE_C_COMPILER={0}', matrix.c_compiler) || '' }} \
+          ${{ matrix.toolchain == 'clang-cl' && '-DCMAKE_LINKER_TYPE=LLD' || '' }} \
+          -DENABLE_STATIC=ON \
+          -DENABLE_LTO=ON \
+          -DBUILD_TESTS=ON \
+          -DBUILD_TESTS_EXTRA=ON \
+          -DBUILD_EXECUTABLES_EXTRA=ON
+
+        cmake --build build --config ${{ matrix.build_type }} --parallel
 
     - name: Tests - Unit and Perft
       working-directory: ./build
       run: |
-        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
-        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
-
         for exe_name in tests perft; do
-          ./${BASE_PATH}${exe_name}${EXTENSION_SUFFIX}
+          ./${CONFIG_DIR}${exe_name}${EXE_SUFFIX}
         done
 
     - name: Bench
       working-directory: ./build
-      run: |
-        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
-        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
-
-        echo bench | ./${BASE_PATH}casanchess${EXTENSION_SUFFIX}
+      run: echo bench | ./${CONFIG_DIR}casanchess${EXE_SUFFIX}
 
     - name: Smoke Test - UCI
       working-directory: ./build
       run: |
-        EXTENSION_SUFFIX=${{ runner.os == 'Windows' && '.exe' || '' }}
-        BASE_PATH=${{ runner.os == 'Windows' && matrix.compiler == 'cl' && format('{0}/', matrix.build_type) || '' }}
-        
-        ENGINE_BIN="./${BASE_PATH}casanchess${EXTENSION_SUFFIX}"
+        ENGINE_BIN="./${CONFIG_DIR}casanchess${EXE_SUFFIX}"
 
         timeout 30s bash -c "
         (
