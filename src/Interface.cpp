@@ -1,34 +1,33 @@
 #include "Interface.h"
 
+#include "Engine.h"
 #include "MoveGenerator.h"
-#include "Search.h"
 
 #include <iostream>
 
 const int fixedNodes = 250000;
 const std::string prefix = ">";
 
-Interface::Interface() : m_tt(), m_search(m_tt), m_board() {
-    NewGame();
+Interface::Interface() : m_engine(std::make_unique<Engine>()) {
+    m_engine->NewGame();
 }
 
-void Interface::NewGame() {
-    m_tt.Clear();
-
-    m_board.Init();
-}
+Interface::~Interface() = default;
 
 void Interface::Print() {
-    m_board.Print();
+    m_engine->board.Print();
 }
 
 void Interface::Start(std::string fenString) {
+    Board& board = m_engine->board;
+    Search& search = m_engine->search;
+
     PrintWelcome();
 
     if(fenString == "") {
-        NewGame();
+        m_engine->NewGame();
     } else {
-        m_board.SetFen(fenString);
+        board.SetFen(fenString);
     }
 
     std::string input;
@@ -46,17 +45,17 @@ void Interface::Start(std::string fenString) {
         //Set the board position from a fen string
         else if(input.find("fen") != std::string::npos) {
             input.erase(0, 4); //pos 0, size 4
-            m_board.SetFen(input);
+            board.SetFen(input);
         }
 
         //Random move
         else if(input == "random") {
-            MoveList moves = MoveGenerator::GenerateMoves(m_board);
+            MoveList moves = MoveGenerator::GenerateMoves(board);
 
             if( !moves.empty() ) {
-                m_board.MakeMove( MoveGenerator::RandomMove(moves) );
+                board.MakeMove( MoveGenerator::RandomMove(moves) );
             } else {
-                if( m_board.IsCheck() ) {
+                if( board.IsCheck() ) {
                     P("Checkmate!!!")
                 } else {
                     P("Stalemate...")
@@ -67,23 +66,23 @@ void Interface::Start(std::string fenString) {
 
         //Think and make a move
         else if(input == "think" || input == "t") {
-            m_search.IterativeDeepening(m_board, UCI_Limits::FixNodes(fixedNodes));
-            m_search.MakeMove(m_board);
+            search.IterativeDeepening(board, UCI_Limits::FixNodes(fixedNodes));
+            search.MakeMove(board);
         }
 
         //Show the list of moves
         else if(input == "moves") {
-            m_board.ShowMoves();
+            board.ShowMoves();
         }
 
         //Divide-perft
         else if(input.find("divide") != std::string::npos) {
             input.erase(0, 7);
-            m_board.Divide( stoi(input) );
+            board.Divide( stoi(input) );
         }
 
         else {
-            m_board.MakeMove(input);
+            board.MakeMove(input);
         }
 
     }

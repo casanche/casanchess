@@ -142,6 +142,7 @@ set(ENGINE_SOURCES
     src/Board.cpp
     src/Constants.cpp
     src/Debug.cpp
+    src/Engine.cpp
     src/Evaluation.cpp
     src/Fen.cpp
     src/Hash.cpp
