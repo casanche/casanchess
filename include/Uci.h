@@ -1,11 +1,14 @@
 #pragma once
 
-#include "Board.h"
+#include "Hash.h"
 #include "Search.h"
 #include "SearchLimits.h"
 
+#include <memory>
 #include <sstream>
 #include <thread>
+
+struct Engine;
 
 inline bool UCI_PONDER = false;
 inline bool UCI_CLASSICAL_EVAL = false;
@@ -33,16 +36,9 @@ private:
     void Position(std::istringstream &stream);
     void SetOption(std::istringstream &stream);
     
-    void StartSearch();
-
     void ShowHashMoves();
     void StopAndJoin();
-
-    UCI_Limits m_limits;
     
-    TT m_tt;
-    Search m_search;
-    Board m_board;
-
+    std::unique_ptr<Engine> m_engine;
     std::thread m_searchThread;
 };

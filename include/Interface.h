@@ -1,21 +1,19 @@
 #pragma once
 
-#include "Board.h"
-#include "Hash.h"
-#include "Search.h"
-
+#include <memory>
 #include <string>
+
+struct Engine;
 
 class Interface {
 public:
     Interface();
-    void NewGame();
+    ~Interface();
+
     void Print();
     void Start(std::string fenString = "");
 private:
     void PrintWelcome();
 
-    TT m_tt;
-    Search m_search;
-    Board m_board;
+    std::unique_ptr<Engine> m_engine;
 };

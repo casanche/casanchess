@@ -1,6 +1,7 @@
 #include "Uci.h"
 
 #include "Board.h"
+#include "Engine.h"
 #include "Evaluation.h"
 #include "Hash.h"
 #include "NNUE.h"
@@ -20,20 +21,18 @@ namespace {
     const std::string AUTHOR = "Carlos Sanchez Mayordomo";
     const std::string VERSION_MAJOR = "1";
     const std::string VERSION_MINOR = "1";
-    const std::string VERSION_PATCH = "0";
+    const std::string VERSION_PATCH = "2";
 }
 
-Uci::Uci() :
-    m_tt(),
-    m_search(m_tt),
-    m_board()
-{}
+Uci::Uci() : m_engine(std::make_unique<Engine>()) {}
 
 Uci::~Uci() {
     StopAndJoin();
 }
 
 void Uci::Launch() {
+    Search& search = m_engine->search;
+    Board& board = m_engine->board;
 
     std::string line;
 
@@ -67,14 +66,12 @@ void Uci::Launch() {
         else if(token == "ucinewgame") {
             StopAndJoin();
 
-            m_tt.Clear();
-            m_search.ClearSearch(true);
-            m_board.Init();
+            m_engine->NewGame();
         }
         else if(token == "position") { Position(stream); }
         else if(token == "go") { Go(stream); }
         else if(token == "stop") { StopAndJoin(); }
-        else if(token == "ponderhit") { m_search.PonderHit(); }
+        else if(token == "ponderhit") { search.PonderHit(); }
         else if(token == "quit" || token == "q") {
             std::cout << "info string quitting" << std::endl;
             StopAndJoin();
@@ -88,12 +85,12 @@ void Uci::Launch() {
             Utils::Clock clock;
             clock.Start();
 
-            Board board;
-            board.Print();
+            Board perftBoard;
+            perftBoard.Print();
             if(token == "perft") {
-                std::cout << board.Perft(depth) << std::endl;
+                std::cout << perftBoard.Perft(depth) << std::endl;
             } else {
-                board.Divide(depth);
+                perftBoard.Divide(depth);
             }
 
             std::cout << "[" << token << " " << depth << "] " << clock.Elapsed() << " ms" << std::endl;
@@ -109,26 +106,26 @@ void Uci::Launch() {
             ShowHashMoves();
         }
         else if(token == "mirror") {
-            m_board.Mirror();
+            board.Mirror();
         }
         else if(token == "print") {
-            m_board.Print();
-            std::string activePlayer = (m_board.ActivePlayer() == WHITE) ? "WHITE" : "BLACK";
+            board.Print();
+            std::string activePlayer = (board.ActivePlayer() == WHITE) ? "WHITE" : "BLACK";
             P("Active player: " << activePlayer);
-            P("Ply: " << m_board.Ply());
-            P("Fifty-move rule: " << m_board.FiftyRule());
+            P("Ply: " << board.Ply());
+            P("Fifty-move rule: " << board.FiftyRule());
             std::string castlingRights;
-            if(m_board.CastlingRights() & 0b0001) castlingRights += "K"; else castlingRights += "-";
-            if(m_board.CastlingRights() & 0b0010) castlingRights += "Q"; else castlingRights += "-";
-            if(m_board.CastlingRights() & 0b0100) castlingRights += "k"; else castlingRights += "-";
-            if(m_board.CastlingRights() & 0b1000) castlingRights += "q"; else castlingRights += "-";
+            if(board.CastlingRights() & 0b0001) castlingRights += "K"; else castlingRights += "-";
+            if(board.CastlingRights() & 0b0010) castlingRights += "Q"; else castlingRights += "-";
+            if(board.CastlingRights() & 0b0100) castlingRights += "k"; else castlingRights += "-";
+            if(board.CastlingRights() & 0b1000) castlingRights += "q"; else castlingRights += "-";
             P("Castling rights: " << castlingRights);
-            Bitboard enpassant = m_board.EnPassantSquare();
+            Bitboard enpassant = board.EnPassantSquare();
             int epSquare = enpassant ? BitscanForward(enpassant) : -1;
             P("Enpassant square: " << epSquare);
-            P("ZKey: " << m_board.ZKey());
-            P("Static evaluation: " << Evaluation::Evaluate(m_board));
-            std::cout << "Move history: "; m_board.ShowHistory(); std::cout << std::endl;
+            P("ZKey: " << board.ZKey());
+            P("Static evaluation: " << Evaluation::Evaluate(board));
+            std::cout << "Move history: "; board.ShowHistory(); std::cout << std::endl;
         }
         else {
             std::cout << "Command not valid: " << line << std::endl;
@@ -138,6 +135,10 @@ void Uci::Launch() {
 
 void Uci::Bench(int depth, bool verbose) {
     StopAndJoin();
+
+    TT& tt = m_engine->tt;
+    Search& search = m_engine->search;
+    Board& board = m_engine->board;
 
     if(verbose)
         std::cout << "Running benchmark at depth " << depth << "..." << std::endl;
@@ -177,16 +178,16 @@ void Uci::Bench(int depth, bool verbose) {
         }
 
         // Set position
-        m_board.SetFen(testPositions[i]);
+        board.SetFen(testPositions[i]);
 
         // Set search limits
-        m_tt.Clear();
-        m_search.IterativeDeepening(m_board, UCI_Limits::FixDepth(depth), true);
+        tt.Clear();
+        search.IterativeDeepening(board, UCI_Limits::FixDepth(depth), true);
 
         // Get results using the engine's own calculations
-        u64 nodes = m_search.GetNodes();
-        i64 elapsed = m_search.GetLimits().ElapsedTime();
-        int nps = m_search.GetLimits().CalculateNPS(nodes);
+        u64 nodes = search.GetNodes();
+        i64 elapsed = search.GetLimits().ElapsedTime();
+        int nps = search.GetLimits().CalculateNPS(nodes);
 
         totalNodes += nodes;
         totalTime += elapsed;
@@ -197,8 +198,8 @@ void Uci::Bench(int depth, bool verbose) {
             std::cout << "  Nodes: " << nodes << std::endl;
             std::cout << "  Time: " << elapsed << " ms" << std::endl;
             std::cout << "  Speed: " << std::fixed << std::setprecision(2) << (nps / 1000.0) << " kN/s" << std::endl;
-            std::cout << "  Best move: " << m_search.BestMove().Notation() << std::endl;
-            std::cout << "  Score: " << m_search.BestScore() << std::endl;
+            std::cout << "  Best move: " << search.BestMove().Notation() << std::endl;
+            std::cout << "  Score: " << search.BestScore() << std::endl;
             std::cout << std::endl;
         }
     }
@@ -248,19 +249,20 @@ void Uci::Go(std::istringstream &stream) {
 
     }
 
-    m_limits = limits; // To avoid copies in std::thread that may cause memory misalignments
-    m_searchThread = std::thread(&Uci::StartSearch, this);
+    m_searchThread = std::thread(&Engine::StartSearch, m_engine.get(), limits);
 }
 
 void Uci::Position(std::istringstream &stream) {
     StopAndJoin();
+
+    Board& board = m_engine->board;
 
     std::string token;
 
     while(stream >> token) {
 
         if(token == "startpos") {
-            m_board.Init();
+            board.Init();
         }
 
         else if(token == "fen") {
@@ -268,22 +270,24 @@ void Uci::Position(std::istringstream &stream) {
             while(stream >> token && token != "moves") {
                 fen += token + " ";
             }
-            m_board.SetFen(fen);
+            board.SetFen(fen);
         }
 
         while(stream >> token) {
             if(token == "moves") continue;
             // P(token);
-            m_board.MakeMove(token);
+            board.MakeMove(token);
         }
 
-        // m_board.Print();
+        // board.Print();
     }
 
 }
 
 void Uci::SetOption(std::istringstream &stream) {
     StopAndJoin();
+
+    TT& tt = m_engine->tt;
 
     std::string token;
     stream >> token; //should be 'name'
@@ -298,7 +302,7 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
             P(token);
 
-            m_tt.SetSize( stoi(token) );
+            tt.SetSize( stoi(token) );
         }
         else if(token == "Ponder") {
             stream >> token; //should be 'value'
@@ -313,7 +317,7 @@ void Uci::SetOption(std::istringstream &stream) {
                 UCI_PONDER = false;
         }
         else if(token == "ClearHash") {
-            m_tt.Clear();
+            tt.Clear();
         }
         else if(token == "Contempt") {
             stream >> token; // should be 'value'
@@ -350,9 +354,7 @@ void Uci::SetOption(std::istringstream &stream) {
 
             NNUE::Load(path);
 
-            m_tt.Clear();
-            m_search.ClearSearch(true);
-            m_board.Init();
+            m_engine->NewGame();
         }
         else if (token == "SyzygyPath") {
             stream >> token;
@@ -380,25 +382,23 @@ void Uci::SetOption(std::istringstream &stream) {
     }
 }
 
-void Uci::StartSearch() {
-    m_search.IterativeDeepening(m_board, m_limits);
-}
-
 void Uci::ShowHashMoves() {
-    MoveList moves = MoveGenerator::GenerateMoves(m_board);
+    TT& tt = m_engine->tt;
+    Board& board = m_engine->board;
+    MoveList moves = MoveGenerator::GenerateMoves(board);
 
     for(auto move : moves) {
-        m_board.MakeMove(move);
-        TTEntry* ttEntry = m_tt.Probe(m_board.ZKey());
+        board.MakeMove(move);
+        TTEntry* ttEntry = tt.Probe(board.ZKey());
         if(ttEntry) {
             P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
         }
-        m_board.TakeMove(move);
+        board.TakeMove(move);
     }
 }
 
 void Uci::StopAndJoin() {
-    m_search.Stop();
+    m_engine->StopSearch();
 
     // Thread join
     if(m_searchThread.joinable()) {
