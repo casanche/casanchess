@@ -444,7 +444,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --- Reverse Futility Pruning ---
     // Prune if static evaluation is too good (eval >> beta)
-    const int staticMargin = 100;
+    const int staticMargin = 80;
     if(depth <= 4 && !isPV && !inCheck) {
         int staticEval = eval - depth * staticMargin;
         if(staticEval >= beta) {
@@ -536,7 +536,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // ------- Futility pruning -------
         // Prune quiet moves and bad captures if unlikely to raise alpha
-        const int futilityMargin = 0 + depth * 25;
+        const int futilityMargin = 0 + depth * 35;
         if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinValue(alpha)
             && depth <= 4
             && eval + futilityMargin <= alpha
