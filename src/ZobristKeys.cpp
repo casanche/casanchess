@@ -6,7 +6,7 @@
 
 u64 ZobristKeys::m_zkeyColor;
 u64 ZobristKeys::m_zkeyPieces[2][8][64]; //[COLOR][PIECE_TYPE][SQUARE]
-u64 ZobristKeys::m_zkeyCastling[2][2]; //[COLOR][CASTLING_TYPE_SIMPLE]
+u64 ZobristKeys::m_zkeyCastling[2][2]; //[COLOR][CASTLING_TYPE]
 u64 ZobristKeys::m_zkeyEnpassant[8]; //[FILE]
 
 enum CASTLING_TYPE_SIMPLE { CASTLING_KING=0, CASTLING_QUEEN=1 };
