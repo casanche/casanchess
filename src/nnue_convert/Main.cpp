@@ -3,7 +3,7 @@
 #include <string>
 #include <string_view>
 
-void Convert(std::string ifilename, std::string ofilename);
+bool Convert(std::string ifilename, std::string ofilename);
 
 struct CliArgs {
     std::string inputFile;
@@ -44,5 +44,5 @@ int main(int argc, char** argv) {
     std::filesystem::path filepath = args.inputFile;
     std::string inputFile = filepath.string();
     std::string outputFile = filepath.replace_extension(".nn").string();
-    Convert(inputFile, outputFile);
+    return Convert(inputFile, outputFile) ? 0 : 1;
 }

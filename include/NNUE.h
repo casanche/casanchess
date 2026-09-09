@@ -20,6 +20,7 @@ struct SharedNetwork {
 
 struct NNUE_State {
     alignas(32) i16 accumulator[MAX_PLY_HISTORY][2][NNUE_SIZE]; // [PLY][COLOR][NNUE_SIZE]
+    i32 linearAccumulator[MAX_PLY_HISTORY][2]; // [PLY][COLOR]
 };
 
 class NNUE {
@@ -31,6 +32,7 @@ public:
     ~NNUE() = default;
 
     int Evaluate(int color, int ply) const;
+    int Drawishness(int color, int ply) const;
 
     void Inputs_FullUpdate(int ply, const PieceBitboards pieces);
     void Inputs_AddPiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b);
@@ -44,9 +46,9 @@ public:
     static std::string GetPath() { return s_shared.filepath; }
 
 private:
-    void ActivateReLU(const i16* input, i16* output, int size) const;
+    void ActivateSCReLU(const i16* input, i16* output) const;
 
-    template <typename T, bool with_ReLU>
+    template <typename T, bool applyActivation>
     void ComputeLayer(const i16* inputLayer, T* outputLayer,
                       const i32* biases, const i16* weights,
                       int dimInput, int dimOutput) const;
