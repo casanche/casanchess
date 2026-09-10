@@ -20,7 +20,7 @@ struct SharedNetwork {
 
     // State of "Load"
     bool isLoaded = false;
-    std::string filepath = "network-20260806.nnue";
+    std::string filepath = "network-20260910.nnue";
 
     bool Load(const std::string& path);
 };
