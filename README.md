@@ -37,6 +37,7 @@ cmake --build build --config Release --parallel
 ```
 
 ## UCI options
+* **``Ambition``**: Used to favor positions less likely to draw. Maximum evaluation adjustment in centipawns.
 * **``ClearHash``**: Reset the transposition table entries.
 * **``Hash``**: Transposition table size in MB. Default: 16MB
 * **``NNUE_Path``**: Absolute or relative path to the NNUE file.

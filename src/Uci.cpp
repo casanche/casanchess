@@ -49,6 +49,7 @@ void Uci::Launch() {
             std::cout << "id author " << AUTHOR << std::endl;
 
             //Options
+            std::cout << "option name Ambition type spin default " << UCI_AMBITION_DEFAULT << " min 0 max 50" << std::endl;
             std::cout << "option name ClassicalEval type check default false" << std::endl;
             std::cout << "option name ClearHash type button" << std::endl;
             std::cout << "option name Contempt type spin default 10 min -100 max 100" << std::endl;
@@ -289,6 +290,7 @@ void Uci::SetOption(std::istringstream &stream) {
     StopAndJoin();
 
     TT& tt = m_engine->tt;
+    Search& search = m_engine->search;
 
     std::string token;
     stream >> token; //should be 'name'
@@ -320,13 +322,30 @@ void Uci::SetOption(std::istringstream &stream) {
         else if(token == "ClearHash") {
             tt.Clear();
         }
+        else if(token == "Ambition") {
+            stream >> token; // should be 'value'
+            if(token != "value")
+                return;
+            stream >> token;
+
+            const int ambition = std::clamp(std::stoi(token), 0, 50);
+            if(ambition != UCI_AMBITION) {
+                UCI_AMBITION = ambition;
+                tt.Clear();
+                search.ClearEvalCache();
+            }
+        }
         else if(token == "Contempt") {
             stream >> token; // should be 'value'
             if(token != "value")
                 return;
             stream >> token;
 
-            UCI_DRAW_CONTEMPT = std::clamp(std::stoi(token), -100, 100);
+            const int contempt = std::clamp(std::stoi(token), -100, 100);
+            if(contempt != UCI_DRAW_CONTEMPT) {
+                UCI_DRAW_CONTEMPT = contempt;
+                tt.Clear();
+            }
         }
         else if(token == "ClassicalEval") {
             stream >> token;
@@ -335,10 +354,19 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
             P(token);
 
+            bool classicalEval;
             if(token == "true")
-                UCI_CLASSICAL_EVAL = true;
+                classicalEval = true;
             else if(token == "false")
-                UCI_CLASSICAL_EVAL = false;
+                classicalEval = false;
+            else
+                return;
+
+            if(classicalEval != UCI_CLASSICAL_EVAL) {
+                UCI_CLASSICAL_EVAL = classicalEval;
+                tt.Clear();
+                search.ClearEvalCache();
+            }
         }
         else if(token == "NNUE_Path") {
             stream >> token;
@@ -384,18 +412,7 @@ void Uci::SetOption(std::istringstream &stream) {
 }
 
 void Uci::ShowHashMoves() {
-    TT& tt = m_engine->tt;
-    Board& board = m_engine->board;
-    MoveList moves = MoveGenerator::GenerateMoves(board);
-
-    for(auto move : moves) {
-        board.MakeMove(move);
-        TTEntry* ttEntry = tt.Probe(board.ZKey());
-        if(ttEntry) {
-            P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
-        }
-        board.TakeMove(move);
-    }
+    m_engine->search.ShowHashMoves(m_engine->board);
 }
 
 void Uci::StopAndJoin() {

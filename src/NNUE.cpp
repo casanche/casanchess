@@ -10,13 +10,10 @@
 //
 // Layers:
 //   L1: 16,640 features → 256 accumulators (NNUE_SIZE x 2)
-//   L2: 256 → 32 (NNUE_HIDDEN_SIZE)
-//   L3: 32 → 1 (eval)
+//   L2: 256 → 48 (NNUE_HIDDEN_SIZE)
+//   L3: 48 → 1 (eval)
 //   Bypass: 16,640 features → 1 (eval)
-//   Drawishness: 256 → 1 (drawishness). Post-training
-//
-// Drawishness: 256 → 1
-//   Post-training head that predicts the residual (not explained by eval) draw component.
+//   Drawishness: 256 → 1 signed draw residual (post-training)
 //
 // Accumulators are updated incrementally when pieces move (basically the point of NNUE).
 // AVX2 instrinsics are used for fast vectorized layer computation.
@@ -114,10 +111,34 @@ int NNUE::Evaluate(int color, int ply) const {
     ActivateSCReLU(m_state->accumulator[ply][color], o1);
     ActivateSCReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE);
 
+    return EvaluateFromActivated(o1, color, ply);
+}
+
+int NNUE::Drawishness(int color, int ply) const {
+    i16 o1[NNUE_SIZE * 2];
+    ActivateSCReLU(m_state->accumulator[ply][color], o1);
+    ActivateSCReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE);
+
+    return DrawishnessFromActivated(o1);
+}
+
+EvaluationOutput NNUE::EvaluateOutputs(int color, int ply) const {
+    i16 o1[NNUE_SIZE * 2];
+    ActivateSCReLU(m_state->accumulator[ply][color], o1);
+    ActivateSCReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE);
+
+    return {
+        EvaluateFromActivated(o1, color, ply),
+        DrawishnessFromActivated(o1)
+    };
+}
+
+int NNUE::EvaluateFromActivated(const i16* activated, int color, int ply) const {
+
     i16 o2[ ARCH[L2][COL] ]; //Layer 2
     i32 o3[ ARCH[L3][COL] ]; //Layer 3
 
-    ComputeLayer<i16, true>(o1, o2, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
+    ComputeLayer<i16, true>(activated, o2, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
     ComputeLayer<i32, false>(o2, o3, s_shared.network.b3, s_shared.network.w3, ARCH[L3][ROW], ARCH[L3][COL]);
 
     const i32 linear = m_state->linearAccumulator[ply][color]
@@ -126,14 +147,10 @@ int NNUE::Evaluate(int color, int ply) const {
     return (o3[0] + linear * NNUEConstants::QUANT_FACTOR_W) * 100 / NNUEConstants::QUANT_FACTOR_B;
 }
 
-int NNUE::Drawishness(int color, int ply) const {
-    i16 o1[NNUE_SIZE * 2];
-    ActivateSCReLU(m_state->accumulator[ply][color], o1);
-    ActivateSCReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE);
-
+int NNUE::DrawishnessFromActivated(const i16* activated) const {
     i64 residual = s_shared.network.drawB;
     for(uint i = 0; i < ARCH[L2][ROW]; i++)
-        residual += static_cast<i64>(o1[i]) * s_shared.network.drawW[i];
+        residual += static_cast<i64>(activated[i]) * s_shared.network.drawW[i];
 
     return static_cast<int>(residual * 100 / NNUEConstants::QUANT_FACTOR_B);
 }

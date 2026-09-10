@@ -7,6 +7,13 @@
 
 using PieceBitboards = Bitboard[2][8]; //[COLOR][PIECE_TYPE]
 
+struct EvaluationOutput {
+    int eval;
+    // Signed draw residual in logits multiplied by 100. This is neither a
+    // probability nor a centipawn evaluation.
+    int drawishness;
+};
+
 struct SharedNetwork {
     // The actual network (from the binary file)
     Network network;
@@ -33,6 +40,7 @@ public:
 
     int Evaluate(int color, int ply) const;
     int Drawishness(int color, int ply) const;
+    EvaluationOutput EvaluateOutputs(int color, int ply) const;
 
     void Inputs_FullUpdate(int ply, const PieceBitboards pieces);
     void Inputs_AddPiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b);
@@ -47,6 +55,8 @@ public:
 
 private:
     void ActivateSCReLU(const i16* input, i16* output) const;
+    int EvaluateFromActivated(const i16* activated, int color, int ply) const;
+    int DrawishnessFromActivated(const i16* activated) const;
 
     template <typename T, bool applyActivation>
     void ComputeLayer(const i16* inputLayer, T* outputLayer,

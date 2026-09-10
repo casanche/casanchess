@@ -12,6 +12,8 @@ namespace ZobristKeys {
     extern u64 m_zkeyPieces[2][8][64];
     extern u64 m_zkeyCastling[2][2];
     extern u64 m_zkeyEnpassant[8];
+    // Distinguish black-root search policies in TT and EvalCache; exclude from board keys.
+    extern u64 m_zkeyRootContext;
 }
 
 class ZobristKey {
