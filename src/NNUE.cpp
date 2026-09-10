@@ -2,7 +2,7 @@
 //
 // NNUE (Efficiently Updatable Neural Network) evaluation.
 // A neural network that evaluates chess positions.
-// 
+//
 // Architecture: HalfKP with a linear feature bypass
 //
 // Input (features):
@@ -40,6 +40,47 @@ namespace {
 
         return (value * value + NNUEConstants::QUANT_FACTOR_L1 / 2)
              / NNUEConstants::QUANT_FACTOR_L1;
+    }
+
+    #if defined(__AVX2__)
+    inline i32 HorizontalSum128(__m128i x) {
+        x = _mm_add_epi32(x, _mm_srli_si128(x, 8));
+        x = _mm_add_epi32(x, _mm_srli_si128(x, 4));
+        return _mm_cvtsi128_si32(x);
+    }
+    #endif
+
+    // Quantized NNUE dot products use 32-bit accumulation.
+    inline i32 DotProduct(const i16* values, const i16* weights, int size) {
+        i32 sum = 0;
+        int i = 0;
+
+        #if defined(__AVX2__)
+            __m256i dot = _mm256_setzero_si256();
+
+            for(; i + 15 < size; i += 16) {
+                // Network fields and local buffers are not required to be aligned.
+                const __m256i valuesVec = _mm256_loadu_si256(
+                    reinterpret_cast<const __m256i*>(values + i)
+                );
+                const __m256i weightsVec = _mm256_loadu_si256(
+                    reinterpret_cast<const __m256i*>(weights + i)
+                );
+
+                dot = _mm256_add_epi32(dot, _mm256_madd_epi16(valuesVec, weightsVec));
+            }
+
+            const __m128i halves = _mm_add_epi32(
+                _mm256_castsi256_si128(dot),
+                _mm256_extracti128_si256(dot, 1)
+            );
+            sum = HorizontalSum128(halves);
+        #endif
+
+        for(; i < size; i++)
+            sum += values[i] * weights[i];
+
+        return sum;
     }
 }
 
@@ -107,7 +148,6 @@ NNUE& NNUE::operator=(const NNUE& other) {
 
 int NNUE::Evaluate(int color, int ply) const {
     i16 o1[NNUE_SIZE * 2]; //Layer 1 activated accumulator
-
     ActivateSCReLU(m_state->accumulator[ply][color], o1);
     ActivateSCReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE);
 
@@ -134,7 +174,6 @@ EvaluationOutput NNUE::EvaluateOutputs(int color, int ply) const {
 }
 
 int NNUE::EvaluateFromActivated(const i16* activated, int color, int ply) const {
-
     i16 o2[ ARCH[L2][COL] ]; //Layer 2
     i32 o3[ ARCH[L3][COL] ]; //Layer 3
 
@@ -148,9 +187,8 @@ int NNUE::EvaluateFromActivated(const i16* activated, int color, int ply) const 
 }
 
 int NNUE::DrawishnessFromActivated(const i16* activated) const {
-    i64 residual = s_shared.network.drawB;
-    for(uint i = 0; i < ARCH[L2][ROW]; i++)
-        residual += static_cast<i64>(activated[i]) * s_shared.network.drawW[i];
+    const i64 residual = static_cast<i64>(s_shared.network.drawB)
+                       + DotProduct(activated, s_shared.network.drawW, ARCH[L2][ROW]);
 
     return static_cast<int>(residual * 100 / NNUEConstants::QUANT_FACTOR_B);
 }
@@ -319,45 +357,14 @@ void NNUE::ActivateSCReLU(const i16* input, i16* output) const {
     #endif
 }
 
-namespace {
-    #if defined(__AVX2__)
-    // Horizontal sum of 4 integers (128-bits)
-    inline i32 HorizontalSum128(__m128i x) {
-        x = _mm_add_epi32(x, _mm_srli_si128(x, 8));
-        x = _mm_add_epi32(x, _mm_srli_si128(x, 4));
-        return _mm_cvtsi128_si32(x);
-    }
-    #endif
-}
-
 template <typename T, bool applyActivation>
 void NNUE::ComputeLayer(const i16* inputLayer, T* outputLayer,
                         const i32* biases, const i16* weights,
                         int dimInput, int dimOutput) const
 {
     for(int o = 0; o < dimOutput; o++) {
-        i32 sum = biases[o];
         const int offset = o * dimInput;
-
-        #if defined(__AVX2__)
-            __m256i dot = _mm256_setzero_si256();
-
-            for(int i = 0; i < dimInput; i += 16) {
-                __m256i inputVec = _mm256_loadu_si256((__m256i*)&inputLayer[i]);
-                __m256i weightsVec = _mm256_loadu_si256((__m256i*)&weights[offset + i]);
-
-                __m256i product = _mm256_madd_epi16(inputVec, weightsVec);
-                dot = _mm256_add_epi32(dot, product);
-            }
-
-            __m128i x = _mm_add_epi32(_mm256_castsi256_si128(dot), _mm256_extracti128_si256(dot, 1));
-
-            sum += HorizontalSum128(x);
-        #else
-            for(int i = 0; i < dimInput; i++) {
-                sum += inputLayer[i] * weights[offset + i];
-            }
-        #endif
+        i32 sum = biases[o] + DotProduct(inputLayer, weights + offset, dimInput);
 
         if constexpr (applyActivation) {
             sum /= NNUEConstants::QUANT_FACTOR_W; // Revert scaling
