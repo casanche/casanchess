@@ -26,10 +26,9 @@ testing::AssertionResult IsIncrementalCorrect(Board& board) {
         << "Full output: " << full.eval << ", " << full.drawishness;
 }
 
-void ExpectCombinedOutputMatchesIndividualHeads(const Board& board) {
+void ExpectCombinedOutputIsConsistent(const Board& board) {
     const EvaluationOutput nnue = board.NNUE_EvaluateOutputs();
     EXPECT_EQ(nnue.eval, board.NNUE_Evaluate());
-    EXPECT_EQ(nnue.drawishness, board.NNUE_Drawishness());
 
     const EvaluationOutput output = Evaluation::EvaluateOutputs(board);
     EXPECT_EQ(output.eval, Evaluation::Evaluate(board));
@@ -40,12 +39,12 @@ void ExpectCombinedOutputMatchesIndividualHeads(const Board& board) {
 // Sequence covering all NNUE update paths
 TEST(NNUE, Incremental_vs_FullUpdate) {
     Board board;
-    ExpectCombinedOutputMatchesIndividualHeads(board);
+    ExpectCombinedOutputIsConsistent(board);
 
     // Quiet moves
     board.MakeMove("e2e4");
     EXPECT_TRUE(IsIncrementalCorrect(board));
-    ExpectCombinedOutputMatchesIndividualHeads(board);
+    ExpectCombinedOutputIsConsistent(board);
 
     board.MakeMove("d7d5");
     EXPECT_TRUE(IsIncrementalCorrect(board));
@@ -77,9 +76,9 @@ TEST(NNUE, Incremental_vs_FullUpdate) {
     // Null moves
     board.MakeNull();
     EXPECT_TRUE(IsIncrementalCorrect(board));
-    ExpectCombinedOutputMatchesIndividualHeads(board);
+    ExpectCombinedOutputIsConsistent(board);
 
     board.TakeNull();
     EXPECT_TRUE(IsIncrementalCorrect(board));
-    ExpectCombinedOutputMatchesIndividualHeads(board);
+    ExpectCombinedOutputIsConsistent(board);
 }

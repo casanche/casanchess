@@ -58,7 +58,6 @@ public:
 
     // NNUE
     int NNUE_Evaluate() const { return m_nnue.Evaluate(m_activePlayer, m_ply); }
-    int NNUE_Drawishness() const { return m_nnue.Drawishness(m_activePlayer, m_ply); }
     EvaluationOutput NNUE_EvaluateOutputs() const { return m_nnue.EvaluateOutputs(m_activePlayer, m_ply); }
 
     // Helper methods

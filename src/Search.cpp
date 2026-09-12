@@ -110,7 +110,7 @@ void Search::SetRootContext(const Board& board) {
     m_ttContext = 0;
     m_evalContext = 0;
 
-    // Use the unmodified keys for white-root searches.
+    // Separate root-relative cache entries without changing the board key.
     if(m_rootPlayer == BLACK) {
         if(UCI_AMBITION != 0 || UCI_DRAW_CONTEMPT != 0)
             m_ttContext = ZobristKeys::m_zkeyRootContext;

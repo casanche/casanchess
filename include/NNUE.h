@@ -39,7 +39,6 @@ public:
     ~NNUE() = default;
 
     int Evaluate(int color, int ply) const;
-    int Drawishness(int color, int ply) const;
     EvaluationOutput EvaluateOutputs(int color, int ply) const;
 
     void Inputs_FullUpdate(int ply, const PieceBitboards pieces);
@@ -58,10 +57,9 @@ private:
     int EvaluateFromActivated(const i16* activated, int color, int ply) const;
     int DrawishnessFromActivated(const i16* activated) const;
 
-    template <typename T, bool applyActivation>
-    void ComputeLayer(const i16* inputLayer, T* outputLayer,
-                      const i32* biases, const i16* weights,
-                      int dimInput, int dimOutput) const;
+    void ComputeActivatedLayer(const i16* inputLayer, i16* outputLayer,
+                               const i32* biases, const i16* weights,
+                               int dimInput, int dimOutput) const;
 
 private:
     // Global

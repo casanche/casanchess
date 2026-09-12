@@ -35,11 +35,13 @@ namespace {
     constexpr int KING_BUCKET_MULTIPLIER = 640;
     constexpr int PIECE_INDEX_MULTIPLIER = 64;
 
-    constexpr i32 SCReLU(i32 value) {
-        value = std::clamp(value, 0, NNUEConstants::QUANT_FACTOR_L1);
+    constexpr i32 SCReLU(i64 value) {
+        value = std::clamp<i64>(value, 0, NNUEConstants::QUANT_FACTOR_L1);
 
-        return (value * value + NNUEConstants::QUANT_FACTOR_L1 / 2)
-             / NNUEConstants::QUANT_FACTOR_L1;
+        return static_cast<i32>(
+            (value * value + NNUEConstants::QUANT_FACTOR_L1 / 2)
+            / NNUEConstants::QUANT_FACTOR_L1
+        );
     }
 
     #if defined(__AVX2__)
@@ -154,14 +156,6 @@ int NNUE::Evaluate(int color, int ply) const {
     return EvaluateFromActivated(o1, color, ply);
 }
 
-int NNUE::Drawishness(int color, int ply) const {
-    i16 o1[NNUE_SIZE * 2];
-    ActivateSCReLU(m_state->accumulator[ply][color], o1);
-    ActivateSCReLU(m_state->accumulator[ply][1-color], o1 + NNUE_SIZE);
-
-    return DrawishnessFromActivated(o1);
-}
-
 EvaluationOutput NNUE::EvaluateOutputs(int color, int ply) const {
     i16 o1[NNUE_SIZE * 2];
     ActivateSCReLU(m_state->accumulator[ply][color], o1);
@@ -174,21 +168,24 @@ EvaluationOutput NNUE::EvaluateOutputs(int color, int ply) const {
 }
 
 int NNUE::EvaluateFromActivated(const i16* activated, int color, int ply) const {
-    i16 o2[ ARCH[L2][COL] ]; //Layer 2
-    i32 o3[ ARCH[L3][COL] ]; //Layer 3
+    i16 hidden[ ARCH[L2][COL] ];
 
-    ComputeLayer<i16, true>(activated, o2, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
-    ComputeLayer<i32, false>(o2, o3, s_shared.network.b3, s_shared.network.w3, ARCH[L3][ROW], ARCH[L3][COL]);
+    ComputeActivatedLayer(activated, hidden, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
 
-    const i32 linear = m_state->linearAccumulator[ply][color]
-                     - m_state->linearAccumulator[ply][1-color];
+    i64 nonlinear = s_shared.network.b3[0];
+    nonlinear += DotProduct(hidden, s_shared.network.w3, ARCH[L3][ROW]);
 
-    return (o3[0] + linear * NNUEConstants::QUANT_FACTOR_W) * 100 / NNUEConstants::QUANT_FACTOR_B;
+    i64 linear = m_state->linearAccumulator[ply][color];
+    linear -= m_state->linearAccumulator[ply][1-color];
+
+    const i64 output = nonlinear + linear * NNUEConstants::QUANT_FACTOR_W;
+
+    return static_cast<int>(output * 100 / NNUEConstants::QUANT_FACTOR_B);
 }
 
 int NNUE::DrawishnessFromActivated(const i16* activated) const {
-    const i64 residual = static_cast<i64>(s_shared.network.drawB)
-                       + DotProduct(activated, s_shared.network.drawW, ARCH[L2][ROW]);
+    i64 residual = s_shared.network.drawB;
+    residual += DotProduct(activated, s_shared.network.drawW, ARCH[L2][ROW]);
 
     return static_cast<int>(residual * 100 / NNUEConstants::QUANT_FACTOR_B);
 }
@@ -235,8 +232,8 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply, int ki
     const int feature_w = GetFeatureIndex(color,   pieceType, square_w, kingSquare_w);
     const int feature_b = GetFeatureIndex(1-color, pieceType, square_b, kingSquare_b);
 
-    assert(feature_w <= NNUE_FEATURES);
-    assert(feature_b <= NNUE_FEATURES);
+    assert(feature_w < NNUE_FEATURES);
+    assert(feature_b < NNUE_FEATURES);
 
     i16* acc_w = m_state->accumulator[ply][0];
     i16* acc_b = m_state->accumulator[ply][1];
@@ -261,8 +258,8 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply, int
     const int feature_w = GetFeatureIndex(color,   pieceType, square_w, kingSquare_w);
     const int feature_b = GetFeatureIndex(1-color, pieceType, square_b, kingSquare_b);
 
-    assert(feature_w <= NNUE_FEATURES);
-    assert(feature_b <= NNUE_FEATURES);
+    assert(feature_w < NNUE_FEATURES);
+    assert(feature_b < NNUE_FEATURES);
 
     i16* acc_w = m_state->accumulator[ply][0];
     i16* acc_b = m_state->accumulator[ply][1];
@@ -293,11 +290,11 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
     const int feature_to_w = GetFeatureIndex(color,   pieceType, toSq_w, kingSquare_w);
     const int feature_to_b = GetFeatureIndex(1-color, pieceType, toSq_b, kingSquare_b);
 
-    assert(feature_from_w <= NNUE_FEATURES);
-    assert(feature_from_b <= NNUE_FEATURES);
+    assert(feature_from_w < NNUE_FEATURES);
+    assert(feature_from_b < NNUE_FEATURES);
 
-    assert(feature_to_w <= NNUE_FEATURES);
-    assert(feature_to_b <= NNUE_FEATURES);
+    assert(feature_to_w < NNUE_FEATURES);
+    assert(feature_to_b < NNUE_FEATURES);
 
     i16* acc_w = m_state->accumulator[ply][0];
     i16* acc_b = m_state->accumulator[ply][1];
@@ -357,24 +354,16 @@ void NNUE::ActivateSCReLU(const i16* input, i16* output) const {
     #endif
 }
 
-template <typename T, bool applyActivation>
-void NNUE::ComputeLayer(const i16* inputLayer, T* outputLayer,
-                        const i32* biases, const i16* weights,
-                        int dimInput, int dimOutput) const
+void NNUE::ComputeActivatedLayer(const i16* inputLayer, i16* outputLayer,
+                                 const i32* biases, const i16* weights,
+                                 int dimInput, int dimOutput) const
 {
     for(int o = 0; o < dimOutput; o++) {
         const int offset = o * dimInput;
-        i32 sum = biases[o] + DotProduct(inputLayer, weights + offset, dimInput);
+        i64 sum = biases[o];
+        sum += DotProduct(inputLayer, weights + offset, dimInput);
 
-        if constexpr (applyActivation) {
-            sum /= NNUEConstants::QUANT_FACTOR_W; // Revert scaling
-            outputLayer[o] = static_cast<T>(SCReLU(sum));
-        } else {
-            outputLayer[o] = static_cast<T>(sum);
-        }
+        sum /= NNUEConstants::QUANT_FACTOR_W; // Revert scaling
+        outputLayer[o] = static_cast<i16>(SCReLU(sum));
     }
 }
-
-// The compiler needs to know which types to generate in since the template is defined in .cpp
-template void NNUE::ComputeLayer<i16, true>(const i16*, i16*, const i32*, const i16*, int, int) const;
-template void NNUE::ComputeLayer<i32, false>(const i16*, i32*, const i32*, const i16*, int, int) const;
