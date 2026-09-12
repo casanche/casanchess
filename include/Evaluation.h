@@ -2,6 +2,7 @@
 
 #include "Constants.h"
 #include "Hash.h"
+#include "NNUE.h"
 #include <cmath>
 
 class Board;
@@ -42,6 +43,7 @@ namespace Evaluation {
     //Evaluate functions
     int ClassicalEvaluation(const Board& baord);
     int Evaluate(const Board& board);
+    EvaluationOutput EvaluateOutputs(const Board& board);
     TaperedScore EvalBishopPair(const Board &board, COLOR color);
     void EvalKingSafety(const Board &board, Bitboard attacksMobility[2][8], Score& score);
     void EvalKingSafety_WeakFiles(const Board& board, int kingSafetyUnits[2]);

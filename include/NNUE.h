@@ -7,19 +7,27 @@
 
 using PieceBitboards = Bitboard[2][8]; //[COLOR][PIECE_TYPE]
 
+struct EvaluationOutput {
+    int eval;
+    // Signed draw residual in logits multiplied by 100. This is neither a
+    // probability nor a centipawn evaluation.
+    int drawishness;
+};
+
 struct SharedNetwork {
     // The actual network (from the binary file)
     Network network;
 
     // State of "Load"
     bool isLoaded = false;
-    std::string filepath = "network-20260806.nnue";
+    std::string filepath = "network-20260910.nnue";
 
     bool Load(const std::string& path);
 };
 
 struct NNUE_State {
     alignas(32) i16 accumulator[MAX_PLY_HISTORY][2][NNUE_SIZE]; // [PLY][COLOR][NNUE_SIZE]
+    i32 linearAccumulator[MAX_PLY_HISTORY][2]; // [PLY][COLOR]
 };
 
 class NNUE {
@@ -31,6 +39,8 @@ public:
     ~NNUE() = default;
 
     int Evaluate(int color, int ply) const;
+    int Drawishness(int color, int ply) const;
+    EvaluationOutput EvaluateOutputs(int color, int ply) const;
 
     void Inputs_FullUpdate(int ply, const PieceBitboards pieces);
     void Inputs_AddPiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b);
@@ -44,9 +54,11 @@ public:
     static std::string GetPath() { return s_shared.filepath; }
 
 private:
-    void ActivateReLU(const i16* input, i16* output, int size) const;
+    void ActivateSCReLU(const i16* input, i16* output) const;
+    int EvaluateFromActivated(const i16* activated, int color, int ply) const;
+    int DrawishnessFromActivated(const i16* activated) const;
 
-    template <typename T, bool with_ReLU>
+    template <typename T, bool applyActivation>
     void ComputeLayer(const i16* inputLayer, T* outputLayer,
                       const i32* biases, const i16* weights,
                       int dimInput, int dimOutput) const;

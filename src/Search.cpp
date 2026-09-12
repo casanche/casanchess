@@ -39,6 +39,7 @@
 #include "MoveScorer.h"
 #include "Syzygy.h"
 #include "Uci.h"
+#include "ZobristKeys.h"
 using namespace Sorting;
 
 #include <algorithm> //max(), clamp()
@@ -59,13 +60,6 @@ const int NULLMOVE_REDUCTION_FACTOR = 3;
 
 const bool TURNOFF_LMR = false;
 const bool TURNOFF_FUTILITY = false;
-
-namespace {
-    // Draw contempt to discourage premature draws.
-    int DrawScore(int ply) {
-        return (ply & 1) ? UCI_DRAW_CONTEMPT : -UCI_DRAW_CONTEMPT;
-    }
-}
 
 // Called once when the UCI interface starts up.
 Search::Search(TT& tt): m_tt(tt) {
@@ -111,10 +105,80 @@ void Search::ClearSearch(bool fullClear) {
     }
 }
 
+void Search::SetRootContext(const Board& board) {
+    m_rootPlayer = board.ActivePlayer();
+    m_ttContext = 0;
+    m_evalContext = 0;
+
+    // Use the unmodified keys for white-root searches.
+    if(m_rootPlayer == BLACK) {
+        if(UCI_AMBITION != 0 || UCI_DRAW_CONTEMPT != 0)
+            m_ttContext = ZobristKeys::m_zkeyRootContext;
+
+        if(UCI_AMBITION != 0)
+            m_evalContext = ZobristKeys::m_zkeyRootContext;
+    }
+}
+
+int Search::ApplyAmbition(EvaluationOutput output, int ambition, bool rootToMove) {
+    // Reach the maximum adjustment at a residual of +/-2 logits.
+    constexpr int DRAWISHNESS_LIMIT = 200;
+
+    const int residual = std::clamp(output.drawishness, -DRAWISHNESS_LIMIT, DRAWISHNESS_LIMIT);
+    const int penalty = residual * ambition / DRAWISHNESS_LIMIT;
+    const int rootSign = rootToMove ? 1 : -1;
+
+    return std::clamp(output.eval - rootSign * penalty, -WINSCORE + 1, WINSCORE - 1);
+}
+
+int Search::Evaluate(const Board& board) const {
+    if(UCI_AMBITION == 0)
+        return Evaluation::Evaluate(board);
+
+    return ApplyAmbition(
+        Evaluation::EvaluateOutputs(board),
+        UCI_AMBITION,
+        board.ActivePlayer() == m_rootPlayer
+    );
+}
+
+int Search::StaticEvaluation(const Board& board, int ttEval) {
+    if(ttEval != NO_EVAL)
+        return ttEval;
+
+    int eval;
+    if(m_evalCache.Probe(EvalKey(board), eval))
+        return eval;
+
+    eval = Evaluate(board);
+    m_evalCache.Store(EvalKey(board), eval);
+    return eval;
+}
+
+int Search::DrawScore(const Board& board) const {
+    return board.ActivePlayer() == m_rootPlayer
+        ? -UCI_DRAW_CONTEMPT
+        : +UCI_DRAW_CONTEMPT;
+}
+
+void Search::ShowHashMoves(Board& board) {
+    MoveList moves = MoveGenerator::GenerateMoves(board);
+
+    for(auto move : moves) {
+        board.MakeMove(move);
+        TTEntry* ttEntry = m_tt.Probe(TTKey(board));
+        if(ttEntry)
+            P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
+        board.TakeMove(move);
+    }
+}
+
 // Main loop: increase depth one by one and call the root search.
 // Manage time, aspiration window, and UCI output.
 void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool fullClear) {
     ClearSearch(fullClear);
+
+    SetRootContext(board);
 
     MoveList rootMoves = MoveGenerator::GenerateMoves(board);
     size_t movesSize = rootMoves.size();
@@ -215,7 +279,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
     Move hashMove; // For move ordering
-    TTEntry* ttEntry = m_tt.Probe(board.ZKey());
+    TTEntry* ttEntry = m_tt.Probe(TTKey(board));
     if(ttEntry)
         hashMove = ttEntry->bestMove;
 
@@ -295,7 +359,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         assert(bestMove == m_bestMove && bestScore == m_bestScore);
         D( m_debug.Increment("RootMax: AlphaBeta: TT Store Exact") );
 
-        m_tt.Store(board.ZKey(), bestScore, TTENTRY_TYPE::EXACT, bestMove, depth, m_ply, m_searchCount);
+        m_tt.Store(TTKey(board), bestScore, TTENTRY_TYPE::EXACT, bestMove, depth, m_ply, m_searchCount);
     }
 
     return bestScore;
@@ -314,7 +378,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // Prevents the search from going too deep and crashing the engine
     if(m_ply >= MAX_PLY-1) {
         D( m_debug.Increment("NegaMax: Safety: MAX_PLY reached") );
-        return Evaluation::Evaluate(board);
+        return Evaluate(board);
     }
 
     const bool isPV = (beta - alpha) != 1;
@@ -328,11 +392,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // --------- Draw detection: repetition and 50-move rule -----------
     if(board.FiftyRule() >= 100) {
         D( m_debug.Increment("NegaMax: Draw: FiftyRule") );
-        return DrawScore(m_ply);
+        return DrawScore(board);
     }
     if(board.IsRepetitionDraw()) {
         D( m_debug.Increment("NegaMax: Draw: Repetition") );
-        return DrawScore(m_ply);
+        return DrawScore(board);
     }
 
     //---------- Mate distance pruning -------------
@@ -369,7 +433,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     Move hashMove; // For move ordering
     int ttEval = NO_EVAL;
     
-    TTEntry* ttEntry = m_tt.Probe(board.ZKey());
+    TTEntry* ttEntry = m_tt.Probe(TTKey(board));
     if(ttEntry) {
         D( m_debug.Increment("NegaMax: TT: Hit") );
         ttEval = ttEntry->eval;
@@ -404,7 +468,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             score = -TBWIN + m_ply;
             bound = TTENTRY_TYPE::UPPER_BOUND;
         } else {
-            score = DrawScore(m_ply);
+            score = DrawScore(board);
             bound = TTENTRY_TYPE::EXACT;
         }
 
@@ -412,7 +476,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if( (score >= beta  && bound != TTENTRY_TYPE::UPPER_BOUND)
          || (score <= alpha && bound != TTENTRY_TYPE::LOWER_BOUND) )
         {
-            m_tt.Store(board.ZKey(), score, bound, Move(), MAX_DEPTH, m_ply, m_searchCount);
+            m_tt.Store(TTKey(board), score, bound, Move(), MAX_DEPTH, m_ply, m_searchCount);
             return score;
         }
 
@@ -429,22 +493,13 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // Used in pruning heuristics
     int eval = NO_EVAL;
     if(!inCheck) {
-        D( m_debug.Increment("NegaMax: Evaluation: 1: Enter") );
-        if(ttEval != NO_EVAL) {
-            D( m_debug.Increment("NegaMax: Evaluation: 2.1: Use TT Eval") );
-            eval = ttEval;
-        } else if(m_evalCache.Probe(board.ZKey(), eval)) {
-            D( m_debug.Increment("NegaMax: Evaluation: 2.2: Use EvalCache") );
-        } else {
-            D( m_debug.Increment("NegaMax: Evaluation: 3: Call Evaluate()") );
-            eval = Evaluation::Evaluate(board);
-            m_evalCache.Store(board.ZKey(), eval);
-        }
+        D( m_debug.Increment("NegaMax: Evaluation") );
+        eval = StaticEvaluation(board, ttEval);
     }
 
     // --- Reverse Futility Pruning ---
     // Prune if static evaluation is too good (eval >> beta)
-    const int staticMargin = 100;
+    const int staticMargin = 80;
     if(depth <= 4 && !isPV && !inCheck) {
         int staticEval = eval - depth * staticMargin;
         if(staticEval >= beta) {
@@ -485,7 +540,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff - Depth " + std::to_string(depth)) );
             if(IsWinValue(nullScore))
                 nullScore = beta;  // Avoid reporting false mates in zugzwang
-            m_tt.Store(board.ZKey(), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount, eval);
+            m_tt.Store(TTKey(board), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount, eval);
             return nullScore;
         }
     }
@@ -505,7 +560,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
         else {
             D( m_debug.Increment("NegaMax: EmptyMoves: Stalemate") );
-            return DrawScore(m_ply); // Stalemate
+            return DrawScore(board); // Stalemate
         }
     }
 
@@ -536,7 +591,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // ------- Futility pruning -------
         // Prune quiet moves and bad captures if unlikely to raise alpha
-        const int futilityMargin = 0 + depth * 25;
+        const int futilityMargin = 0 + depth * 35;
         if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinValue(alpha)
             && depth <= 4
             && eval + futilityMargin <= alpha
@@ -608,7 +663,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(score >= beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
-            m_tt.Store(board.ZKey(), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
+            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
 
             // Update heuristics
             if( move.IsQuiet() ) {
@@ -634,7 +689,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         D( m_debug.Increment("NegaMax: AlphaBeta: " + std::string(withinBounds ? "Exact" : "UpperBound")) );
         TTENTRY_TYPE type = withinBounds ? TTENTRY_TYPE::EXACT
                                          : TTENTRY_TYPE::UPPER_BOUND;
-        m_tt.Store(board.ZKey(), bestScore, type, bestMove, depth, m_ply, m_searchCount, eval);
+        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, m_searchCount, eval);
     }
 
     return bestScore;
@@ -658,7 +713,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // Prevent infinite recursion in rare cases (unlikely to occur)
     if (m_plyqs >= MAX_QS_PLIES) {
         D( m_debug.Increment("Quiescence: MAX_QS_PLIES reached (unlikely)") );
-        return Evaluation::Evaluate(board);
+        return Evaluate(board);
     }
 
     const bool isPV = (beta - alpha) != 1;
@@ -667,7 +722,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     // Probe transposition table.
     // Only non-PV nodes: PV nodes require the most accurate score possible.
-    TTEntry* ttEntry = m_tt.Probe(board.ZKey());
+    TTEntry* ttEntry = m_tt.Probe(TTKey(board));
     if(ttEntry) {
         D( m_debug.Increment("Quiescence: TT: Hit") );
         hashMove = ttEntry->bestMove;
@@ -693,17 +748,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // Probe evaluation cache first (modifies standPat if hit)
     int standPat = 0;
     if(!inCheck) {
-        D( m_debug.Increment("Quiescence: Evaluation: 1: Enter") );
-        if(ttEval != NO_EVAL) {
-            D( m_debug.Increment("Quiescence: Evaluation: 2.1: Use TT Eval") );
-            standPat = ttEval;
-        } else if(m_evalCache.Probe(board.ZKey(), standPat)) {
-            D( m_debug.Increment("Quiescence: Evaluation: 2.2: Use EvalCache") );
-        } else {
-            D( m_debug.Increment("Quiescence: Evaluation: 3: Call Evaluate()") );
-            standPat = Evaluation::Evaluate(board);
-            m_evalCache.Store(board.ZKey(), standPat);
-        }
+        D( m_debug.Increment("Quiescence: Evaluation") );
+        standPat = StaticEvaluation(board, ttEval);
 
         if(standPat > alpha) {
             if(standPat >= beta) {
@@ -776,7 +822,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             bestScore = score;
 
         if(score >= beta) {
-            m_tt.Store(board.ZKey(), bestScore, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
+            m_tt.Store(TTKey(board), bestScore, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
             return score;
         }
 

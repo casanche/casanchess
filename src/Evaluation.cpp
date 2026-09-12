@@ -531,3 +531,13 @@ int Evaluation::Evaluate(const Board& board) {
 
     return eval;
 }
+
+EvaluationOutput Evaluation::EvaluateOutputs(const Board& board) {
+    if(InsufficientMaterial(board))
+        return {0, 0};
+
+    if(UCI_CLASSICAL_EVAL)
+        return {ClassicalEvaluation(board), 0};
+
+    return board.NNUE_EvaluateOutputs();
+}
