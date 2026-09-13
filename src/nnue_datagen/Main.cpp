@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
 
     UCI_CLASSICAL_EVAL = false;
     UCI_DRAW_CONTEMPT = 0;
+    UCI_AMBITION = 0;
 
     DatagenConfig config;
     config.outputDir = args.outputDir;

@@ -10,14 +10,16 @@
 
 struct Engine;
 
+constexpr int UCI_AMBITION_DEFAULT = 0;
+constexpr int UCI_OUTPUT_ROOTMAX_MINTIME = 1000; //ms
+
 inline bool UCI_PONDER = false;
 inline bool UCI_CLASSICAL_EVAL = false;
 inline uint UCI_SYZYGY_PROBE_LIMIT = 7;
 inline int UCI_DRAW_CONTEMPT = 10;
+inline int UCI_AMBITION = UCI_AMBITION_DEFAULT;
 
 inline bool UCI_OUTPUT = true;
-
-constexpr int UCI_OUTPUT_ROOTMAX_MINTIME = 1000; //ms
 
 class Uci {
 public:

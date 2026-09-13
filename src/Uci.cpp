@@ -4,6 +4,7 @@
 #include "Engine.h"
 #include "Evaluation.h"
 #include "Hash.h"
+#include "MoveGenerator.h"
 #include "NNUE.h"
 #include "SearchLimits.h"
 #include "Syzygy.h"
@@ -49,6 +50,7 @@ void Uci::Launch() {
             std::cout << "id author " << AUTHOR << std::endl;
 
             //Options
+            std::cout << "option name Ambition type spin default " << UCI_AMBITION_DEFAULT << " min 0 max 50" << std::endl;
             std::cout << "option name ClassicalEval type check default false" << std::endl;
             std::cout << "option name ClearHash type button" << std::endl;
             std::cout << "option name Contempt type spin default 10 min -100 max 100" << std::endl;
@@ -124,7 +126,9 @@ void Uci::Launch() {
             int epSquare = enpassant ? BitscanForward(enpassant) : -1;
             P("Enpassant square: " << epSquare);
             P("ZKey: " << board.ZKey());
-            P("Static evaluation: " << Evaluation::Evaluate(board));
+            const EvaluationOutput output = Evaluation::EvaluateOutputs(board);
+            P("Static evaluation: " << output.eval);
+            P("Drawishness: " << output.drawishness);
             std::cout << "Move history: "; board.ShowHistory(); std::cout << std::endl;
         }
         else {
@@ -288,6 +292,7 @@ void Uci::SetOption(std::istringstream &stream) {
     StopAndJoin();
 
     TT& tt = m_engine->tt;
+    Search& search = m_engine->search;
 
     std::string token;
     stream >> token; //should be 'name'
@@ -319,13 +324,30 @@ void Uci::SetOption(std::istringstream &stream) {
         else if(token == "ClearHash") {
             tt.Clear();
         }
+        else if(token == "Ambition") {
+            stream >> token; // should be 'value'
+            if(token != "value")
+                return;
+            stream >> token;
+
+            const int ambition = std::clamp(std::stoi(token), 0, 50);
+            if(ambition != UCI_AMBITION) {
+                UCI_AMBITION = ambition;
+                tt.Clear();
+                search.ClearEvalCache();
+            }
+        }
         else if(token == "Contempt") {
             stream >> token; // should be 'value'
             if(token != "value")
                 return;
             stream >> token;
 
-            UCI_DRAW_CONTEMPT = std::clamp(std::stoi(token), -100, 100);
+            const int contempt = std::clamp(std::stoi(token), -100, 100);
+            if(contempt != UCI_DRAW_CONTEMPT) {
+                UCI_DRAW_CONTEMPT = contempt;
+                tt.Clear();
+            }
         }
         else if(token == "ClassicalEval") {
             stream >> token;
@@ -334,10 +356,19 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
             P(token);
 
+            bool classicalEval;
             if(token == "true")
-                UCI_CLASSICAL_EVAL = true;
+                classicalEval = true;
             else if(token == "false")
-                UCI_CLASSICAL_EVAL = false;
+                classicalEval = false;
+            else
+                return;
+
+            if(classicalEval != UCI_CLASSICAL_EVAL) {
+                UCI_CLASSICAL_EVAL = classicalEval;
+                tt.Clear();
+                search.ClearEvalCache();
+            }
         }
         else if(token == "NNUE_Path") {
             stream >> token;
@@ -384,15 +415,15 @@ void Uci::SetOption(std::istringstream &stream) {
 
 void Uci::ShowHashMoves() {
     TT& tt = m_engine->tt;
+    Search& search = m_engine->search;
     Board& board = m_engine->board;
     MoveList moves = MoveGenerator::GenerateMoves(board);
 
     for(auto move : moves) {
         board.MakeMove(move);
-        TTEntry* ttEntry = tt.Probe(board.ZKey());
-        if(ttEntry) {
+        TTEntry* ttEntry = tt.Probe(search.TTKey(board));
+        if(ttEntry)
             P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
-        }
         board.TakeMove(move);
     }
 }

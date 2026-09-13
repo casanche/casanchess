@@ -25,6 +25,7 @@ public:
     Search& operator=(const Search&) = delete;
 
     void ClearSearch(bool fullSearchClearFlag);
+    void ClearEvalCache() { m_evalCache.Clear(); }
 
     // Start search
     void IterativeDeepening(Board &board, const UCI_Limits& limits, bool fullSearchClearFlag = false);
@@ -44,12 +45,21 @@ public:
     // Interface
     void MakeMove(Board &board) { board.MakeMove(m_bestMove); };
 
+    // Root-relative
+    u64 TTKey(const Board& board) const { return board.ZKey() ^ m_ttKeyContext; }
+
 private:
     // Internal search algorithms
     int AspirationWindow(Board& board, const int depth, const int bestScore);
     int RootMax(Board &board, int depth, int alpha, int beta);
     int NegaMax(Board  &board, int depth, int alpha, int beta);
     int QuiescenceSearch(Board &board, int alpha, int beta);
+
+    // Root-relative
+    void SetRootContext(const Board& board);
+    int StaticEvaluation(const Board& board, int ttEval);
+    int DrawScore(const Board& board) const;
+    u64 EvalKey(const Board& board) const { return board.ZKey() ^ m_evalKeyContext; }
 
     // NegaMax methods
     int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
@@ -73,6 +83,11 @@ private:
     int m_ply; // Distance from root
     int m_plyqs; // Distance within the Quiescence Search
     int m_selPly; // Maximum ply reached (UCI reporting)
+
+    // Root-relative
+    COLOR m_rootPlayer = WHITE;
+    u64 m_ttKeyContext = 0;
+    u64 m_evalKeyContext = 0;
 
     // Limits
     Limits m_limits;

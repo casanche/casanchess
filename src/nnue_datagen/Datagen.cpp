@@ -426,7 +426,7 @@ MoveList Datagen::SortFilteredMoves(Board& board, Search& search) {
     MoveList goodMoves;
 
     Move hashMove = Move();
-    TTEntry* ttEntry = search.m_tt.Probe(board.ZKey());
+    TTEntry* ttEntry = search.m_tt.Probe(search.TTKey(board));
     if(ttEntry)
         hashMove = ttEntry->bestMove;
 
@@ -492,6 +492,7 @@ bool Datagen::WriteRunMetadata(const std::string& mode, int concurrency) const {
              << "seed=" << m_config.seed << '\n'
              << "concurrency=" << concurrency << '\n'
              << "draw_contempt=" << UCI_DRAW_CONTEMPT << '\n'
+             << "ambition=" << UCI_AMBITION << '\n'
              << "timestamp_unix=" << static_cast<long long>(std::time(nullptr)) << "\n\n"
              << "# Syzygy\n"
              << "syzygy_enabled=" << (m_config.SYZYGY_PROBE_LIMIT > 0 ? "true" : "false") << '\n'
