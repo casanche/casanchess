@@ -35,11 +35,10 @@ namespace {
     constexpr int KING_BUCKET_MULTIPLIER = 640;
     constexpr int PIECE_INDEX_MULTIPLIER = 64;
 
-    constexpr i16 SCReLU(i64 value) {
-        constexpr i64 SCALE = NNUEConstants::QUANT_FACTOR_L1;
-
-        value = std::clamp(value, i64{0}, SCALE);
-        return static_cast<i16>((value * value + SCALE / 2) / SCALE);
+    constexpr i32 SCReLU(i32 value) {
+        value = std::clamp(value, 0, NNUEConstants::QUANT_FACTOR_L1);
+        return (value * value + NNUEConstants::QUANT_FACTOR_L1 / 2)
+             / NNUEConstants::QUANT_FACTOR_L1;
     }
 
     #if defined(__AVX2__)
@@ -166,16 +165,16 @@ int NNUE::EvaluateFromActivated(const i16* activated, int color, int ply) const 
 
     ComputeActivatedLayer(activated, hidden, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
 
-    i64 nonlinear = s_shared.network.b3[0];
+    i32 nonlinear = s_shared.network.b3[0];
     nonlinear += DotProduct(hidden, s_shared.network.w3, ARCH[L3][ROW]);
 
-    i64 linear = m_state->linearAccumulator[ply][color];
+    i32 linear = m_state->linearAccumulator[ply][color];
     linear -= m_state->linearAccumulator[ply][1-color];
 
-    const i64 output = nonlinear + linear * NNUEConstants::QUANT_FACTOR_W;
+    const i32 output = nonlinear + linear * NNUEConstants::QUANT_FACTOR_W;
 
     constexpr int EVAL_K = 100;
-    return static_cast<int>(output * EVAL_K / NNUEConstants::QUANT_FACTOR_B);
+    return output * EVAL_K / NNUEConstants::QUANT_FACTOR_B;
 }
 
 int NNUE::DrawishnessFromActivated(const i16* activated) const {
@@ -344,7 +343,7 @@ void NNUE::ActivateSCReLU(const i16* input, i16* output) const {
         }
     #else
         for(int i = 0; i < NNUE_SIZE; i++)
-            output[i] = SCReLU(input[i]);
+            output[i] = static_cast<i16>(SCReLU(input[i]));
     #endif
 }
 
@@ -353,10 +352,9 @@ void NNUE::ComputeActivatedLayer(const i16* inputLayer, i16* outputLayer, const 
 {
     for(int o = 0; o < dimOutput; o++) {
         const int offset = o * dimInput;
-        i64 sum = biases[o];
-        sum += DotProduct(inputLayer, weights + offset, dimInput);
+        i32 sum = biases[o] + DotProduct(inputLayer, weights + offset, dimInput);
 
         sum /= NNUEConstants::QUANT_FACTOR_W; // Revert scaling
-        outputLayer[o] = SCReLU(sum);
+        outputLayer[o] = static_cast<i16>(SCReLU(sum));
     }
 }
