@@ -35,16 +35,16 @@ namespace {
     constexpr int KING_BUCKET_MULTIPLIER = 640;
     constexpr int PIECE_INDEX_MULTIPLIER = 64;
 
-    constexpr i32 SCReLU(i64 value) {
-        value = std::clamp<i64>(value, 0, NNUEConstants::QUANT_FACTOR_L1);
+    constexpr i16 SCReLU(i64 value) {
+        constexpr i64 SCALE = NNUEConstants::QUANT_FACTOR_L1;
 
-        return static_cast<i32>(
-            (value * value + NNUEConstants::QUANT_FACTOR_L1 / 2)
-            / NNUEConstants::QUANT_FACTOR_L1
-        );
+        value = std::clamp(value, i64{0}, SCALE);
+        return static_cast<i16>((value * value + SCALE / 2) / SCALE);
     }
 
     #if defined(__AVX2__)
+    constexpr int SIMD_WIDTH = 16;
+
     inline i32 HorizontalSum128(__m128i x) {
         x = _mm_add_epi32(x, _mm_srli_si128(x, 8));
         x = _mm_add_epi32(x, _mm_srli_si128(x, 4));
@@ -52,7 +52,6 @@ namespace {
     }
     #endif
 
-    // Quantized NNUE dot products use 32-bit accumulation.
     inline i32 DotProduct(const i16* values, const i16* weights, int size) {
         i32 sum = 0;
         int i = 0;
@@ -60,14 +59,9 @@ namespace {
         #if defined(__AVX2__)
             __m256i dot = _mm256_setzero_si256();
 
-            for(; i + 15 < size; i += 16) {
-                // Network fields and local buffers are not required to be aligned.
-                const __m256i valuesVec = _mm256_loadu_si256(
-                    reinterpret_cast<const __m256i*>(values + i)
-                );
-                const __m256i weightsVec = _mm256_loadu_si256(
-                    reinterpret_cast<const __m256i*>(weights + i)
-                );
+            for(; i + SIMD_WIDTH <= size; i += SIMD_WIDTH) {
+                const __m256i valuesVec = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(values + i));
+                const __m256i weightsVec = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights + i));
 
                 dot = _mm256_add_epi32(dot, _mm256_madd_epi16(valuesVec, weightsVec));
             }
@@ -91,31 +85,31 @@ namespace {
 // =========================
 
 bool SharedNetwork::Load(const std::string& path) {
-    const std::string requestedPath = path.empty() ? filepath : path;
+    const std::string networkPath = path.empty() ? filepath : path;
 
-    std::ifstream file(requestedPath, std::ios::binary);
+    std::ifstream file(networkPath, std::ios::binary);
 
     if(!file.is_open()) {
-        std::cerr << "info string ERROR: NNUE file not found: " << requestedPath << std::endl;
+        std::cerr << "info string ERROR: NNUE file not found: " << networkPath << std::endl;
         return false;
     }
 
     file.seekg(0, std::ios::end);
     const std::streampos fileSize = file.tellg();
     if(fileSize != static_cast<std::streamoff>(sizeof(Network))) {
-        std::cerr << "info string ERROR: NNUE file size mismatch: " << requestedPath << std::endl;
+        std::cerr << "info string ERROR: NNUE file size mismatch: " << networkPath << std::endl;
         return false;
     }
 
     file.seekg(0, std::ios::beg);
     auto candidate = std::make_unique<Network>();
     if(!file.read(reinterpret_cast<char*>(candidate.get()), sizeof(Network))) {
-        std::cerr << "info string ERROR: Could not read NNUE file: " << requestedPath << std::endl;
+        std::cerr << "info string ERROR: Could not read NNUE file: " << networkPath << std::endl;
         return false;
     }
 
     network = *candidate;
-    filepath = requestedPath;
+    filepath = networkPath;
     isLoaded = true;
     std::cout << "info string NNUE loaded: " << filepath << std::endl;
 
@@ -180,7 +174,8 @@ int NNUE::EvaluateFromActivated(const i16* activated, int color, int ply) const 
 
     const i64 output = nonlinear + linear * NNUEConstants::QUANT_FACTOR_W;
 
-    return static_cast<int>(output * 100 / NNUEConstants::QUANT_FACTOR_B);
+    constexpr int EVAL_K = 100;
+    return static_cast<int>(output * EVAL_K / NNUEConstants::QUANT_FACTOR_B);
 }
 
 int NNUE::DrawishnessFromActivated(const i16* activated) const {
@@ -323,7 +318,6 @@ void NNUE::CopyAccumulator(int fromPly, int toPly) {
     std::memcpy(&m_state->linearAccumulator[toPly], m_state->linearAccumulator[fromPly], sizeof(m_state->linearAccumulator[0]));
 }
 
-// Clamp, square and restore the L1 scale.
 void NNUE::ActivateSCReLU(const i16* input, i16* output) const {
     #if defined(__AVX2__)
         constexpr int SCRELU_SHIFT = 8;
@@ -333,30 +327,29 @@ void NNUE::ActivateSCReLU(const i16* input, i16* output) const {
         const __m256i max = _mm256_set1_epi16(NNUEConstants::QUANT_FACTOR_L1);
         const __m256i rounding = _mm256_set1_epi16(NNUEConstants::QUANT_FACTOR_L1 / 2);
 
-        for(int i = 0; i < NNUE_SIZE; i += 16) {
-            __m256i val = _mm256_loadu_si256((__m256i*)&input[i]);
-            val = _mm256_max_epi16(val, zero);
-            val = _mm256_min_epi16(val, max);
+        for(int i = 0; i < NNUE_SIZE; i += SIMD_WIDTH) {
+            __m256i value = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(input + i));
+            value = _mm256_max_epi16(value, zero);
+            value = _mm256_min_epi16(value, max);
 
-            // 256 squared overflows 16 bits, so restore its result afterwards.
-            const __m256i atMaximum = _mm256_cmpeq_epi16(val, max);
+            // 256 squared overflows 16 bits, so restore its result afterwards
+            const __m256i atMaximum = _mm256_cmpeq_epi16(value, max);
 
-            val = _mm256_mullo_epi16(val, val);
-            val = _mm256_add_epi16(val, rounding);
-            val = _mm256_srli_epi16(val, SCRELU_SHIFT);
-            val = _mm256_blendv_epi8(val, max, atMaximum);
+            value = _mm256_mullo_epi16(value, value);
+            value = _mm256_add_epi16(value, rounding);
+            value = _mm256_srli_epi16(value, SCRELU_SHIFT);
+            value = _mm256_blendv_epi8(value, max, atMaximum);
 
-            _mm256_storeu_si256((__m256i*)&output[i], val);
+            _mm256_storeu_si256(reinterpret_cast<__m256i*>(output + i), value);
         }
     #else
         for(int i = 0; i < NNUE_SIZE; i++)
-            output[i] = static_cast<i16>(SCReLU(input[i]));
+            output[i] = SCReLU(input[i]);
     #endif
 }
 
-void NNUE::ComputeActivatedLayer(const i16* inputLayer, i16* outputLayer,
-                                 const i32* biases, const i16* weights,
-                                 int dimInput, int dimOutput) const
+void NNUE::ComputeActivatedLayer(const i16* inputLayer, i16* outputLayer, const i32* biases,
+                                 const i16* weights, int dimInput, int dimOutput) const
 {
     for(int o = 0; o < dimOutput; o++) {
         const int offset = o * dimInput;
@@ -364,6 +357,6 @@ void NNUE::ComputeActivatedLayer(const i16* inputLayer, i16* outputLayer,
         sum += DotProduct(inputLayer, weights + offset, dimInput);
 
         sum /= NNUEConstants::QUANT_FACTOR_W; // Revert scaling
-        outputLayer[o] = static_cast<i16>(SCReLU(sum));
+        outputLayer[o] = SCReLU(sum);
     }
 }

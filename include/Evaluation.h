@@ -43,6 +43,7 @@ namespace Evaluation {
     //Evaluate functions
     int ClassicalEvaluation(const Board& baord);
     int Evaluate(const Board& board);
+    int EvaluateWithAmbition(const Board& board, COLOR rootPlayer, int ambition);
     EvaluationOutput EvaluateOutputs(const Board& board);
     TaperedScore EvalBishopPair(const Board &board, COLOR color);
     void EvalKingSafety(const Board &board, Bitboard attacksMobility[2][8], Score& score);

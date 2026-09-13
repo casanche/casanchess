@@ -9,9 +9,7 @@ using PieceBitboards = Bitboard[2][8]; //[COLOR][PIECE_TYPE]
 
 struct EvaluationOutput {
     int eval;
-    // Signed draw residual in logits multiplied by 100. This is neither a
-    // probability nor a centipawn evaluation.
-    int drawishness;
+    int drawishness; // draw residual (contribution not explained by eval) in logits
 };
 
 struct SharedNetwork {

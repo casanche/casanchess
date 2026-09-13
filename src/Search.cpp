@@ -107,39 +107,17 @@ void Search::ClearSearch(bool fullClear) {
 
 void Search::SetRootContext(const Board& board) {
     m_rootPlayer = board.ActivePlayer();
-    m_ttContext = 0;
-    m_evalContext = 0;
+    m_ttKeyContext = 0;
+    m_evalKeyContext = 0;
 
     // Separate root-relative cache entries without changing the board key.
     if(m_rootPlayer == BLACK) {
         if(UCI_AMBITION != 0 || UCI_DRAW_CONTEMPT != 0)
-            m_ttContext = ZobristKeys::m_zkeyRootContext;
+            m_ttKeyContext = ZobristKeys::m_zkeyRootContext;
 
         if(UCI_AMBITION != 0)
-            m_evalContext = ZobristKeys::m_zkeyRootContext;
+            m_evalKeyContext = ZobristKeys::m_zkeyRootContext;
     }
-}
-
-int Search::ApplyAmbition(EvaluationOutput output, int ambition, bool rootToMove) {
-    // Reach the maximum adjustment at a residual of +/-2 logits.
-    constexpr int DRAWISHNESS_LIMIT = 200;
-
-    const int residual = std::clamp(output.drawishness, -DRAWISHNESS_LIMIT, DRAWISHNESS_LIMIT);
-    const int penalty = residual * ambition / DRAWISHNESS_LIMIT;
-    const int rootSign = rootToMove ? 1 : -1;
-
-    return std::clamp(output.eval - rootSign * penalty, -WINSCORE + 1, WINSCORE - 1);
-}
-
-int Search::Evaluate(const Board& board) const {
-    if(UCI_AMBITION == 0)
-        return Evaluation::Evaluate(board);
-
-    return ApplyAmbition(
-        Evaluation::EvaluateOutputs(board),
-        UCI_AMBITION,
-        board.ActivePlayer() == m_rootPlayer
-    );
 }
 
 int Search::StaticEvaluation(const Board& board, int ttEval) {
@@ -150,7 +128,7 @@ int Search::StaticEvaluation(const Board& board, int ttEval) {
     if(m_evalCache.Probe(EvalKey(board), eval))
         return eval;
 
-    eval = Evaluate(board);
+    eval = Evaluation::EvaluateWithAmbition(board, m_rootPlayer, UCI_AMBITION);
     m_evalCache.Store(EvalKey(board), eval);
     return eval;
 }
@@ -159,18 +137,6 @@ int Search::DrawScore(const Board& board) const {
     return board.ActivePlayer() == m_rootPlayer
         ? -UCI_DRAW_CONTEMPT
         : +UCI_DRAW_CONTEMPT;
-}
-
-void Search::ShowHashMoves(Board& board) {
-    MoveList moves = MoveGenerator::GenerateMoves(board);
-
-    for(auto move : moves) {
-        board.MakeMove(move);
-        TTEntry* ttEntry = m_tt.Probe(TTKey(board));
-        if(ttEntry)
-            P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
-        board.TakeMove(move);
-    }
 }
 
 // Main loop: increase depth one by one and call the root search.
@@ -378,7 +344,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // Prevents the search from going too deep and crashing the engine
     if(m_ply >= MAX_PLY-1) {
         D( m_debug.Increment("NegaMax: Safety: MAX_PLY reached") );
-        return Evaluate(board);
+        return Evaluation::EvaluateWithAmbition(board, m_rootPlayer, UCI_AMBITION);
     }
 
     const bool isPV = (beta - alpha) != 1;
@@ -713,7 +679,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // Prevent infinite recursion in rare cases (unlikely to occur)
     if (m_plyqs >= MAX_QS_PLIES) {
         D( m_debug.Increment("Quiescence: MAX_QS_PLIES reached (unlikely)") );
-        return Evaluate(board);
+        return Evaluation::EvaluateWithAmbition(board, m_rootPlayer, UCI_AMBITION);
     }
 
     const bool isPV = (beta - alpha) != 1;

@@ -18,7 +18,22 @@ using namespace Evaluation;
 #include "NNUE.h"
 #include "Uci.h"
 
+#include <algorithm>
+
 namespace Evaluation {
+
+    namespace {
+        int ApplyAmbition(EvaluationOutput output, int ambition, bool rootToMove) {
+            // Reach the maximum adjustment at a residual of +/-2 logits.
+            constexpr int DRAWISHNESS_LIMIT = 200;
+
+            const int residual = std::clamp(output.drawishness, -DRAWISHNESS_LIMIT, DRAWISHNESS_LIMIT);
+            const int penalty = residual * ambition / DRAWISHNESS_LIMIT;
+            const int rootSign = rootToMove ? 1 : -1;
+
+            return std::clamp(output.eval - rootSign * penalty, -WINSCORE + 1, WINSCORE - 1);
+        }
+    }
 
     //Constants
     const Bitboard LIGHT_SQUARES = 0x55AA55AA55AA55AA;
@@ -530,6 +545,13 @@ int Evaluation::Evaluate(const Board& board) {
     }
 
     return eval;
+}
+
+int Evaluation::EvaluateWithAmbition(const Board& board, COLOR rootPlayer, int ambition) {
+    if(ambition == 0)
+        return Evaluate(board);
+
+    return ApplyAmbition(EvaluateOutputs(board), ambition, board.ActivePlayer() == rootPlayer);
 }
 
 EvaluationOutput Evaluation::EvaluateOutputs(const Board& board) {

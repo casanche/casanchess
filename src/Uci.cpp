@@ -4,6 +4,7 @@
 #include "Engine.h"
 #include "Evaluation.h"
 #include "Hash.h"
+#include "MoveGenerator.h"
 #include "NNUE.h"
 #include "SearchLimits.h"
 #include "Syzygy.h"
@@ -413,7 +414,18 @@ void Uci::SetOption(std::istringstream &stream) {
 }
 
 void Uci::ShowHashMoves() {
-    m_engine->search.ShowHashMoves(m_engine->board);
+    TT& tt = m_engine->tt;
+    Search& search = m_engine->search;
+    Board& board = m_engine->board;
+    MoveList moves = MoveGenerator::GenerateMoves(board);
+
+    for(auto move : moves) {
+        board.MakeMove(move);
+        TTEntry* ttEntry = tt.Probe(search.TTKey(board));
+        if(ttEntry)
+            P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
+        board.TakeMove(move);
+    }
 }
 
 void Uci::StopAndJoin() {
