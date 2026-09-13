@@ -23,12 +23,37 @@ using namespace Evaluation;
 namespace Evaluation {
 
     namespace {
-        int ApplyAmbition(EvaluationOutput output, int ambition, bool rootToMove) {
-            // Reach the maximum adjustment at a residual of +/-2 logits.
-            constexpr int DRAWISHNESS_LIMIT = 200;
+        constexpr int DRAWISHNESS_LIMIT = 200;
 
+        // V1.5 draw baseline, in logits: 1.078608 - 1.294259 * abs(eval / 100).
+        constexpr int DRAW_BASE_INTERCEPT = 108; // centilogits
+        constexpr int DRAW_BASE_SLOPE = 1294;    // centilogits per cp, scaled by 1000
+
+        constexpr int DRAW_SIGMOID_MIN = -1400;
+        constexpr int DRAW_SIGMOID_MAX = DRAW_BASE_INTERCEPT + DRAWISHNESS_LIMIT;
+        constexpr int DRAW_SIGMOID_SIZE = DRAW_SIGMOID_MAX - DRAW_SIGMOID_MIN + 1;
+        constexpr int DRAW_PROBABILITY_SCALE = 32768;
+        constexpr int DRAW_DELTA_LIMIT = 15143; // round(scale * tanh(0.5))
+        u16 DRAW_SIGMOID[DRAW_SIGMOID_SIZE] = {0};
+
+        int DrawProbability(int logit) {
+            logit = std::clamp(logit, DRAW_SIGMOID_MIN, DRAW_SIGMOID_MAX);
+            return DRAW_SIGMOID[logit - DRAW_SIGMOID_MIN];
+        }
+
+        int AmbitionPenalty(const EvaluationOutput& output, int ambition) {
             const int residual = std::clamp(output.drawishness, -DRAWISHNESS_LIMIT, DRAWISHNESS_LIMIT);
-            const int penalty = residual * ambition / DRAWISHNESS_LIMIT;
+            const int base = DRAW_BASE_INTERCEPT
+                - (DRAW_BASE_SLOPE * std::abs(output.eval) + 500) / 1000;
+            const int deltaDraw = DrawProbability(base + residual) - DrawProbability(base);
+
+            // A residual of +/-2 logits reaches the largest possible change
+            // in draw probability when the interval is centered at zero.
+            return deltaDraw * ambition / DRAW_DELTA_LIMIT;
+        }
+
+        int ApplyAmbition(EvaluationOutput output, int ambition, bool rootToMove) {
+            const int penalty = AmbitionPenalty(output, ambition);
             const int rootSign = rootToMove ? 1 : -1;
 
             return std::clamp(output.eval - rootSign * penalty, -WINSCORE + 1, WINSCORE - 1);
@@ -140,6 +165,13 @@ int Evaluation::Score::TaperedCalculation(int mgScore, int egScore, int phase) {
 }
 
 void Evaluation::Init() {
+    for(int logit = DRAW_SIGMOID_MIN; logit <= DRAW_SIGMOID_MAX; logit++) {
+        const double probability = 1.0 / (1.0 + std::exp(-logit / 100.0));
+        DRAW_SIGMOID[logit - DRAW_SIGMOID_MIN] = static_cast<u16>(
+            std::round(probability * DRAW_PROBABILITY_SCALE)
+        );
+    }
+
     //Adjacent files
     for(int file = FILEA; file <= FILEH; file++) {
         if(file != FILEA) ADJACENT_FILES[file] |= MaskFile[file-1];
