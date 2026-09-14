@@ -137,6 +137,7 @@ set(INCLUDE_PATHS
 )
 
 set(ENGINE_SOURCES
+    src/Ambition.cpp
     src/Attacks.cpp
     src/BitboardUtils.cpp
     src/Board.cpp
