@@ -38,8 +38,8 @@ if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     set(ARCH_FLAGS /arch:AVX2)
     set(COMPILER_OPTIONS
         /W4 /EHsc ${ARCH_FLAGS}
-        $<$<CONFIG:RELEASE>:/O2 /fp:fast /DNDEBUG>
-        $<$<CONFIG:RELWITHDEBINFO>:/O2 /fp:fast /DNDEBUG /Zi>
+        $<$<CONFIG:RELEASE>:/O2 /DNDEBUG>
+        $<$<CONFIG:RELWITHDEBINFO>:/O2 /DNDEBUG /Zi>
         $<$<CONFIG:DEBUG>:/Od /DDEBUG /Zi>
     )
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -53,7 +53,7 @@ if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
 else()
     set(WARNING_FLAGS -Wall -Wextra -Wshadow)
     set(ARCH_FLAGS -march=x86-64-v3 -mtune=generic)
-    set(OPTIMIZATION_FLAGS -O3 -ffast-math -DNDEBUG -funroll-loops)
+    set(OPTIMIZATION_FLAGS -O3 -DNDEBUG -funroll-loops)
     set(COMPILER_OPTIONS
         ${WARNING_FLAGS} ${ARCH_FLAGS}
         $<$<CONFIG:RELEASE>:${OPTIMIZATION_FLAGS}>
