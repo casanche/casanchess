@@ -41,10 +41,10 @@ TEST(EvaluationTest, Mirror) {
     board.SetFen("r4rk1/pppbqppp/2n1pn2/1B1p4/3P4/P1B1P3/1PPN1PPP/R2Q1RK1 b - - 0 10"); // RG3
     // Mirrored: "r2q1rk1/1ppn1ppp/p1b1p3/3p4/1b1P4/2N1PN2/PPPBQPPP/R4RK1 w - - 0 10"
 
-    int eval = Evaluation::Evaluate(board);
+    int eval = Evaluation::Evaluate(board, board.ActivePlayer(), 0);
 
     board.Mirror();
-    int evalMirror = Evaluation::Evaluate(board);
+    int evalMirror = Evaluation::Evaluate(board, board.ActivePlayer(), 0);
 
     UCI_CLASSICAL_EVAL = false;
     EXPECT_EQ(eval, evalMirror);

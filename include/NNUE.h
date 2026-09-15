@@ -9,7 +9,7 @@ using PieceBitboards = Bitboard[2][8]; //[COLOR][PIECE_TYPE]
 
 struct EvaluationOutput {
     int eval;
-    int drawishness; // draw residual (contribution not explained by eval) in logits
+    int drawishness; // Draw residual after conditioning on eval, in centilogits
 };
 
 struct SharedNetwork {

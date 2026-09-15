@@ -31,7 +31,7 @@ void ExpectCombinedOutputIsConsistent(const Board& board) {
     EXPECT_EQ(nnue.eval, board.NNUE_Evaluate());
 
     const EvaluationOutput output = Evaluation::EvaluateOutputs(board);
-    EXPECT_EQ(output.eval, Evaluation::Evaluate(board));
+    EXPECT_EQ(output.eval, Evaluation::Evaluate(board, board.ActivePlayer(), 0));
     EXPECT_EQ(output.eval, nnue.eval);
     EXPECT_EQ(output.drawishness, nnue.drawishness);
 }

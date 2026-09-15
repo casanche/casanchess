@@ -12,28 +12,14 @@
 #include "Evaluation.h"
 using namespace Evaluation;
 
+#include "Ambition.h"
 #include "Attacks.h"
 #include "Board.h"
 #include "BitboardUtils.h"
 #include "NNUE.h"
 #include "Uci.h"
 
-#include <algorithm>
-
 namespace Evaluation {
-
-    namespace {
-        int ApplyAmbition(EvaluationOutput output, int ambition, bool rootToMove) {
-            // Reach the maximum adjustment at a residual of +/-2 logits.
-            constexpr int DRAWISHNESS_LIMIT = 200;
-
-            const int residual = std::clamp(output.drawishness, -DRAWISHNESS_LIMIT, DRAWISHNESS_LIMIT);
-            const int penalty = residual * ambition / DRAWISHNESS_LIMIT;
-            const int rootSign = rootToMove ? 1 : -1;
-
-            return std::clamp(output.eval - rootSign * penalty, -WINSCORE + 1, WINSCORE - 1);
-        }
-    }
 
     //Constants
     const Bitboard LIGHT_SQUARES = 0x55AA55AA55AA55AA;
@@ -532,26 +518,27 @@ int Evaluation::ClassicalEvaluation(const Board& board) {
     return sign * score.Tapered( Phase(board) );
 }
 
-int Evaluation::Evaluate(const Board& board) {
-    //Automatic draw
-    if( InsufficientMaterial(board) )
-        return 0;
+namespace {
+    int EvaluateObjective(const Board& board) {
+        if( InsufficientMaterial(board) )
+            return 0;
 
-    int eval;
-    if(UCI_CLASSICAL_EVAL) {
-        eval = ClassicalEvaluation(board);
-    } else {
-        eval = board.NNUE_Evaluate();
+        if(UCI_CLASSICAL_EVAL)
+            return ClassicalEvaluation(board);
+
+        return board.NNUE_Evaluate();
     }
-
-    return eval;
 }
 
-int Evaluation::EvaluateWithAmbition(const Board& board, COLOR rootPlayer, int ambition) {
+int Evaluation::Evaluate(const Board& board, COLOR rootPlayer, int ambition) {
     if(ambition == 0)
-        return Evaluate(board);
+        return EvaluateObjective(board);
 
-    return ApplyAmbition(EvaluateOutputs(board), ambition, board.ActivePlayer() == rootPlayer);
+    return Ambition::Apply(
+        EvaluateOutputs(board),
+        ambition,
+        board.ActivePlayer() == rootPlayer
+    );
 }
 
 EvaluationOutput Evaluation::EvaluateOutputs(const Board& board) {

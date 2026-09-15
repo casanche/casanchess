@@ -10,7 +10,7 @@
 
 struct Engine;
 
-constexpr int UCI_AMBITION_DEFAULT = 0;
+constexpr int UCI_AMBITION_DEFAULT = 15;
 constexpr int UCI_OUTPUT_ROOTMAX_MINTIME = 1000; //ms
 
 inline bool UCI_PONDER = false;
