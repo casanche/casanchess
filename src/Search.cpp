@@ -162,8 +162,15 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
 
         AspirationWindow(board, m_depth, m_bestScore);
 
-        // Stop search if limits are reached within the loop
-        if(m_limits.Stopped()) break;
+        // Stop the search if limits are reached and publish the best move found so far
+        if(m_limits.Stopped()) {
+            const std::string pv = m_pv.PVString();
+            if(!pv.empty()) {
+                i64 elapsedTime = m_limits.UpdatedElapsedTime();
+                Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::LOWER_BOUND, pv, m_tt);
+            }
+            break;
+        }
 
         i64 elapsedTime = m_limits.UpdatedElapsedTime();
         Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::EXACT, m_pv.PVString(), m_tt);
@@ -197,11 +204,12 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
     for(int researches = 1; !m_limits.Stopped() && (score <= alpha || score >= beta); researches++) {
         D( m_debug.Increment("AspirationWindow: Out of bounds: Researches: " + std::to_string(researches) ); );
 
-        // Display lowerbound / upperbound info
         BOUND_TYPE bound = (score <= alpha) ? BOUND_TYPE::UPPER_BOUND
                                             : BOUND_TYPE::LOWER_BOUND;
+        // Bound results only display the best root move, not a full PV
+        const std::string pv = m_bestMove.Notation();
         i64 elapsedTime = m_limits.UpdatedElapsedTime();
-        Uci::Output(m_depth, m_selPly, score, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, m_pv.PVString(), m_tt);
+        Uci::Output(m_depth, m_selPly, score, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
 
         // Asymmetrical incremental aspiration
         window = window * ASPIRATION_WINDOW_MULTIPLIER;
