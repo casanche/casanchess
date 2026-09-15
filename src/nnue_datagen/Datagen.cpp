@@ -8,10 +8,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <filesystem>
 #include <format>
-#include <cmath>
-#include <syncstream>
 #include <sstream>
 #include <thread>
 
@@ -204,10 +203,12 @@ void Datagen::Games(const std::string& filename, int threadIndex) {
         outputFile << ss.view();
 
         // Log to standard output
-        std::osyncstream syncedLog(std::cout);
-        syncedLog << "Thread: " << threadIndex + 1 << " | Game: " << n_game 
-                  << " | Result: " << gameResult << " | Length: " << gameLength 
-                  << " | Saved: " << savedPositions.size() << "\n";
+        {
+            const std::lock_guard lock(m_logMutex);
+            std::cout << "Thread: " << threadIndex + 1 << " | Game: " << n_game
+                      << " | Result: " << gameResult << " | Length: " << gameLength
+                      << " | Saved: " << savedPositions.size() << "\n";
+        }
     }
 }
 
@@ -346,10 +347,12 @@ void Datagen::Random(const std::string& filename, int threadIndex) {
         }
         outputFile << ss.view();
 
-        std::osyncstream syncedLog(std::cout);
-        syncedLog << "Thread: " << threadIndex + 1 << " | Random Game: " << n_game
-                  << " | Result: " << gameResult << " | Length: " << gameLength
-                  << " | Saved: " << savedPositions.size() << "\n";
+        {
+            const std::lock_guard lock(m_logMutex);
+            std::cout << "Thread: " << threadIndex + 1 << " | Random Game: " << n_game
+                      << " | Result: " << gameResult << " | Length: " << gameLength
+                      << " | Saved: " << savedPositions.size() << "\n";
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Casanchess 
+project(Casanchess
     VERSION 1.1.2
     LANGUAGES CXX
 )
@@ -52,8 +52,8 @@ if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     endif()
 else()
     set(WARNING_FLAGS -Wall -Wextra -Wshadow)
-    set(ARCH_FLAGS -march=haswell -mtune=generic)
-    set(OPTIMIZATION_FLAGS -O3 -ffast-math -DNDEBUG -fomit-frame-pointer -funroll-loops)
+    set(ARCH_FLAGS -march=x86-64-v3 -mtune=generic)
+    set(OPTIMIZATION_FLAGS -O3 -ffast-math -DNDEBUG -funroll-loops)
     set(COMPILER_OPTIONS
         ${WARNING_FLAGS} ${ARCH_FLAGS}
         $<$<CONFIG:RELEASE>:${OPTIMIZATION_FLAGS}>
@@ -67,7 +67,8 @@ endif()
 # =============================================================================
 # IPO/LTO Configuration
 if(ENABLE_LTO)
-    if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # Forcing FullLTO. CMake defaults to ThinLTO for Clang
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(CMAKE_CXX_COMPILE_OPTIONS_IPO "-flto=full")
     endif()
 
@@ -77,15 +78,17 @@ if(ENABLE_LTO)
         message(STATUS "IPO/LTO enabled for Release builds")
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE)
+    elseif(CMAKE_BUILD_TYPE MATCHES "^(Release|RelWithDebInfo)$")
+        message(FATAL_ERROR "LTO requested but not supported: ${ipo_error}")
     else()
         message(STATUS "IPO/LTO not supported: ${ipo_error}")
     endif()
 endif()
 
-# Static GNU/MinGW builds
-if(ENABLE_STATIC AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR MINGW))
-    message(STATUS "STATIC linking mode enabled")
-    list(APPEND LINK_FLAGS -static)
+if(ENABLE_STATIC AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND
+   (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR MINGW))
+    message(STATUS "STATIC linking mode enabled (${CMAKE_CXX_COMPILER_ID} on ${CMAKE_SYSTEM_NAME})")
+    add_link_options(-static)
 endif()
 
 # =============================================================================
@@ -101,11 +104,12 @@ if(BUILD_TESTS)
     FetchContent_Declare(
         googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG        v1.17.0 # 30-Apr-2025
+        GIT_TAG        v1.18.0 # 10-Aug-2026
+        GIT_SHALLOW    TRUE
     )
     set(BUILD_GMOCK OFF CACHE INTERNAL "")
     FetchContent_MakeAvailable(googletest)
-    
+
     # Disable LTO for GoogleTest targets
     set_target_properties(gtest gtest_main PROPERTIES
         INTERPROCEDURAL_OPTIMIZATION_RELEASE FALSE
@@ -184,7 +188,6 @@ target_link_libraries(engine_static PUBLIC engine)
 add_executable(casanchess Main.cpp)
 
 target_link_libraries(casanchess PRIVATE $<TARGET_OBJECTS:engine_obj> engine)
-target_link_options(casanchess PRIVATE ${LINK_FLAGS})
 
 # =============================================================================
 # Data Files
@@ -215,20 +218,17 @@ if(BUILD_TESTS)
         tests/test-Utils.cpp
         tests/test-ZobristKey.cpp
     )
-    
-    target_compile_options(tests PRIVATE ${COMPILER_OPTIONS})
+
     target_link_libraries(tests PRIVATE engine_static gtest)
 
     # Extra tests
     if(BUILD_TESTS_EXTRA)
         # Perft test
         add_executable(perft tests/test-Perft.cpp)
-        target_compile_options(perft PRIVATE ${COMPILER_OPTIONS})
         target_link_libraries(perft PRIVATE engine_static gtest)
 
         # Search test
         add_executable(searcht tests/test-Search.cpp)
-        target_compile_options(searcht PRIVATE ${COMPILER_OPTIONS})
         target_link_libraries(searcht PRIVATE engine_static gtest)
     endif()
 endif()
@@ -243,7 +243,6 @@ if(BUILD_NNUE_TOOLS)
         src/nnue_datagen/Datagen.cpp
         src/nnue_datagen/RandomPosition.cpp
     )
-    target_compile_options(nnue-datagen PRIVATE ${COMPILER_OPTIONS})
     target_link_libraries(nnue-datagen PRIVATE engine_static)
 
     # nnue-convert executable
@@ -251,6 +250,5 @@ if(BUILD_NNUE_TOOLS)
         src/nnue_convert/Main.cpp
         src/nnue_convert/Convert.cpp
     )
-    target_compile_options(nnue-convert PRIVATE ${COMPILER_OPTIONS})
     target_link_libraries(nnue-convert PRIVATE engine_static)
 endif()
