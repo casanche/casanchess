@@ -1,5 +1,4 @@
 #include "Attacks.h"
-#include "Evaluation.h"
 #include "Interface.h"
 #include "NNUE.h"
 #include "Syzygy.h"
@@ -16,7 +15,6 @@ int main(int argc, char** argv) {
     clock.Start();
 
     Attacks::Init();
-    Evaluation::Init(); //after Attacks
     Syzygy::Init(Syzygy::DEFAULT_PATH);
     ZobristKeys::Init();
 

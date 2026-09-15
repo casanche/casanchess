@@ -1,12 +1,10 @@
 #include "Board.h"
 
 #include "Attacks.h"
-#include "Uci.h"
 using namespace Attacks;
 #include "BitboardUtils.h"
 using namespace BitboardUtils;
-#include "Hash.h"
-#include "Heuristics.h"
+#include "Debug.h"
 #include "Move.h"
 #include "MoveGenerator.h"
 #include "NNUE.h"
@@ -94,13 +92,11 @@ void Board::InitStateAndHistory() {
     m_history[m_ply].castling = m_castlingRights;
     m_history[m_ply].enpassant = m_enPassantSquare;
     m_zobristKey.SetKey(*this);
-    m_pawnKey.SetPawnKey(*this);
     m_history[m_ply].zkey = ZKey();
 
     m_checkCalculated = false;
 
-    if(!UCI_CLASSICAL_EVAL)
-        m_nnue.Inputs_FullUpdate(m_ply, m_pieces);
+    m_nnue.Inputs_FullUpdate(m_ply, m_pieces);
 }
 
 void Board::Divide(int depth) {
@@ -333,6 +329,11 @@ bool Board::IsAttacked(COLOR color, int square) const {
     return false;
 }
 
+bool Board::AreHeavyPieces() const {
+    const COLOR color = ActivePlayer();
+    return Piece(color, ALL_PIECES) ^ (Piece(color, PAWN) | Piece(color, KING));
+}
+
 bool Board::IsCheck() {
     COLOR color = ActivePlayer();
     if(!m_checkCalculated) {
@@ -391,7 +392,6 @@ void Board::Mirror() {
         m_castlingRights = mirroredCastlingRights;
     }
     m_zobristKey.SetKey(*this);
-    m_pawnKey.SetPawnKey(*this);
     UpdateBitboards();
 }
 

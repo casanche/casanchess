@@ -99,7 +99,6 @@ void Search::ClearSearch(bool fullClear) {
     if(fullClear) {
         assert(m_tt.Occupancy() == 0);
         m_evalCache.Clear();
-        Hash::pawnHash.Clear();
 
         m_heuristics.history.Clear();
     }
@@ -484,7 +483,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         && eval >= beta  //very good score
         && depth > 1
         // && depth >= NULLMOVE_REDUCTION_FACTOR + (depth / 5)  //enough depth
-        && Evaluation::AreHeavyPieces(board)  // Avoid zugzwang in K+P endgames
+        && board.AreHeavyPieces()  // Avoid zugzwang in K+P endgames
     ) {
         D( m_debug.Increment("NegaMax: Pruning: NullMove: Hit") );
         D( m_debug.Increment("NegaMax: Pruning: NullMove: Hit - Depth " + std::to_string(depth)) );

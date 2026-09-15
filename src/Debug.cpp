@@ -8,7 +8,6 @@
 bool BoardIdentity::operator==(const BoardIdentity& rhs) const {
     if( activePlayer != rhs.activePlayer ||
         zkey != rhs.zkey ||
-        pawnKey != rhs.pawnKey ||
         castlingRights != rhs.castlingRights ||
         enPassantSquare != rhs.enPassantSquare ||
         allPieces != rhs.allPieces ||
@@ -32,7 +31,6 @@ std::ostream& operator<<(std::ostream& os, const BoardIdentity& boardIdentity) {
     os << "BoardIdentity: {"
        << "activePlayer=" << (boardIdentity.activePlayer ? "WHITE" : "BLACK") << ", "
        << "zkey=" << boardIdentity.zkey << ", "
-       << "pawnKey=" << boardIdentity.pawnKey << ", "
        << "castlingRights=" << (int)boardIdentity.castlingRights << ", "
        << "enPassantSquare=" << boardIdentity.enPassantSquare << ", "
        << "allPieces=" << boardIdentity.allPieces << ", "
@@ -80,7 +78,6 @@ BoardIdentity BoardIntegrityChecker::GenerateBoardIdentity(const Board& board) {
 
     boardIdentity.activePlayer = board.ActivePlayer();
     boardIdentity.zkey = board.ZKey();
-    boardIdentity.pawnKey = board.PawnKey();
     boardIdentity.castlingRights = board.CastlingRights();
     boardIdentity.enPassantSquare = board.EnPassantSquare();
 

@@ -51,7 +51,6 @@ void Uci::Launch() {
 
             //Options
             std::cout << "option name Ambition type spin default " << UCI_AMBITION_DEFAULT << " min 0 max 50" << std::endl;
-            std::cout << "option name ClassicalEval type check default false" << std::endl;
             std::cout << "option name ClearHash type button" << std::endl;
             std::cout << "option name Contempt type spin default 10 min -100 max 100" << std::endl;
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
@@ -347,27 +346,6 @@ void Uci::SetOption(std::istringstream &stream) {
             if(contempt != UCI_DRAW_CONTEMPT) {
                 UCI_DRAW_CONTEMPT = contempt;
                 tt.Clear();
-            }
-        }
-        else if(token == "ClassicalEval") {
-            stream >> token;
-            if(token != "value")
-                return;
-            stream >> token;
-            P(token);
-
-            bool classicalEval;
-            if(token == "true")
-                classicalEval = true;
-            else if(token == "false")
-                classicalEval = false;
-            else
-                return;
-
-            if(classicalEval != UCI_CLASSICAL_EVAL) {
-                UCI_CLASSICAL_EVAL = classicalEval;
-                tt.Clear();
-                search.ClearEvalCache();
             }
         }
         else if(token == "NNUE_Path") {

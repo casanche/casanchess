@@ -65,6 +65,7 @@ public:
     Bitboard AttackersTo(COLOR color, int square) const;
     Bitboard AttackersTo(int square) const { return AttackersTo(ActivePlayer(), square); }
     PIECE_TYPE GetPieceAtSquare(COLOR color, int square) const;
+    bool AreHeavyPieces() const;
     bool IsAttacked(COLOR color, int square) const;
     bool IsCheck();
     bool IsCheckAnyColor();
@@ -83,7 +84,6 @@ public:
     inline COLOR InactivePlayer() const     { return (COLOR)!m_activePlayer; }
     inline unsigned int MoveNumber() const  { return m_moveNumber; }
     inline Move LastMove() const            { return m_history[m_ply].move; }
-    inline u64 PawnKey() const              { return m_pawnKey.Key(); }
     inline Bitboard Piece(COLOR color, PIECE_TYPE pieceType) const     { return m_pieces[color][pieceType]; }
     inline unsigned int Ply() const         { return m_ply; }
     inline u64 ZKey() const                 { return m_zobristKey.Key(); }
@@ -111,7 +111,6 @@ private:
     uint m_ply; //a ply is half a move
     Bitboard m_enPassantSquare;
     ZobristKey m_zobristKey;
-    ZobristKey m_pawnKey;
 
     //Pieces
     PieceBitboards m_pieces;

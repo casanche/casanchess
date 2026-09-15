@@ -1,7 +1,7 @@
 #include "Datagen.h"
 
 #include "Attacks.h"
-#include "Evaluation.h"
+#include "NNUE.h"
 #include "Syzygy.h"
 #include "Uci.h"
 #include "ZobristKeys.h"
@@ -65,12 +65,10 @@ int main(int argc, char** argv) {
     }
 
     Attacks::Init();
-    Evaluation::Init(); 
     const unsigned int syzygyMaxPieces = Syzygy::Init(Syzygy::DEFAULT_PATH);
     ZobristKeys::Init();
     NNUE::Load();
 
-    UCI_CLASSICAL_EVAL = false;
     UCI_DRAW_CONTEMPT = 0;
     UCI_AMBITION = 0;
 

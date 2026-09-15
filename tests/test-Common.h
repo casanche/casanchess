@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Attacks.h"
-#include "Evaluation.h"
 #include "NNUE.h"
 #include "ZobristKeys.h"
 
@@ -21,7 +20,6 @@ namespace TestCommon {
 
     inline void InitEngine() {
         Attacks::Init();
-        Evaluation::Init(); //after Attacks
         ZobristKeys::Init();
         NNUE::Load();
     }
