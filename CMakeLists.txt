@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Casanchess 
+project(Casanchess
     VERSION 1.1.2
     LANGUAGES CXX
 )
@@ -38,8 +38,8 @@ if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     set(ARCH_FLAGS /arch:AVX2)
     set(COMPILER_OPTIONS
         /W4 /EHsc ${ARCH_FLAGS}
-        $<$<CONFIG:RELEASE>:/O2 /DNDEBUG>
-        $<$<CONFIG:RELWITHDEBINFO>:/O2 /DNDEBUG /Zi>
+        $<$<CONFIG:RELEASE>:/O2 /fp:fast /DNDEBUG>
+        $<$<CONFIG:RELWITHDEBINFO>:/O2 /fp:fast /DNDEBUG /Zi>
         $<$<CONFIG:DEBUG>:/Od /DDEBUG /Zi>
     )
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -53,7 +53,7 @@ if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
 else()
     set(WARNING_FLAGS -Wall -Wextra -Wshadow)
     set(ARCH_FLAGS -march=x86-64-v3 -mtune=generic)
-    set(OPTIMIZATION_FLAGS -O3 -DNDEBUG -funroll-loops)
+    set(OPTIMIZATION_FLAGS -O3 -ffast-math -DNDEBUG -funroll-loops)
     set(COMPILER_OPTIONS
         ${WARNING_FLAGS} ${ARCH_FLAGS}
         $<$<CONFIG:RELEASE>:${OPTIMIZATION_FLAGS}>
@@ -110,7 +110,7 @@ if(BUILD_TESTS)
     )
     set(BUILD_GMOCK OFF CACHE INTERNAL "")
     FetchContent_MakeAvailable(googletest)
-    
+
     # Disable LTO for GoogleTest targets
     set_target_properties(gtest gtest_main PROPERTIES
         INTERPROCEDURAL_OPTIMIZATION_RELEASE FALSE
@@ -219,20 +219,17 @@ if(BUILD_TESTS)
         tests/test-Utils.cpp
         tests/test-ZobristKey.cpp
     )
-    
-    target_compile_options(tests PRIVATE ${COMPILER_OPTIONS})
+
     target_link_libraries(tests PRIVATE engine_static gtest)
 
     # Extra tests
     if(BUILD_TESTS_EXTRA)
         # Perft test
         add_executable(perft tests/test-Perft.cpp)
-        target_compile_options(perft PRIVATE ${COMPILER_OPTIONS})
         target_link_libraries(perft PRIVATE engine_static gtest)
 
         # Search test
         add_executable(searcht tests/test-Search.cpp)
-        target_compile_options(searcht PRIVATE ${COMPILER_OPTIONS})
         target_link_libraries(searcht PRIVATE engine_static gtest)
     endif()
 endif()
@@ -247,7 +244,6 @@ if(BUILD_NNUE_TOOLS)
         src/nnue_datagen/Datagen.cpp
         src/nnue_datagen/RandomPosition.cpp
     )
-    target_compile_options(nnue-datagen PRIVATE ${COMPILER_OPTIONS})
     target_link_libraries(nnue-datagen PRIVATE engine_static)
 
     # nnue-convert executable
@@ -255,6 +251,5 @@ if(BUILD_NNUE_TOOLS)
         src/nnue_convert/Main.cpp
         src/nnue_convert/Convert.cpp
     )
-    target_compile_options(nnue-convert PRIVATE ${COMPILER_OPTIONS})
     target_link_libraries(nnue-convert PRIVATE engine_static)
 endif()

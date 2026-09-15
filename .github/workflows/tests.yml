@@ -102,7 +102,7 @@ jobs:
               -DENABLE_LTO=ON \
               -DBUILD_TESTS=ON \
               -DBUILD_TESTS_EXTRA=ON \
-              -DBUILD_EXECUTABLES_EXTRA=ON
+              -DBUILD_NNUE_TOOLS=ON
             cmake --build build --parallel
 
             file build/casanchess | grep "statically linked"
@@ -129,7 +129,7 @@ jobs:
           -DENABLE_LTO=ON \
           -DBUILD_TESTS=ON \
           -DBUILD_TESTS_EXTRA=ON \
-          -DBUILD_EXECUTABLES_EXTRA=ON
+          -DBUILD_NNUE_TOOLS=ON
 
         cmake --build build --config ${{ matrix.build_type }} --parallel
 
