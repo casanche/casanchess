@@ -71,17 +71,6 @@ void ZobristKey::SetKey(Board& board) {
     }
 }
 
-void ZobristKey::SetPawnKey(Board& board) {
-    m_key = 0;
-
-    for(COLOR color : {WHITE, BLACK}) {
-        Bitboard thePawns = board.GetPieces(color, PAWN);
-        for(int square : BitboardIterator(thePawns)) {
-            m_key ^= ZobristKeys::m_zkeyPieces[color][PAWN][square];
-        }
-    }
-}
-
 void ZobristKey::UpdateColor() {
     m_key ^= ZobristKeys::m_zkeyColor;
 }

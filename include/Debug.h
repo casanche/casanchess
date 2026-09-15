@@ -22,7 +22,6 @@ struct BoardIdentity {
     // Position
     bool activePlayer;
     u64 zkey;
-    u64 pawnKey;
     u8 castlingRights;
     Bitboard enPassantSquare;
 

@@ -6,7 +6,6 @@
 #include <memory>
 
 constexpr uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
-constexpr int PAWN_HASH_SIZE = 8192; //In number of entries
 
 // 2^19 entries = 4 MB / 64 bits per entry
 constexpr u64 EVALCACHE_ENTRIES = 1 << 19;
@@ -85,42 +84,3 @@ private:
     u64 m_size; // Number of entries
     u64 m_mask;
 };
-
-// =====================
-// == Pawn-hash entry ==
-// =====================
-
-namespace Hash{
-
-    struct PawnEntry {
-        u64 zkey;
-        i16 evalMg;
-        i16 evalEg;
-    };
-    
-    class PawnHash {
-    public:
-        PawnHash();
-        ~PawnHash();
-    
-        void Store(u64 zkey, int evalMg, int evalEg);
-        PawnEntry* Probe(u64 zkey);
-    
-        void Clear();
-    
-        int Size() { return PAWN_HASH_SIZE; };
-        u64 Occupancy() const;
-    
-    private:
-        PawnEntry* m_pawnEntries;
-    };
-
-}
-
-// ======================
-// == Global variables ==
-// ======================
-
-namespace Hash {
-    inline PawnHash pawnHash;
-}

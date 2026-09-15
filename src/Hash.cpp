@@ -1,7 +1,5 @@
 #include "Hash.h"
 
-#include "Debug.h"
-
 #include <bit>
 #include <cstring>
 
@@ -165,56 +163,4 @@ u64 EvalCache::Occupancy(u64 sampleSize) const {
         count += (m_evalEntries[i].zkey != 0);
     }
     return count;
-}
-
-// ===============
-// == Pawn-hash ==
-// ===============
-
-namespace Hash {
-
-    PawnHash::PawnHash() {
-        m_pawnEntries = new PawnEntry[PAWN_HASH_SIZE];
-        Clear();
-    }
-    
-    PawnHash::~PawnHash() {
-        delete [] m_pawnEntries;
-    }
-    
-    void PawnHash::Clear() {
-        for(u64 i=0; i < PAWN_HASH_SIZE; ++i) {
-            m_pawnEntries[i] = {};
-        }
-    }
-    
-    void PawnHash::Store(u64 zkey, int evalMg, int evalEg) {
-        u64 index = zkey % PAWN_HASH_SIZE;
-    
-        PawnEntry pawnEntry;
-        pawnEntry.zkey = zkey;
-        pawnEntry.evalMg = SafeCastInt16(evalMg);
-        pawnEntry.evalEg = SafeCastInt16(evalEg);
-    
-        m_pawnEntries[index] = pawnEntry;
-    }
-    
-    PawnEntry* PawnHash::Probe(u64 zkey) {
-        u64 index = zkey % PAWN_HASH_SIZE;
-        PawnEntry entry = m_pawnEntries[index];
-        if(entry.zkey == zkey) {
-            return &m_pawnEntries[index];
-        } else {
-            return nullptr;
-        }
-    }
-    
-    u64 PawnHash::Occupancy() const {
-        u64 count = 0;
-        for(u64 i = 0; i < PAWN_HASH_SIZE; ++i) {
-            count += (m_pawnEntries[i].zkey != 0);
-        }
-        return count;
-    }
-
 }

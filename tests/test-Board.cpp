@@ -1,9 +1,4 @@
 #include "Board.h"
-#include "Evaluation.h"
-#include "Uci.h"
-
-#include <fstream>
-
 #include "test-Common.h"
 using namespace TestCommon;
 
@@ -32,20 +27,4 @@ TEST(BoardTest, IsRepetitionDraw) {
     board.MakeMove("g6h6"); EXPECT_EQ(board.IsRepetitionDraw(), true);
     board.MakeMove("g3h4"); EXPECT_EQ(board.IsRepetitionDraw(), true);
     board.MakeMove("h6g6"); EXPECT_EQ(board.IsRepetitionDraw(), true);
-}
-
-TEST(EvaluationTest, Mirror) {
-    Board board;
-    UCI_CLASSICAL_EVAL = true; // NNUE eval does not respect mirroring
-
-    board.SetFen("r4rk1/pppbqppp/2n1pn2/1B1p4/3P4/P1B1P3/1PPN1PPP/R2Q1RK1 b - - 0 10"); // RG3
-    // Mirrored: "r2q1rk1/1ppn1ppp/p1b1p3/3p4/1b1P4/2N1PN2/PPPBQPPP/R4RK1 w - - 0 10"
-
-    int eval = Evaluation::Evaluate(board, board.ActivePlayer(), 0);
-
-    board.Mirror();
-    int evalMirror = Evaluation::Evaluate(board, board.ActivePlayer(), 0);
-
-    UCI_CLASSICAL_EVAL = false;
-    EXPECT_EQ(eval, evalMirror);
 }

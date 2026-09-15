@@ -1,7 +1,7 @@
 #include "MoveMaker.h"
 #include "Board.h"
+#include "Debug.h"
 #include "NNUE_Architecture.h"
-#include "Uci.h"
 
 void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {    
     // Get move information
@@ -84,7 +84,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     board.m_checkCalculated = false;
 
     //NNUE update
-    if(update_nnue && !UCI_CLASSICAL_EVAL) {
+    if(update_nnue) {
         // Copy Accumulator from previous ply
         board.m_nnue.CopyAccumulator(ply-1, ply);
 
@@ -207,9 +207,7 @@ void MoveMaker::MakeNull(Board& board) {
     assert(ply < MAX_PLY_HISTORY);
 
     // Copy the NNUE accumulator from the previous ply
-    if(!UCI_CLASSICAL_EVAL) {
-        board.m_nnue.CopyAccumulator(ply-1, ply);
-    }
+    board.m_nnue.CopyAccumulator(ply-1, ply);
 
     //Reset en-passant square
     if(board.m_enPassantSquare) {
@@ -257,17 +255,11 @@ void MoveMaker::AddPiece(Board& board, int square, COLOR color, PIECE_TYPE piece
     Bitboard &bb = board.m_pieces[color][pieceType];
     bb |= SquareBB(square); //add bit, OR
     board.m_zobristKey.UpdatePiece(color, pieceType, square); //modify the Zobrist key (XOR)
-    if(pieceType == PAWN) {
-        board.m_pawnKey.UpdatePiece(color, PAWN, square);
-    }
 }
 void MoveMaker::RemovePiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType) {
     Bitboard &bb = board.m_pieces[color][pieceType];
     bb ^= SquareBB(square); //remove bit, XOR
     board.m_zobristKey.UpdatePiece(color, pieceType, square); //modify the Zobrist key (XOR)
-    if(pieceType == PAWN) {
-        board.m_pawnKey.UpdatePiece(color, PAWN, square);
-    }
 }
 void MoveMaker::MovePiece(Board& board, int fromSq, int toSq, COLOR color, PIECE_TYPE pieceType) {
     AddPiece(board, toSq, color, pieceType);

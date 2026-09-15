@@ -23,7 +23,6 @@ public:
 
     void SetKey(Board& board);
     inline void SetKey(u64 key) { m_key = key; }
-    void SetPawnKey(Board& board);
 
     void UpdateColor();
     void UpdatePiece(COLOR color, PIECE_TYPE pieceType, int square);
