@@ -5,11 +5,6 @@
 #include <cassert>
 #include <sstream>
 
-namespace {
-    const Bitboard LIGHT_SQUARES = 0x55AA55AA55AA55AA;
-    const Bitboard DARK_SQUARES = 0xAA55AA55AA55AA55;
-}
-
 void Fen::SetPosition(Board& board, std::string fenString) {
     board.ClearBits();
 

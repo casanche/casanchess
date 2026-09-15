@@ -67,8 +67,7 @@ endif()
 # =============================================================================
 # IPO/LTO Configuration
 if(ENABLE_LTO)
-    # CMake defaults to ThinLTO for Clang. Casanchess uses FullLTO for
-    # release performance across every Clang-based toolchain.
+    # Forcing FullLTO. CMake defaults to ThinLTO for Clang
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(CMAKE_CXX_COMPILE_OPTIONS_IPO "-flto=full")
     endif()

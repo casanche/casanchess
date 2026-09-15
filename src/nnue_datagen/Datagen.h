@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <fstream>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -80,5 +81,6 @@ private:
 
     BookPositions m_bookPositions;
 
+    std::mutex m_logMutex;
     std::atomic<int> m_gamesPlayed{0};
 };
