@@ -175,6 +175,9 @@ constexpr bool IsValidPieceType(PIECE_TYPE piece) {
 constexpr bool IsMateValue(const int score) {
     return (abs(score) >= MATESCORE_MIN) && (abs(score) <= MATESCORE_MAX);
 }
+constexpr bool IsTBValue(const int score) {
+    return (abs(score) >= WINSCORE) && (abs(score) < MATESCORE_MIN);
+}
 constexpr bool IsWinValue(const int score) {
     return abs(score) >= WINSCORE;
 }
