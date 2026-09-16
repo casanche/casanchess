@@ -401,6 +401,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // --------- Transposition table probe --------
     Move bestMove; // For later storage in the TT
     int bestScore = NO_SCORE;
+    int tbMaxScore = INFINITE_SCORE;
     int alphaOriginal = alpha; // For TT entry type calculation
 
     Move hashMove; // For move ordering
@@ -433,34 +434,39 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     if( Syzygy::Probe_WDL(board, tb_result) ) {
         m_tbHits++;
 
-        int score;
-        TTENTRY_TYPE bound;
+        int tbScore;
+        TTENTRY_TYPE tbBound;
 
         if(tb_result == Syzygy::TB_RESULT::WIN) {
-            score = TBWIN - m_ply;
-            bound = TTENTRY_TYPE::LOWER_BOUND;
+            tbScore = TBWIN - m_ply;
+            tbBound = TTENTRY_TYPE::LOWER_BOUND;
         } else if(tb_result == Syzygy::TB_RESULT::LOSS) {
-            score = -TBWIN + m_ply;
-            bound = TTENTRY_TYPE::UPPER_BOUND;
+            tbScore = -TBWIN + m_ply;
+            tbBound = TTENTRY_TYPE::UPPER_BOUND;
         } else {
-            score = DrawScore(board);
-            bound = TTENTRY_TYPE::EXACT;
+            tbScore = DrawScore(board);
+            tbBound = TTENTRY_TYPE::EXACT;
         }
 
         // Check if score is a cut-off
-        if( (score >= beta  && bound != TTENTRY_TYPE::UPPER_BOUND)
-         || (score <= alpha && bound != TTENTRY_TYPE::LOWER_BOUND) )
+        if(tbBound == TTENTRY_TYPE::EXACT
+            || (tbScore >= beta  && tbBound != TTENTRY_TYPE::UPPER_BOUND)
+            || (tbScore <= alpha && tbBound != TTENTRY_TYPE::LOWER_BOUND) )
         {
-            m_tt.Store(TTKey(board), score, bound, Move(), MAX_DEPTH, m_ply, m_searchCount);
-            return score;
+            m_tt.Store(TTKey(board), tbScore, tbBound, Move(), MAX_DEPTH, m_ply, m_searchCount);
+            return tbScore;
         }
 
         // If not, update variables
-        if(bound != TTENTRY_TYPE::UPPER_BOUND) {
-            if(score > bestScore)
-                bestScore = score;
-            if(score > alpha)
-                alpha = score;
+        if(isPV) {
+            if(tbBound == TTENTRY_TYPE::LOWER_BOUND) {
+                if(tbScore > bestScore)
+                    bestScore = tbScore;
+                if(tbScore > alpha)
+                    alpha = tbScore;
+            } else { // UPPER_BOUND
+                tbMaxScore = tbScore;
+            }
         }
     }
 
@@ -628,6 +634,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_ply--;
 
         if(m_limits.Stopped()) return 0;
+
+        if(score > tbMaxScore)
+            score = tbMaxScore;
 
         if(score > bestScore) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update BestMove (score > bestScore)") );
