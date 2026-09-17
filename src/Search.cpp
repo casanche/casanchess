@@ -162,18 +162,31 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
 
         AspirationWindow(board, m_depth, m_bestScore);
 
-        // Stop the search if limits are reached and publish the best move found so far
-        if(m_limits.Stopped()) {
-            const std::string pv = m_pv.PVString();
+        const bool stopped = m_limits.Stopped();
+
+        // Normal search output
+        std::string pv = m_pv.PVString();
+        BOUND_TYPE bound = stopped ? BOUND_TYPE::LOWER_BOUND
+                                   : BOUND_TYPE::EXACT;
+
+        // TB-specific output
+        if(IsTBScore(m_bestScore)) {
+            pv = m_bestMove.Notation();
+            bound = IsTBLowerBound(m_bestScore) ? BOUND_TYPE::LOWER_BOUND
+                                                : BOUND_TYPE::UPPER_BOUND;
+        }
+
+        // Stop the search if limits are reached, and publish the best move found so far before exit
+        if(stopped) {
             if(!pv.empty()) {
                 i64 elapsedTime = m_limits.UpdatedElapsedTime();
-                Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::LOWER_BOUND, pv, m_tt);
+                Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
             }
             break;
         }
 
         i64 elapsedTime = m_limits.UpdatedElapsedTime();
-        Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::EXACT, m_pv.PVString(), m_tt);
+        Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
 
         // Stop search if we used half of the allocated time, since
         // next iteration will likely use more than the allocated time
@@ -186,7 +199,11 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
 
     m_limits.WaitIfNecessary();
 
-    Uci::BestMove(m_bestMove.Notation(), m_pv.PonderString());
+    std::string ponder = m_pv.PonderString();
+    if(IsTBScore(m_bestScore))
+        ponder = "";
+
+    Uci::BestMove(m_bestMove.Notation(), ponder);
 }
 
 // Narrow alpha-beta bounds around expected score
