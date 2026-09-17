@@ -425,7 +425,7 @@ void Uci::Output(int depth, int seldepth, int score, u64 nodes, i64 time, uint n
     std::cout << "info depth " << depth;
     std::cout << " seldepth " << seldepth;
 
-    if(IsMateValue(score)) {
+    if(IsMateScore(score)) {
         int mateScore = (score > 0) ?  MATESCORE_MAX - score + 1
                                     : -MATESCORE_MAX - score - 1;
         std::cout << " score mate " << mateScore / 2; //return mate in moves, not in plies

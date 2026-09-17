@@ -172,18 +172,27 @@ constexpr PIECE_TYPE& operator++(PIECE_TYPE& pieceType) {
 constexpr bool IsValidPieceType(PIECE_TYPE piece) {
     return (piece != NO_PIECE) && (piece != ALL_PIECES);
 }
-constexpr bool IsMateValue(const int score) {
-    return (abs(score) >= MATESCORE_MIN) && (abs(score) <= MATESCORE_MAX);
-}
-constexpr bool IsTBValue(const int score) {
-    return (abs(score) >= WINSCORE) && (abs(score) < MATESCORE_MIN);
-}
-constexpr bool IsWinValue(const int score) {
-    return abs(score) >= WINSCORE;
-}
 constexpr int RelativeRank(COLOR color, int square) {
     return color == WHITE ? Rank(square) : 7 ^ Rank(square);
 }
 constexpr Bitboard RelativeMaskRank(COLOR color, RANKS rank) {
     return color == WHITE ? MaskRank[rank] : MaskRank[RANK8-rank];
+}
+
+// "Win" scores
+constexpr bool IsMateScore(const int score) {
+    return (abs(score) >= MATESCORE_MIN) && (abs(score) <= MATESCORE_MAX);
+}
+constexpr bool IsTBScore(const int score) {
+    return (abs(score) >= WINSCORE) && (abs(score) < MATESCORE_MIN);
+}
+constexpr bool IsWinScore(const int score) {
+    return abs(score) >= WINSCORE;
+}
+
+constexpr bool IsTBLowerBound(const int score) {
+    return IsTBScore(score) && (score > 0);
+}
+constexpr bool IsTBUpperBound(const int score) {
+    return IsTBScore(score) && (score < 0);
 }
