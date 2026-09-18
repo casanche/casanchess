@@ -208,7 +208,12 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
 
 // Narrow alpha-beta bounds around expected score
 int Search::AspirationWindow(Board& board, const int depth, const int bestScore) {
-    const bool aspiration = TURNON_ASPIRATION_WINDOW && depth >= ASPIRATION_WINDOW_DEPTH && !IsWinScore(bestScore);
+    if(IsTBScore(bestScore))
+        return SearchBeyondTB(board, depth, bestScore);
+    
+    const bool aspiration = TURNON_ASPIRATION_WINDOW
+                         && depth >= ASPIRATION_WINDOW_DEPTH
+                         && !IsWinScore(bestScore);
     if(!aspiration)
         return RootMax(board, depth, -INFINITE_SCORE, INFINITE_SCORE);
 
@@ -218,13 +223,24 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
 
     int score = RootMax(board, depth, alpha, beta);
 
-    for(int researches = 1; !m_limits.Stopped() && (score <= alpha || score >= beta); researches++) {
+    for(int researches = 1; !m_limits.Stopped(); researches++) {
+        // TB bounds are handled separately
+        if(IsTBScore(score)) {
+            m_bestScore = score;
+            return score;
+        }
+
+        // Within bounds
+        if(score > alpha && score < beta)
+            return score;
+
         D( m_debug.Increment("AspirationWindow: Out of bounds: Researches: " + std::to_string(researches) ); );
 
         BOUND_TYPE bound = (score <= alpha) ? BOUND_TYPE::UPPER_BOUND
                                             : BOUND_TYPE::LOWER_BOUND;
         // Bound results only display the best root move, not a full PV
         const std::string pv = m_bestMove.Notation();
+
         i64 elapsedTime = m_limits.UpdatedElapsedTime();
         Uci::Output(m_depth, m_selPly, score, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
 
@@ -232,7 +248,7 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
         window = window * ASPIRATION_WINDOW_MULTIPLIER;
         if(score <= alpha) {
             alpha = bestScore - window;
-        } else if(score >= beta) {
+        } else { // score >= beta
             beta = bestScore + window;
         }
 
@@ -857,6 +873,28 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
 
     return bestScore;
+}
+
+// Search TB bound in a limited range. If not better, recover the original TB score
+int Search::SearchBeyondTB(Board& board, const int depth, const int tbScore) {
+    assert(IsTBScore(tbScore));
+
+    const Move tbBestMove = m_bestMove;
+
+    const int score = IsTBLowerBound(tbScore) ? RootMax(board, depth, tbScore, +INFINITE_SCORE)
+                                              : RootMax(board, depth, -INFINITE_SCORE, tbScore);
+
+    const bool beyondBound = IsTBLowerBound(tbScore) ? score > tbScore
+                                                     : score < tbScore;
+
+    // Go back to previous result
+    if(m_limits.Stopped() || !beyondBound) {
+        m_bestScore = tbScore;
+        m_bestMove = tbBestMove;
+        return tbScore;
+    }
+
+    return score;
 }
 
 // Late Move Reductions: reduce the search depth for less-promising moves.
