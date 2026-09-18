@@ -100,7 +100,7 @@ u64 TT::Occupancy(u64 sampleSize) const {
 //ROOT' <---- (Mate in X+ply') <---- POS <---- (Mate in X)
 int TT::ScoreFromHash(int score, int ply) {
     assert(abs(score) <= MATESCORE_MAX);
-    if(IsWinValue(score)) {
+    if(IsWinScore(score)) {
         if(score > 0) return score - ply;
         else          return score + ply;
     }
@@ -111,7 +111,7 @@ int TT::ScoreFromHash(int score, int ply) {
 //ROOT ----> (Mate in X+ply) ----> POS ----> (Mate in X)
 int TT::ScoreToHash(int score, int ply) {
     assert(abs(score) <= MATESCORE_MAX);
-    if(IsWinValue(score)) {
+    if(IsWinScore(score)) {
         if(score > 0) return score + ply;
         else          return score - ply;
     }

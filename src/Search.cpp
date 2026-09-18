@@ -162,18 +162,31 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
 
         AspirationWindow(board, m_depth, m_bestScore);
 
-        // Stop the search if limits are reached and publish the best move found so far
-        if(m_limits.Stopped()) {
-            const std::string pv = m_pv.PVString();
+        const bool stopped = m_limits.Stopped();
+
+        // Normal search output
+        std::string pv = m_pv.PVString();
+        BOUND_TYPE bound = stopped ? BOUND_TYPE::LOWER_BOUND
+                                   : BOUND_TYPE::EXACT;
+
+        // TB-specific output
+        if(IsTBScore(m_bestScore)) {
+            pv = m_bestMove.Notation();
+            bound = IsTBLowerBound(m_bestScore) ? BOUND_TYPE::LOWER_BOUND
+                                                : BOUND_TYPE::UPPER_BOUND;
+        }
+
+        // Stop the search if limits are reached, and publish the best move found so far before exit
+        if(stopped) {
             if(!pv.empty()) {
                 i64 elapsedTime = m_limits.UpdatedElapsedTime();
-                Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::LOWER_BOUND, pv, m_tt);
+                Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
             }
             break;
         }
 
         i64 elapsedTime = m_limits.UpdatedElapsedTime();
-        Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::EXACT, m_pv.PVString(), m_tt);
+        Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
 
         // Stop search if we used half of the allocated time, since
         // next iteration will likely use more than the allocated time
@@ -186,12 +199,16 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
 
     m_limits.WaitIfNecessary();
 
-    Uci::BestMove(m_bestMove.Notation(), m_pv.PonderString());
+    std::string ponder = m_pv.PonderString();
+    if(IsTBScore(m_bestScore))
+        ponder = "";
+
+    Uci::BestMove(m_bestMove.Notation(), ponder);
 }
 
 // Narrow alpha-beta bounds around expected score
 int Search::AspirationWindow(Board& board, const int depth, const int bestScore) {
-    const bool aspiration = TURNON_ASPIRATION_WINDOW && depth >= ASPIRATION_WINDOW_DEPTH && !IsWinValue(bestScore);
+    const bool aspiration = TURNON_ASPIRATION_WINDOW && depth >= ASPIRATION_WINDOW_DEPTH && !IsWinScore(bestScore);
     if(!aspiration)
         return RootMax(board, depth, -INFINITE_SCORE, INFINITE_SCORE);
 
@@ -219,7 +236,7 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
             beta = bestScore + window;
         }
 
-        if(researches == 4 || IsWinValue(score)) {
+        if(researches == 4 || IsWinScore(score)) {
             alpha = -INFINITE_SCORE;
             beta = INFINITE_SCORE;
         }
@@ -295,6 +312,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
         if(m_limits.Stopped()) break;
 
+        const bool isTBUpperBound = IsTBUpperBound(score);
+
         if(score > bestScore) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
@@ -302,14 +321,14 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         }
 
         // Not useful to store in TT due to aspiration window
-        if(score >= beta) {
+        if(!isTBUpperBound && score >= beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
             m_bestMove = move;
 
-            break;
+            return score;
         }
 
-        if(score > alpha) {
+        if(!isTBUpperBound && score > alpha) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
 
@@ -326,13 +345,22 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         }
     }
 
-    // Store "exact" score in transposition table if search finished within search bounds
-    bool withinBounds = (bestScore > alphaOriginal) && (bestScore < beta);
-    if(!m_limits.Stopped() && withinBounds) {
-        assert(bestMove == m_bestMove && bestScore == m_bestScore);
-        D( m_debug.Increment("RootMax: AlphaBeta: TT Store Exact") );
+    const bool withinBounds = (bestScore > alphaOriginal) && (bestScore < beta);
+    const bool isTBUpperBound = IsTBUpperBound(bestScore);
 
-        m_tt.Store(TTKey(board), bestScore, TTENTRY_TYPE::EXACT, bestMove, depth, m_ply, m_searchCount);
+    if(!m_limits.Stopped() && isTBUpperBound) {
+        m_bestMove = bestMove;
+        m_bestScore = bestScore;
+    }
+    if(!m_limits.Stopped() && (withinBounds || isTBUpperBound)) {
+        assert(bestMove == m_bestMove && bestScore == m_bestScore);
+        D( m_debug.Increment("RootMax: AlphaBeta: TT Store") );
+
+        const TTENTRY_TYPE type = IsTBLowerBound(bestScore) ? TTENTRY_TYPE::LOWER_BOUND
+                                : isTBUpperBound            ? TTENTRY_TYPE::UPPER_BOUND
+                                                            : TTENTRY_TYPE::EXACT;
+
+        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, m_searchCount);
     }
 
     return bestScore;
@@ -401,6 +429,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     // --------- Transposition table probe --------
     Move bestMove; // For later storage in the TT
     int bestScore = NO_SCORE;
+    int tbUpperBound = INFINITE_SCORE;
     int alphaOriginal = alpha; // For TT entry type calculation
 
     Move hashMove; // For move ordering
@@ -415,10 +444,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(!isPV && ttEntry->depth >= depth) {
             D( m_debug.Increment("NegaMax: TT: Higher Depth") );
             int score = m_tt.ScoreFromHash(ttEntry->score, m_ply);
+            const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
 
-            if( ttEntry->type == TTENTRY_TYPE::EXACT
-                || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-                || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
+            if(!invalidTBScore
+                && (ttEntry->type == TTENTRY_TYPE::EXACT
+                    || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+                    || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
             ) {
                 D( m_debug.Increment("NegaMax: TT: Cut-Off") );
                 return score;
@@ -431,34 +462,40 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     if( Syzygy::Probe_WDL(board, tb_result) ) {
         m_tbHits++;
 
-        int score;
-        TTENTRY_TYPE bound;
+        int tbScore;
+        TTENTRY_TYPE tbBound;
 
         if(tb_result == Syzygy::TB_RESULT::WIN) {
-            score = TBWIN - m_ply;
-            bound = TTENTRY_TYPE::LOWER_BOUND;
+            tbScore = TBWIN - m_ply;
+            tbBound = TTENTRY_TYPE::LOWER_BOUND;
         } else if(tb_result == Syzygy::TB_RESULT::LOSS) {
-            score = -TBWIN + m_ply;
-            bound = TTENTRY_TYPE::UPPER_BOUND;
+            tbScore = -TBWIN + m_ply;
+            tbBound = TTENTRY_TYPE::UPPER_BOUND;
         } else {
-            score = DrawScore(board);
-            bound = TTENTRY_TYPE::EXACT;
+            tbScore = DrawScore(board);
+            tbBound = TTENTRY_TYPE::EXACT;
         }
 
-        // Check if score is a cut-off
-        if( (score >= beta  && bound != TTENTRY_TYPE::UPPER_BOUND)
-         || (score <= alpha && bound != TTENTRY_TYPE::LOWER_BOUND) )
+        // TB cut-off
+        if(tbBound == TTENTRY_TYPE::EXACT
+            || (tbScore >= beta  && tbBound == TTENTRY_TYPE::LOWER_BOUND)
+            || (tbScore <= alpha && tbBound == TTENTRY_TYPE::UPPER_BOUND) )
         {
-            m_tt.Store(TTKey(board), score, bound, Move(), MAX_DEPTH, m_ply, m_searchCount);
-            return score;
+            m_tt.Store(TTKey(board), tbScore, tbBound, Move(), MAX_DEPTH, m_ply, m_searchCount);
+            return tbScore;
         }
 
-        // If not, update variables
-        if(bound != TTENTRY_TYPE::UPPER_BOUND) {
-            if(score > bestScore)
-                bestScore = score;
-            if(score > alpha)
-                alpha = score;
+        // If not, update scores
+        if(isPV) {
+            if(tbBound == TTENTRY_TYPE::UPPER_BOUND)
+                tbUpperBound = tbScore;
+
+            if(tbBound == TTENTRY_TYPE::LOWER_BOUND) {
+                if(tbScore > bestScore)
+                    bestScore = tbScore;
+                if(tbScore > alpha)
+                    alpha = tbScore;
+            }
         }
     }
 
@@ -508,10 +545,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_ply--;
         m_nullmoveAllowed = true;
 
-        if(nullScore >= beta) {
+        if(!IsTBUpperBound(nullScore) && nullScore >= beta) {
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff") );
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff - Depth " + std::to_string(depth)) );
-            if(IsWinValue(nullScore))
+            if(IsWinScore(nullScore))
                 nullScore = beta;  // Avoid reporting false mates in zugzwang
             m_tt.Store(TTKey(board), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount, eval);
             return nullScore;
@@ -565,7 +602,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // ------- Futility pruning -------
         // Prune quiet moves and bad captures if unlikely to raise alpha
         const int futilityMargin = 0 + depth * 35;
-        if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinValue(alpha)
+        if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinScore(alpha)
             && depth <= 4
             && eval + futilityMargin <= alpha
             && ( move.Score() < 120 || (move.Score() >= 181 && move.Score() <= 188) )
@@ -627,13 +664,17 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         if(m_limits.Stopped()) return 0;
 
+        score = std::min(score, tbUpperBound);
+
+        const bool isTBUpperBound = IsTBUpperBound(score);
+
         if(score > bestScore) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
             bestMove = move;
         }
 
-        if(score >= beta) {
+        if(!isTBUpperBound && score >= beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
             m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
@@ -647,7 +688,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             return score;
         }
 
-        if(score > alpha) {
+        if(!isTBUpperBound && score > alpha) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
  
@@ -656,12 +697,19 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     } // End move loop
 
-    // Store score in transposition table
     if(bestMove.MoveType() != 0) {
-        bool withinBounds = (bestScore > alphaOriginal);
-        D( m_debug.Increment("NegaMax: AlphaBeta: " + std::string(withinBounds ? "Exact" : "UpperBound")) );
-        TTENTRY_TYPE type = withinBounds ? TTENTRY_TYPE::EXACT
-                                         : TTENTRY_TYPE::UPPER_BOUND;
+        TTENTRY_TYPE type = (bestScore > alphaOriginal) ? TTENTRY_TYPE::EXACT
+                                                        : TTENTRY_TYPE::UPPER_BOUND;
+
+        if(IsTBLowerBound(bestScore))
+            type = TTENTRY_TYPE::LOWER_BOUND;
+        else if(IsTBUpperBound(bestScore))
+            type = TTENTRY_TYPE::UPPER_BOUND;
+
+        D( m_debug.Increment("NegaMax: AlphaBeta: "
+            + std::string(type == TTENTRY_TYPE::EXACT ? "Exact"
+                        : type == TTENTRY_TYPE::LOWER_BOUND ? "LowerBound"
+                                                            : "UpperBound")) );
         m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, m_searchCount, eval);
     }
 
@@ -704,9 +752,12 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         if(!isPV) {
             D( m_debug.Increment("Quiescence: TT: !isPV") );
             int score = m_tt.ScoreFromHash(ttEntry->score, m_ply);
-            if( ttEntry->type == TTENTRY_TYPE::EXACT
-                || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-                || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta)
+            const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
+
+            if(!invalidTBScore
+                && (ttEntry->type == TTENTRY_TYPE::EXACT
+                    || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+                    || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
             ) {
                 D( m_debug.Increment("Quiescence: TT: Cut-Off") );
                 return score;
@@ -791,15 +842,17 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         D( BoardIdentity aft = BoardIntegrityChecker::GenerateBoardIdentity(board); );
         D( assert(bef == aft) );
 
+        const bool isTBUpperBound = IsTBUpperBound(score);
+
         if(score > bestScore)
             bestScore = score;
 
-        if(score >= beta) {
-            m_tt.Store(TTKey(board), bestScore, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
+        if(!isTBUpperBound && score >= beta) {
+            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
             return score;
         }
 
-        if(score > alpha)
+        if(!isTBUpperBound && score > alpha)
             alpha = score;
     }
 

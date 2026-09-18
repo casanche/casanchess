@@ -445,7 +445,7 @@ MoveList Datagen::SortFilteredMoves(Board& board, Search& search) {
 
 // Save positions with filters: quiets, no-check, no-mate
 bool Datagen::SaveEvals(Board& board, Search& search, std::vector<SavedPosition>& savedPositions) {
-    if(board.IsCheck() || !search.BestMove().IsQuiet() || IsWinValue(search.BestScore()))
+    if(board.IsCheck() || !search.BestMove().IsQuiet() || IsWinScore(search.BestScore()))
         return false;
 
     int score = search.BestScore();
