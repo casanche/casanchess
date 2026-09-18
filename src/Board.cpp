@@ -47,9 +47,8 @@ void Board::ClearBits() {
     m_castlingRights = 0;
 
     m_activePlayer = WHITE;
-    m_moveNumber = 1;
+    m_initialMoveNumber = 1;
     m_ply = 0;
-    m_initialPly = 0;
     m_fiftyrule = 0;
 
     UpdateBitboards();
@@ -154,7 +153,7 @@ void Board::Print(bool bits) const {
 }
 
 void Board::ShowHistory() {
-    for(uint i = m_initialPly + 1; i <= m_ply; i++) {
+    for(uint i = 1; i <= m_ply; ++i) {
         std::cout << i << ". " << m_history[i].move.Notation() << " ";
     }
 }
@@ -360,15 +359,11 @@ bool Board::IsCheckAnyColor() {
 
 // Detects a position repetition within a search (same Zobrist Key)
 bool Board::IsRepetitionDraw() const {
-    const int rule_limit = (int)m_fiftyrule;
-    const int ply_limit = m_ply - m_initialPly;
+    const uint limit = std::min((uint)m_fiftyrule, m_ply);
 
-    const int limit = std::min(rule_limit, ply_limit);
-
-    for(int i = 4; i <= limit; i += 2) {
-        if(m_history[m_ply - i].zkey == ZKey()) {
+    for(uint i = 4; i <= limit; i += 2) {
+        if(m_history[m_ply - i].zkey == ZKey())
             return true;
-        }
     }
 
     return false;
