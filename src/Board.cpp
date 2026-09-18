@@ -220,7 +220,7 @@ int Board::SEE(Move move) const {
 
         if(!attackers) break;
 
-        PIECE_TYPE lvaPiece;
+        PIECE_TYPE lvaPiece = NO_PIECE;
         Bitboard lvaBitboard = LeastValuableAttacker(attackers, sideToMove, lvaPiece);
 
         gain[depth + 1] = SEE::MATERIAL_VALUES[attackingPiece];

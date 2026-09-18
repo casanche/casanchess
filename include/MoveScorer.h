@@ -11,8 +11,6 @@ namespace Scorer {
     constexpr int POSITIVECAPTURE_MAX = 249;
     constexpr int POSITIVECAPTURE_MIN = 241;
     constexpr int NEUTRALCAPTURE = 240;
-    constexpr int NEUTRALCAPTURE_MAX = 240;
-    constexpr int NEUTRALCAPTURE_MIN = 240;
     constexpr int KILLER_1 = 194;
     constexpr int KILLER_2 = 193;
     constexpr int KILLER_3 = 192;
@@ -28,7 +26,7 @@ namespace Scorer {
     // Tactical positions
     constexpr int TACTICAL_PROMOTION_CAPTURE = 254;
     constexpr int TACTICAL_PROMOTION_NORMAL = 253;
-    constexpr int TACTICAL_MAX = 252;
+    constexpr int TACTICAL_MAX = 251;
     constexpr int TACTICAL_MIN = 1;
     u8 TacticalScoreFromSEE(int see);
     int SEEFromTacticalScore(u8 score);
