@@ -21,7 +21,7 @@ std::string Move::Notation() const {
     
     const bool useDescriptive = true;
     if(useDescriptive) {
-        return DescriptiveNotation();
+        return UciNotation();
     }
 
     MoveData data = Data();
@@ -62,7 +62,7 @@ std::string Move::Notation() const {
     return prefix + IndexToNotation(data.toSq) + promotionSuffix;
 }
 
-std::string Move::DescriptiveNotation() const {
+std::string Move::UciNotation() const {
     MoveData data = Data();
 
     //Promotion suffix

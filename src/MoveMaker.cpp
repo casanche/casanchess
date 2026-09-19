@@ -18,8 +18,6 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     board.m_ply++;
     const uint ply = board.m_ply;
 
-    if(color == BLACK)
-        board.m_moveNumber++;
     //Fifty-rule
     if(pieceType == PAWN || moveType == CAPTURE) {
         board.m_fiftyrule = 0;
@@ -135,9 +133,6 @@ void MoveMaker::TakeMove(Board& board, Move move) {
 
     //Decrease the move number if black made the move
     --board.m_ply;
-    if(color == BLACK) {
-        --board.m_moveNumber;
-    }
 
     //Promotions before moving piece
     if(moveType == PROMOTION || moveType == PROMOTION_CAPTURE) {

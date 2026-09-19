@@ -146,17 +146,20 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
     SetRootContext(board);
 
     MoveList rootMoves = MoveGenerator::GenerateMoves(board);
-    size_t movesSize = rootMoves.size();
 
-    m_limits.StartNewSearch(board.ActivePlayer(), limits, movesSize);
+    m_limits.StartNewSearch(board.ActivePlayer(), limits, rootMoves.size());
     
     D( m_debug.Increment("IterativeDeepening: _: Start") );
     m_searchCount++;
 
-    for(m_depth = 1; m_depth <= m_limits.MaxDepth(); m_depth++) {
+    for(m_depth = 1; m_depth <= m_limits.MaxDepth() && !rootMoves.empty(); m_depth++) {
         assert(m_ply == 0);
         assert(m_plyqs == 0);
         assert(m_nullmoveAllowed);
+        if(rootMoves.empty()) {
+            m_bestScore = board.IsCheck() ? -MATESCORE_MAX : DrawScore(board);
+            break;
+        }
 
         m_selPly = 0;
 
@@ -208,7 +211,12 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
 
 // Narrow alpha-beta bounds around expected score
 int Search::AspirationWindow(Board& board, const int depth, const int bestScore) {
-    const bool aspiration = TURNON_ASPIRATION_WINDOW && depth >= ASPIRATION_WINDOW_DEPTH && !IsWinScore(bestScore);
+    if(IsTBScore(bestScore))
+        return SearchBeyondTB(board, depth, bestScore);
+    
+    const bool aspiration = TURNON_ASPIRATION_WINDOW
+                         && depth >= ASPIRATION_WINDOW_DEPTH
+                         && !IsWinScore(bestScore);
     if(!aspiration)
         return RootMax(board, depth, -INFINITE_SCORE, INFINITE_SCORE);
 
@@ -218,13 +226,24 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
 
     int score = RootMax(board, depth, alpha, beta);
 
-    for(int researches = 1; !m_limits.Stopped() && (score <= alpha || score >= beta); researches++) {
+    for(int researches = 1; !m_limits.Stopped(); researches++) {
+        // TB bounds are handled separately
+        if(IsTBScore(score)) {
+            m_bestScore = score;
+            return score;
+        }
+
+        // Within bounds
+        if(score > alpha && score < beta)
+            return score;
+
         D( m_debug.Increment("AspirationWindow: Out of bounds: Researches: " + std::to_string(researches) ); );
 
         BOUND_TYPE bound = (score <= alpha) ? BOUND_TYPE::UPPER_BOUND
                                             : BOUND_TYPE::LOWER_BOUND;
         // Bound results only display the best root move, not a full PV
         const std::string pv = m_bestMove.Notation();
+
         i64 elapsedTime = m_limits.UpdatedElapsedTime();
         Uci::Output(m_depth, m_selPly, score, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
 
@@ -232,7 +251,7 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
         window = window * ASPIRATION_WINDOW_MULTIPLIER;
         if(score <= alpha) {
             alpha = bestScore - window;
-        } else if(score >= beta) {
+        } else { // score >= beta
             beta = bestScore + window;
         }
 
@@ -312,23 +331,25 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
         if(m_limits.Stopped()) break;
 
-        const bool isTBUpperBound = IsTBUpperBound(score);
-
         if(score > bestScore) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
             bestMove = move;
         }
 
+        // A TB upper bound should not cause a beta cutoff or raise alpha
+        if(IsTBUpperBound(score))
+            continue;
+
         // Not useful to store in TT due to aspiration window
-        if(!isTBUpperBound && score >= beta) {
+        if(score >= beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
             m_bestMove = move;
 
             return score;
         }
 
-        if(!isTBUpperBound && score > alpha) {
+        if(score > alpha) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
 
@@ -346,20 +367,17 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     }
 
     const bool withinBounds = (bestScore > alphaOriginal) && (bestScore < beta);
-    const bool isTBUpperBound = IsTBUpperBound(bestScore);
+    const bool tbUpperBound = IsTBUpperBound(bestScore);
 
-    if(!m_limits.Stopped() && isTBUpperBound) {
+    if(!m_limits.Stopped() && (withinBounds || tbUpperBound)) {
         m_bestMove = bestMove;
         m_bestScore = bestScore;
-    }
-    if(!m_limits.Stopped() && (withinBounds || isTBUpperBound)) {
-        assert(bestMove == m_bestMove && bestScore == m_bestScore);
-        D( m_debug.Increment("RootMax: AlphaBeta: TT Store") );
-
+        
         const TTENTRY_TYPE type = IsTBLowerBound(bestScore) ? TTENTRY_TYPE::LOWER_BOUND
-                                : isTBUpperBound            ? TTENTRY_TYPE::UPPER_BOUND
+                                : tbUpperBound              ? TTENTRY_TYPE::UPPER_BOUND
                                                             : TTENTRY_TYPE::EXACT;
-
+        
+        D( m_debug.Increment("RootMax: AlphaBeta: TT Store") );
         m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, m_searchCount);
     }
 
@@ -666,15 +684,17 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         score = std::min(score, tbUpperBound);
 
-        const bool isTBUpperBound = IsTBUpperBound(score);
-
         if(score > bestScore) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
             bestMove = move;
         }
 
-        if(!isTBUpperBound && score >= beta) {
+        // A TB upper bound should not cause a beta cutoff or raise alpha
+        if(IsTBUpperBound(score))
+            continue;
+
+        if(score >= beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
             m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
@@ -688,7 +708,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             return score;
         }
 
-        if(!isTBUpperBound && score > alpha) {
+        if(score > alpha) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
  
@@ -842,21 +862,45 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         D( BoardIdentity aft = BoardIntegrityChecker::GenerateBoardIdentity(board); );
         D( assert(bef == aft) );
 
-        const bool isTBUpperBound = IsTBUpperBound(score);
-
         if(score > bestScore)
             bestScore = score;
 
-        if(!isTBUpperBound && score >= beta) {
+        // A TB upper bound should not cause a beta cutoff or raise alpha
+        if(IsTBUpperBound(score))
+            continue;
+
+        if(score >= beta) {
             m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
             return score;
         }
 
-        if(!isTBUpperBound && score > alpha)
+        if(score > alpha)
             alpha = score;
     }
 
     return bestScore;
+}
+
+// Search TB bound in a limited range. If not better, recover the original TB score
+int Search::SearchBeyondTB(Board& board, const int depth, const int tbScore) {
+    assert(IsTBScore(tbScore));
+
+    const Move tbBestMove = m_bestMove;
+
+    const int score = IsTBLowerBound(tbScore) ? RootMax(board, depth, tbScore, +INFINITE_SCORE)
+                                              : RootMax(board, depth, -INFINITE_SCORE, tbScore);
+
+    const bool beyondBound = IsTBLowerBound(tbScore) ? score > tbScore
+                                                     : score < tbScore;
+
+    // Go back to previous result
+    if(m_limits.Stopped() || !beyondBound) {
+        m_bestScore = tbScore;
+        m_bestMove = tbBestMove;
+        return tbScore;
+    }
+
+    return score;
 }
 
 // Late Move Reductions: reduce the search depth for less-promising moves.
