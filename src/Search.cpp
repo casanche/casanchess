@@ -331,23 +331,25 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
         if(m_limits.Stopped()) break;
 
-        const bool isTBUpperBound = IsTBUpperBound(score);
-
         if(score > bestScore) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
             bestMove = move;
         }
 
+        // A TB upper bound should not cause a beta cutoff or raise alpha
+        if(IsTBUpperBound(score))
+            continue;
+
         // Not useful to store in TT due to aspiration window
-        if(!isTBUpperBound && score >= beta) {
+        if(score >= beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
             m_bestMove = move;
 
             return score;
         }
 
-        if(!isTBUpperBound && score > alpha) {
+        if(score > alpha) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
 
@@ -365,20 +367,17 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     }
 
     const bool withinBounds = (bestScore > alphaOriginal) && (bestScore < beta);
-    const bool isTBUpperBound = IsTBUpperBound(bestScore);
+    const bool tbUpperBound = IsTBUpperBound(bestScore);
 
-    if(!m_limits.Stopped() && isTBUpperBound) {
+    if(!m_limits.Stopped() && (withinBounds || tbUpperBound)) {
         m_bestMove = bestMove;
         m_bestScore = bestScore;
-    }
-    if(!m_limits.Stopped() && (withinBounds || isTBUpperBound)) {
-        assert(bestMove == m_bestMove && bestScore == m_bestScore);
-        D( m_debug.Increment("RootMax: AlphaBeta: TT Store") );
-
+        
         const TTENTRY_TYPE type = IsTBLowerBound(bestScore) ? TTENTRY_TYPE::LOWER_BOUND
-                                : isTBUpperBound            ? TTENTRY_TYPE::UPPER_BOUND
+                                : tbUpperBound              ? TTENTRY_TYPE::UPPER_BOUND
                                                             : TTENTRY_TYPE::EXACT;
-
+        
+        D( m_debug.Increment("RootMax: AlphaBeta: TT Store") );
         m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, m_searchCount);
     }
 
@@ -685,15 +684,17 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         score = std::min(score, tbUpperBound);
 
-        const bool isTBUpperBound = IsTBUpperBound(score);
-
         if(score > bestScore) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
             bestMove = move;
         }
 
-        if(!isTBUpperBound && score >= beta) {
+        // A TB upper bound should not cause a beta cutoff or raise alpha
+        if(IsTBUpperBound(score))
+            continue;
+
+        if(score >= beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
             m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
@@ -707,7 +708,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             return score;
         }
 
-        if(!isTBUpperBound && score > alpha) {
+        if(score > alpha) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
  
@@ -861,17 +862,19 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         D( BoardIdentity aft = BoardIntegrityChecker::GenerateBoardIdentity(board); );
         D( assert(bef == aft) );
 
-        const bool isTBUpperBound = IsTBUpperBound(score);
-
         if(score > bestScore)
             bestScore = score;
 
-        if(!isTBUpperBound && score >= beta) {
+        // A TB upper bound should not cause a beta cutoff or raise alpha
+        if(IsTBUpperBound(score))
+            continue;
+
+        if(score >= beta) {
             m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
             return score;
         }
 
-        if(!isTBUpperBound && score > alpha)
+        if(score > alpha)
             alpha = score;
     }
 
