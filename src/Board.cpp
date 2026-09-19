@@ -342,21 +342,6 @@ bool Board::IsCheck() {
     return m_kingAttackers[color];
 }
 
-bool Board::IsCheckAnyColor() {
-    //Active color
-    m_checkCalculated = false;
-    bool check_active = IsCheck();
-
-    //Inactive color
-    m_checkCalculated = false;
-    m_activePlayer = (COLOR)!m_activePlayer;
-    bool check_inactive = IsCheck();
-    m_activePlayer = (COLOR)!m_activePlayer;
-    m_checkCalculated = false;
-
-    return check_active || check_inactive;
-}
-
 // Detects a position repetition within a search (same Zobrist Key)
 bool Board::IsRepetitionDraw() const {
     const uint limit = std::min((uint)m_fiftyrule, m_ply);

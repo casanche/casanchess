@@ -12,8 +12,6 @@
 
 #include <vector>
 
-const int MAX_ROOTMOVES = 256;
-
 using BOUND_TYPE = TTENTRY_TYPE;
 
 class Search {

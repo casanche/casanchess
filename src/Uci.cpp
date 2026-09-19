@@ -41,6 +41,9 @@ void Uci::Launch() {
     std::string line;
 
     while(std::getline(std::cin, line)) {
+        if(line.ends_with('\r'))
+            line.pop_back();
+
         std::istringstream stream(line);
         std::string token;
         stream >> std::skipws >> token;
@@ -246,13 +249,6 @@ void Uci::Go(std::istringstream &stream) {
         else if(token == "binc") stream >> limits.binc;
         else if(token == "movestogo") stream >> limits.movesToGo;
 
-        else {
-            const uint DEFAULT_NODES = 150000;
-            P("[WARNING] UNDEFINED GO STATEMENT: " << token << " -> Using default statement: 'go nodes " << DEFAULT_NODES << "'");
-            limits.nodes = DEFAULT_NODES;
-            break;
-        }
-
     }
 
     m_searchThread = std::thread(&Engine::StartSearch, m_engine.get(), limits);
@@ -366,9 +362,6 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> std::ws; // Skip leading whitespaces
             std::getline(stream, path); // Support spaces
 
-            if(path.ends_with('\r'))
-                path.pop_back();
-
             if(path == "<empty>")
                 path.clear();
 
@@ -387,9 +380,6 @@ void Uci::SetOption(std::istringstream &stream) {
 
             stream >> std::ws;
             std::getline(stream, path);
-
-            if(path.ends_with('\r'))
-                path.pop_back();
 
             Syzygy::Init(path);
         }

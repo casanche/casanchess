@@ -51,9 +51,4 @@ namespace Scorer {
             && score <= HISTORY_MAX;
     }
 
-    // Composite methods
-    
-    inline bool IsNegativeOrNeutral(int score) {
-        return IsNeutralCapture(score) || IsNegativeCapture(score);
-    }
 }

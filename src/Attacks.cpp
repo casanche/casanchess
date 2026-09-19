@@ -146,10 +146,6 @@ void Attacks::Init() {
 
 }
 
-Bitboard Attacks::GetRay(DIRECTIONS direction, int square) {
-    return m_Rays[direction][square];
-}
-
 Bitboard Attacks::AttacksPawns(COLOR color, int square) {
     return m_NonSlidingAttacks[color][PAWN][square];
 }
@@ -215,20 +211,4 @@ Bitboard Attacks::AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard bloc
 
 Bitboard Attacks::Between(int sq1, int sq2) {
     return m_Between[sq1][sq2];
-}
-
-bool Attacks::IsInDirection(PIECE_TYPE pieceType, int sq1, int sq2) {
-    bool inDirection = Between(sq1, sq2);
-
-    if(inDirection) {
-        DIRECTIONS direction = GetDirection(sq1, sq2);
-        bool inStraightDirection = (direction == NORTH || direction == SOUTH || direction == EAST || direction == WEST);
-        bool inDiagonalDirection = (direction == NORTH_EAST || direction == NORTH_WEST || direction == SOUTH_EAST || direction == SOUTH_WEST);
-
-        if(pieceType == ROOK && inStraightDirection)
-            return true;
-        if(pieceType == BISHOP && inDiagonalDirection)
-            return true;
-    }
-    return false;
 }

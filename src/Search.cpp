@@ -152,7 +152,7 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
     D( m_debug.Increment("IterativeDeepening: _: Start") );
     m_searchCount++;
 
-    for(m_depth = 1; m_depth <= m_limits.MaxDepth() && !rootMoves.empty(); m_depth++) {
+    for(m_depth = 1; m_depth <= m_limits.MaxDepth(); m_depth++) {
         assert(m_ply == 0);
         assert(m_plyqs == 0);
         assert(m_nullmoveAllowed);
