@@ -146,17 +146,20 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
     SetRootContext(board);
 
     MoveList rootMoves = MoveGenerator::GenerateMoves(board);
-    size_t movesSize = rootMoves.size();
 
-    m_limits.StartNewSearch(board.ActivePlayer(), limits, movesSize);
+    m_limits.StartNewSearch(board.ActivePlayer(), limits, rootMoves.size());
     
     D( m_debug.Increment("IterativeDeepening: _: Start") );
     m_searchCount++;
 
-    for(m_depth = 1; m_depth <= m_limits.MaxDepth(); m_depth++) {
+    for(m_depth = 1; m_depth <= m_limits.MaxDepth() && !rootMoves.empty(); m_depth++) {
         assert(m_ply == 0);
         assert(m_plyqs == 0);
         assert(m_nullmoveAllowed);
+        if(rootMoves.empty()) {
+            m_bestScore = board.IsCheck() ? -MATESCORE_MAX : DrawScore(board);
+            break;
+        }
 
         m_selPly = 0;
 
