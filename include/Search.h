@@ -61,6 +61,9 @@ private:
     int DrawScore(const Board& board) const;
     u64 EvalKey(const Board& board) const { return board.ZKey() ^ m_evalKeyContext; }
 
+    // AspirationWindow methods
+    int SearchBeyondTB(Board& board, const int depth, const int tbScore);
+
     // NegaMax methods
     int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
 

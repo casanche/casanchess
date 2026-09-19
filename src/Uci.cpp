@@ -278,13 +278,9 @@ void Uci::Position(std::istringstream &stream) {
 
         while(stream >> token) {
             if(token == "moves") continue;
-            // P(token);
             board.MakeMove(token);
         }
-
-        // board.Print();
     }
-
 }
 
 void Uci::SetOption(std::istringstream &stream) {
@@ -304,7 +300,6 @@ void Uci::SetOption(std::istringstream &stream) {
             if(token != "value")
                 return;
             stream >> token;
-            P(token);
 
             tt.SetSize( stoi(token) );
         }
@@ -313,12 +308,20 @@ void Uci::SetOption(std::istringstream &stream) {
             if(token != "value")
                 return;
             stream >> token;
-            P(token);
 
             if(token == "true")
                 UCI_PONDER = true;
             else if(token == "false")
                 UCI_PONDER = false;
+        }
+        else if(token == "Threads") {
+            stream >> token; // should be 'value'
+            if(token != "value")
+                return;
+            stream >> token;
+
+            if(token != "1")
+                return;
         }
         else if(token == "ClearHash") {
             tt.Clear();

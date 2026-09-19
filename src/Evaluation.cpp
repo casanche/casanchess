@@ -14,11 +14,14 @@ namespace Evaluation {
 
     namespace {
 
+        // K vs K, K+N/B vs K
         bool InsufficientMaterial(const Board& board) {
-            return !board.Piece(WHITE, PAWN) && !board.Piece(BLACK, PAWN)
-                && PopCount(board.AllPieces()) == 3
-                && PopCount(board.Piece(WHITE, KNIGHT) | board.Piece(WHITE, BISHOP)
-                    | board.Piece(BLACK, KNIGHT) | board.Piece(BLACK, BISHOP));
+            const int pieces = PopCount(board.AllPieces());
+            return pieces == 2 || (
+                pieces == 3
+                && ( board.Piece(WHITE, KNIGHT) | board.Piece(WHITE, BISHOP)
+                   | board.Piece(BLACK, KNIGHT) | board.Piece(BLACK, BISHOP) ) != 0
+            );
         }
 
         int EvaluateObjective(const Board& board) {

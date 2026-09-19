@@ -81,8 +81,8 @@ public:
     inline Bitboard EnPassantSquare() const { return m_enPassantSquare; }
     inline u8 FiftyRule() const             { return m_fiftyrule; }
     inline Bitboard GetPieces(COLOR color, PIECE_TYPE pieceType) const { return m_pieces[color][pieceType]; }
+    inline uint MoveNumber() const          { return m_initialMoveNumber + (m_ply + 1 - m_activePlayer) / 2; }
     inline COLOR InactivePlayer() const     { return (COLOR)!m_activePlayer; }
-    inline unsigned int MoveNumber() const  { return m_moveNumber; }
     inline Move LastMove() const            { return m_history[m_ply].move; }
     inline Bitboard Piece(COLOR color, PIECE_TYPE pieceType) const     { return m_pieces[color][pieceType]; }
     inline unsigned int Ply() const         { return m_ply; }
@@ -107,7 +107,6 @@ private:
     COLOR m_activePlayer;
     u8 m_castlingRights; //[0-4] bits: the castling rights
     u8 m_fiftyrule;
-    uint m_moveNumber;
     uint m_ply; //a ply is half a move
     Bitboard m_enPassantSquare;
     ZobristKey m_zobristKey;
@@ -121,7 +120,7 @@ private:
     bool m_checkCalculated;
 
     //History
-    uint m_initialPly;
+    uint m_initialMoveNumber;
     BoardHistory m_history[MAX_PLY_HISTORY];
 
     //NNUE

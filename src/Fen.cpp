@@ -71,12 +71,8 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     //Move number
     token = "-";
     fenStream >> token;
-    if(token != "-" && token != "0") {
-        board.m_moveNumber = std::stoi(token);
-        board.m_ply = (board.m_moveNumber-1) * 2;
-        board.m_ply += board.ActivePlayer(); //add one if white already moved
-        board.m_initialPly = board.m_ply;
-    }
+    if(token != "-" && token != "0")
+        board.m_initialMoveNumber = std::stoi(token);
 
     board.InitStateAndHistory();
 }
@@ -111,7 +107,7 @@ std::string Fen::GetFen(const Board& board) {
     buffer += " " + std::to_string((int)board.FiftyRule());
 
     // Move number
-    buffer += " " + std::to_string(board.Ply());
+    buffer += " " + std::to_string(board.MoveNumber());
 
     return buffer;
 }
