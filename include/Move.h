@@ -70,7 +70,7 @@ public:
 
 private:
     std::string PieceTypeToNotation(PIECE_TYPE pieceType) const;
-    std::string DescriptiveNotation() const;
+    std::string UciNotation() const;
 
     void PrintBits32(u32 word, int startBit, int endBit) const;
 
