@@ -52,7 +52,7 @@ if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     endif()
 else()
     set(WARNING_FLAGS -Wall -Wextra -Wshadow)
-    set(ARCH_FLAGS -march=x86-64-v3 -mtune=generic)
+    set(ARCH_FLAGS -march=x86-64-v3)
     set(OPTIMIZATION_FLAGS -O3 -ffast-math -DNDEBUG -funroll-loops)
     set(COMPILER_OPTIONS
         ${WARNING_FLAGS} ${ARCH_FLAGS}
