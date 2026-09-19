@@ -1,6 +1,7 @@
 build*
 dev/
 docs/
+experiments/
 testing/
 tools/
 versions/
