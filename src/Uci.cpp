@@ -177,7 +177,7 @@ void Uci::Bench(int depth, bool verbose) {
     UCI_OUTPUT = false;
 
     // Disable Syzygy tables
-    bool original_SyzygyProbeLimit = UCI_SYZYGY_PROBE_LIMIT;
+    const uint originalSyzygyProbeLimit = UCI_SYZYGY_PROBE_LIMIT;
     UCI_SYZYGY_PROBE_LIMIT = 0;
 
     for(size_t i = 0; i < testPositions.size(); i++) {
@@ -215,7 +215,7 @@ void Uci::Bench(int depth, bool verbose) {
 
     // Restore UCI parameters
     UCI_OUTPUT = original_UciOutput;
-    UCI_SYZYGY_PROBE_LIMIT = original_SyzygyProbeLimit;
+    UCI_SYZYGY_PROBE_LIMIT = originalSyzygyProbeLimit;
 
     // Overall results
     double avgNps = positionCount > 0 ? (totalNps / (double)positionCount) : 0;
