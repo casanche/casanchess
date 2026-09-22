@@ -827,9 +827,9 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             const int seeValue = (move == hashMove) ? board.SEE(move)
                                                     : Scorer::SEEFromTacticalScore( move.Score() );
 
-            // Prune negative SEE captures
-            if(seeValue < 0) {
-                D( m_debug.Increment("Quiescence: Pruning SEE < 0") );
+            // Prune negative and neutral SEE captures
+            if(seeValue <= 0) {
+                D( m_debug.Increment("Quiescence: Pruning SEE <= 0") );
                 continue;
             }
             
