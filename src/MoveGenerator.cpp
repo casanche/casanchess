@@ -23,9 +23,6 @@ using namespace Attacks;
 #include "Board.h"
 #include "Utils.h" //random
 
-#include <algorithm>
-#include <iostream>
-
 namespace {
     enum class GENERATION_TYPE {Legal, Evasion, Tactical};
 
@@ -132,8 +129,6 @@ namespace {
     }
 
     void InitContext(Context &context, const Board& board) {
-        context.moves = nullptr;
-
         context.color = board.ActivePlayer();
         context.enemyColor = board.InactivePlayer();
 
@@ -302,8 +297,8 @@ namespace {
         Bitboard attack[2] = { RWest(RNorth(thePawns)) & context.enemyPieces,
                             REast(RNorth(thePawns)) & context.enemyPieces };
         Bitboard promotionPush = (singlePush & MaskRank[relativeRank8]);
-        Bitboard promotionAttack[2] = { attack[LEFT]  & context.enemyPieces & MaskRank[relativeRank8],
-                                        attack[RIGHT] & context.enemyPieces & MaskRank[relativeRank8] };
+        Bitboard promotionAttack[2] = { attack[LEFT]  & MaskRank[relativeRank8],
+                                        attack[RIGHT] & MaskRank[relativeRank8] };
         Bitboard enpassant[2] = {0};
         if(board.EnPassantSquare()) {
             enpassant[LEFT]  = RWest(RNorth(thePawns)) & board.EnPassantSquare();
@@ -372,11 +367,9 @@ namespace {
                 if(board.AttackersTo(context.color, kingSquare, blockers) & ~enemyPawn) //any attackers that are not the enemy pawn?
                     continue;
 
-                if(toBitboard) {
-                    Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::ENPASSANT);
-                    move.SetCapturedType(PAWN);
-                    context.AddMove(move);
-                }
+                Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::ENPASSANT);
+                move.SetCapturedType(PAWN);
+                context.AddMove(move);
             }
         }
     }
@@ -435,9 +428,8 @@ namespace {
         MoveList moves; // Assuming RVO/NRVO optimization by the compiler to avoid the return copy
 
         Context context;
-        InitContext(context, board);
-
         context.moves = &moves;
+        InitContext(context, board);
 
         switch(type) {
             case GENERATION_TYPE::Legal:

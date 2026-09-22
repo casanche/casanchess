@@ -8,11 +8,6 @@
 #include "Move.h"
 #include "PV.h"
 #include "SearchLimits.h"
-#include "Utils.h"
-
-#include <vector>
-
-const int MAX_ROOTMOVES = 256;
 
 using BOUND_TYPE = TTENTRY_TYPE;
 

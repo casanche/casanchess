@@ -3,8 +3,6 @@
 #include "Attacks.h"
 #include "BitboardUtils.h"
 
-#include <iterator>
-
 namespace {
     constexpr Bitboard LIGHT_SQUARES = 0x55AA55AA55AA55AA;
     constexpr Bitboard DARK_SQUARES = 0xAA55AA55AA55AA55;

@@ -41,6 +41,9 @@ void Uci::Launch() {
     std::string line;
 
     while(std::getline(std::cin, line)) {
+        if(line.ends_with('\r'))
+            line.pop_back();
+
         std::istringstream stream(line);
         std::string token;
         stream >> std::skipws >> token;
@@ -54,7 +57,7 @@ void Uci::Launch() {
 
             //Options
             std::cout << "option name Ambition type spin default " << UCI_AMBITION_DEFAULT << " min 0 max 50" << std::endl;
-            std::cout << "option name ClearHash type button" << std::endl;
+            std::cout << "option name Clear Hash type button" << std::endl;
             std::cout << "option name Contempt type spin default 10 min -100 max 100" << std::endl;
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
             std::cout << "option name NNUE_Path type string default <empty>" << std::endl;
@@ -174,7 +177,7 @@ void Uci::Bench(int depth, bool verbose) {
     UCI_OUTPUT = false;
 
     // Disable Syzygy tables
-    bool original_SyzygyProbeLimit = UCI_SYZYGY_PROBE_LIMIT;
+    const uint originalSyzygyProbeLimit = UCI_SYZYGY_PROBE_LIMIT;
     UCI_SYZYGY_PROBE_LIMIT = 0;
 
     for(size_t i = 0; i < testPositions.size(); i++) {
@@ -212,7 +215,7 @@ void Uci::Bench(int depth, bool verbose) {
 
     // Restore UCI parameters
     UCI_OUTPUT = original_UciOutput;
-    UCI_SYZYGY_PROBE_LIMIT = original_SyzygyProbeLimit;
+    UCI_SYZYGY_PROBE_LIMIT = originalSyzygyProbeLimit;
 
     // Overall results
     double avgNps = positionCount > 0 ? (totalNps / (double)positionCount) : 0;
@@ -245,13 +248,6 @@ void Uci::Go(std::istringstream &stream) {
         else if(token == "winc") stream >> limits.winc;
         else if(token == "binc") stream >> limits.binc;
         else if(token == "movestogo") stream >> limits.movesToGo;
-
-        else {
-            const uint DEFAULT_NODES = 150000;
-            P("[WARNING] UNDEFINED GO STATEMENT: " << token << " -> Using default statement: 'go nodes " << DEFAULT_NODES << "'");
-            limits.nodes = DEFAULT_NODES;
-            break;
-        }
 
     }
 
@@ -326,8 +322,10 @@ void Uci::SetOption(std::istringstream &stream) {
             if(token != "1")
                 return;
         }
-        else if(token == "ClearHash") {
-            tt.Clear();
+        else if(token == "Clear") {
+            stream >> token;
+            if(token == "Hash")
+                tt.Clear();
         }
         else if(token == "Ambition") {
             stream >> token; // should be 'value'
@@ -364,9 +362,6 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> std::ws; // Skip leading whitespaces
             std::getline(stream, path); // Support spaces
 
-            if(path.ends_with('\r'))
-                path.pop_back();
-
             if(path == "<empty>")
                 path.clear();
 
@@ -380,9 +375,12 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
             if(token != "value")
                 return;
-            stream >> token;
 
-            std::string path = token;
+            std::string path;
+
+            stream >> std::ws;
+            std::getline(stream, path);
+
             Syzygy::Init(path);
         }
         else if (token == "SyzygyProbeLimit") {
@@ -410,7 +408,7 @@ void Uci::ShowHashMoves() {
 
     for(auto move : moves) {
         board.MakeMove(move);
-        TTEntry* ttEntry = tt.Probe(search.TTKey(board));
+        const TTEntry* ttEntry = tt.Probe(search.TTKey(board));
         if(ttEntry)
             P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
         board.TakeMove(move);

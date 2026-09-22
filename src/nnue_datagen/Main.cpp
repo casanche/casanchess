@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <span>
 #include <string_view>
 
 struct CliArgs {

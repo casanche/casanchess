@@ -39,7 +39,7 @@ void ZobristKeys::Init() {
 
 ZobristKey::ZobristKey() : m_key(0) {}
 
-void ZobristKey::SetKey(Board& board) {
+void ZobristKey::SetKey(const Board& board) {
     m_key = 0;
 
     //Color

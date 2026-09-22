@@ -37,18 +37,22 @@ public:
     TT();
     ~TT();
 
+    // Avoid copying
+    TT(const TT&) = delete;
+    TT& operator=(const TT&) = delete;
+
     void Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age, int eval = NO_EVAL);
-    TTEntry* Probe(u64 zkey);
+    const TTEntry* Probe(u64 zkey) const;
 
     void Clear();
     void SetSize(int sizeInMB);
 
     u64 Size() { return m_size; };
     u64 Occupancy(u64 sampleSize = 1000) const;
-    int ScoreFromHash(int score, int ply);
+    static int ScoreFromHash(int score, int ply);
 
 private:
-    int ScoreToHash(int score, int ply);
+    static int ScoreToHash(int score, int ply);
 
     TTEntry* m_entries;
     u64 m_size; // Number of entries
@@ -71,7 +75,7 @@ public:
     EvalCache();
 
     void Store(u64 zkey, int eval);
-    bool Probe(u64 zkey, int& eval);
+    bool Probe(u64 zkey, int& eval) const;
 
     void Clear();
 
