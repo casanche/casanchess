@@ -382,9 +382,15 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> token;
             if(token != "value")
                 return;
-            stream >> token;
 
-            std::string path = token;
+            std::string path;
+
+            stream >> std::ws;
+            std::getline(stream, path);
+
+            if(path.ends_with('\r'))
+                path.pop_back();
+
             Syzygy::Init(path);
         }
         else if (token == "SyzygyProbeLimit") {
