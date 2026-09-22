@@ -226,7 +226,6 @@ Move Datagen::SoftRandomize(Board& board, Search& search, Utils::PRNG& rng) {
     for(const Move move : moves) {
         board.MakeMove(move);
 
-        search.ClearSearch(false);
         search.IterativeDeepening(board, UCI_Limits::FixNodes(m_config.SOFT_RANDOMIZE_NODES));
 
         const int score = -search.BestScore();
@@ -379,8 +378,7 @@ void Datagen::RandomBenchmark(int maxGames) {
         totalGenerationTime += clock.Elapsed();
 
         clock.Start();
-        validationSearch.ClearSearch(true);
-        validationSearch.IterativeDeepening(board, UCI_Limits::FixDepth(7));
+        validationSearch.IterativeDeepening(board, UCI_Limits::FixDepth(7), true);
         totalSearchTime += clock.Elapsed();
 
         if(n_game % 10 == 0 || n_game == maxGames) {
@@ -462,7 +460,6 @@ bool Datagen::ValidateRandomPosition(Board& board, Search& search) {
     if(NoMoves(board) || nPieces <= 6 || board.IsCheck())
         return false;
 
-    search.ClearSearch(false);
     search.IterativeDeepening(board, UCI_Limits::FixNodes(m_config.RANDOM_VALIDATION_NODES));
     return std::abs(search.BestScore()) <= m_config.RANDOM_SCORE_FILTER;
 }
