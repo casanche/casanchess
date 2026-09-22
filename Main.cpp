@@ -5,64 +5,69 @@
 #include "Uci.h"
 #include "Utils.h"
 #include "ZobristKeys.h"
+#include "src/nnue_embed/EmbeddedNetwork.h"
 
 #include <iostream>
-#include <span>
+#include <string>
 #include <string_view>
 
 int main(int argc, char** argv) {
     Utils::Clock clock;
     clock.Start();
 
+    std::string networkPath;
+    std::string_view mode = "uci";
+    std::string fen;
+    int benchDepth = 9;
+
+    // Parse command line arguments
+    for(int i = 1; i < argc; ++i) {
+        const std::string_view arg = argv[i];
+
+        if(arg == "-i") {
+            mode = "interactive";
+            if(i + 1 < argc && argv[i + 1][0] != '-')
+                fen = argv[++i];
+        }
+        else if(arg == "-n" && i + 1 < argc) {
+            networkPath = argv[++i];
+        }
+        else if(arg == "bench") {
+            mode = "bench";
+            if(i + 1 < argc && argv[i + 1][0] != '-')
+                benchDepth = std::stoi(argv[++i]);
+        }
+    }
+
+    // NNUE loading
+    const auto embeddedNetwork = EmbeddedNetwork::Bytes();
+    const bool loaded = networkPath.empty() ? NNUE::LoadBytes(embeddedNetwork)
+                                            : NNUE::LoadFile(networkPath);
+    if(!loaded)
+        return 1;
+
+    // Initialize components
     Attacks::Init();
     Syzygy::Init(Syzygy::DEFAULT_PATH);
     ZobristKeys::Init();
 
-    std::string NNUEPath_CLI = "";
+    if(mode == "interactive") {
+        Interface interface;
+        interface.Start(fen);
 
-    // Parse command line arguments
-    std::span<char*> args(argv, argc);
-    for (size_t i = 1; i < args.size(); ++i) {
-        std::string_view arg = args[i];
-
-        if (arg == "-i") {
-            Interface interface;
-            interface.Start();
-            return 0;
-        }
-        else if (arg == "-j" && i + 1 < args.size()) {
-            // Interface from fen position
-            Interface interface;
-            interface.Start(args[i + 1]);
-            return 0;
-        }
-        else if (arg == "-n" && i + 1 < args.size()) {
-            NNUEPath_CLI = args[i + 1];
-            ++i; // Skip next argument as it's the path
-        }
-        else if (arg == "bench") {
-            int depth = 9;
-            if (i + 1 < args.size()) {
-                try {
-                    depth = std::stoi(args[i + 1]);
-                    ++i;
-                } catch (...) {}
-            }
-
-            NNUE::Load(NNUEPath_CLI);
-
-            Uci uci;
-            uci.Bench(depth, false);
-            return 0;
-        }
+        Syzygy::Free();
+        return 0;
     }
 
-    NNUE::Load(NNUEPath_CLI);
+    Uci uci(embeddedNetwork);
 
-    Uci uci;
-    uci.Launch();
-
-    std::cout << "info string [TIME] " << clock.Elapsed() << " ms" << std::endl;
+    if(mode == "bench") {
+        uci.Bench(benchDepth, false);
+    }
+    else {
+        uci.Launch();
+        std::cout << "info string [TIME] " << clock.Elapsed() << " ms" << std::endl;
+    }
 
     Syzygy::Free();
     return 0;

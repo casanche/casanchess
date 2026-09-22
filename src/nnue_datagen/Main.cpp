@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
     Attacks::Init();
     const unsigned int syzygyMaxPieces = Syzygy::Init(Syzygy::DEFAULT_PATH);
     ZobristKeys::Init();
-    NNUE::Load();
+    NNUE::LoadFile();
 
     UCI_DRAW_CONTEMPT = 0;
     UCI_AMBITION = 0;

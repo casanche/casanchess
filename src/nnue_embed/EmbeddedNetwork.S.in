@@ -1,0 +1,11 @@
+/* NNUE SHA-256: @NNUE_SHA256@ */
+
+.section .rodata
+.global nnue_begin
+.global nnue_end
+
+nnue_begin:
+.incbin "@NNUE_FILE@"
+nnue_end:
+
+.section .note.GNU-stack,"",@progbits

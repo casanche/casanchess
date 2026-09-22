@@ -192,14 +192,41 @@ target_link_libraries(casanchess PRIVATE $<TARGET_OBJECTS:engine_obj> engine)
 # =============================================================================
 # Data Files
 # =============================================================================
-# Copy NNUE files to build directory
-file(GLOB NNUE_FILES "${CMAKE_SOURCE_DIR}/data/*.nnue")
-if(NNUE_FILES)
-    file(COPY ${NNUE_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    message(STATUS "Copied NNUE files: ${NNUE_FILES}")
+file(GLOB NNUE_FILE CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/data/*.nnue")
+get_filename_component(NNUE_FILENAME "${NNUE_FILE}" NAME)
+
+# Make the embedding source change when the network changes
+file(SHA256 "${NNUE_FILE}" NNUE_SHA256)
+
+# Copy the NNUE file for tests and other executables
+configure_file(
+    "${NNUE_FILE}"
+    "${CMAKE_CURRENT_BINARY_DIR}/${NNUE_FILENAME}"
+    COPYONLY
+)
+
+target_compile_definitions(engine_obj PUBLIC NNUE_FILENAME="${NNUE_FILENAME}")
+
+if(WIN32)
+    enable_language(RC)
+    set(NNUE_EMBED_EXTENSION rc)
+    set(NNUE_EMBED_SOURCE src/nnue_embed/EmbeddedNetworkWindows.cpp)
 else()
-    message(WARNING "No NNUE files found in data/ directory")
+    enable_language(ASM)
+    set(NNUE_EMBED_EXTENSION S)
+    set(NNUE_EMBED_SOURCE src/nnue_embed/EmbeddedNetworkLinux.cpp)
 endif()
+
+configure_file(
+    src/nnue_embed/EmbeddedNetwork.${NNUE_EMBED_EXTENSION}.in
+    EmbeddedNetwork.${NNUE_EMBED_EXTENSION}
+    @ONLY
+)
+
+target_sources(casanchess PRIVATE
+    ${NNUE_EMBED_SOURCE}
+    "${CMAKE_CURRENT_BINARY_DIR}/EmbeddedNetwork.${NNUE_EMBED_EXTENSION}"
+)
 
 # =============================================================================
 # Tests

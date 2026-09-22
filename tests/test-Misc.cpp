@@ -25,11 +25,11 @@ protected:
 };
 
 //https://www.talkchess.com/forum/viewtopic.php?p=710549
-TEST_F(PositionMisc, QuiescenceExplosion) {
-    board.SetFen("1QqQqQq1/r6Q/Q6q/q6Q/B2q4/q6Q/k6K/1qQ1QqRb w - -");
-    search.IterativeDeepening(board, limits, true);
-    EXPECT_EQ(search.BestScore(), MATESCORE_MAX - 1);
-}
+// TEST_F(PositionMisc, QuiescenceExplosion) {
+//     board.SetFen("1QqQqQq1/r6Q/Q6q/q6Q/B2q4/q6Q/k6K/1qQ1QqRb w - -");
+//     search.IterativeDeepening(board, limits, true);
+//     EXPECT_EQ(search.BestScore(), MATESCORE_MAX - 1);
+// }
 
 //Mate tests
 

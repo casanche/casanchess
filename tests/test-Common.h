@@ -21,7 +21,7 @@ namespace TestCommon {
     inline void InitEngine() {
         Attacks::Init();
         ZobristKeys::Init();
-        NNUE::Load();
+        NNUE::LoadFile();
     }
 
     class CoutHelper {
