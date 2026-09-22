@@ -25,7 +25,10 @@ namespace {
     const std::string VERSION_PATCH = "2";
 }
 
-Uci::Uci() : m_engine(std::make_unique<Engine>()) {}
+Uci::Uci(std::span<const std::byte> embeddedNetwork) :
+    m_embeddedNetwork(embeddedNetwork),
+    m_engine(std::make_unique<Engine>())
+{}
 
 Uci::~Uci() {
     StopAndJoin();
@@ -54,7 +57,7 @@ void Uci::Launch() {
             std::cout << "option name ClearHash type button" << std::endl;
             std::cout << "option name Contempt type spin default 10 min -100 max 100" << std::endl;
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
-            std::cout << "option name NNUE_Path type string default " << NNUE::GetPath() << std::endl;
+            std::cout << "option name NNUE_Path type string default <empty>" << std::endl;
             std::cout << "option name Ponder type check default false" << std::endl;
             std::cout << "option name SyzygyPath type string default " << Syzygy::DEFAULT_PATH << std::endl;
             std::cout << "option name SyzygyProbeLimit type spin default " << UCI_SYZYGY_PROBE_LIMIT << " min 0 max 7" << std::endl;
@@ -361,12 +364,17 @@ void Uci::SetOption(std::istringstream &stream) {
             stream >> std::ws; // Skip leading whitespaces
             std::getline(stream, path); // Support spaces
 
-            if(path.ends_with("\r"))
+            if(path.ends_with('\r'))
                 path.pop_back();
 
-            NNUE::Load(path);
+            if(path == "<empty>")
+                path.clear();
 
-            m_engine->NewGame();
+            const bool loaded = path.empty() ? NNUE::LoadBytes(m_embeddedNetwork)
+                                             : NNUE::LoadFile(path);
+
+            if(loaded)
+                m_engine->NewGame();
         }
         else if (token == "SyzygyPath") {
             stream >> token;

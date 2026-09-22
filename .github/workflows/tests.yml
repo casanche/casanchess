@@ -141,8 +141,7 @@ jobs:
         done
 
     - name: Bench
-      working-directory: ./build
-      run: echo bench | ./${CONFIG_DIR}casanchess${EXE_SUFFIX}
+      run: echo bench | ./build/${CONFIG_DIR}casanchess${EXE_SUFFIX}
 
     - name: Smoke Test - UCI
       working-directory: ./build
@@ -190,5 +189,4 @@ jobs:
         path: |
           build/casanchess*
           build/Release/casanchess*
-          build/*.nnue
         retention-days: 2

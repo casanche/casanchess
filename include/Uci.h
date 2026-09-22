@@ -4,8 +4,10 @@
 #include "Search.h"
 #include "SearchLimits.h"
 
+#include <cstddef>
 #include <memory>
 #include <sstream>
+#include <span>
 #include <thread>
 
 struct Engine;
@@ -22,8 +24,9 @@ inline bool UCI_OUTPUT = true;
 
 class Uci {
 public:
-    Uci();
+    Uci(std::span<const std::byte> embeddedNetwork);
     ~Uci();
+
     void Bench(int depth, bool verbose);
     void Launch();
 
@@ -40,6 +43,7 @@ private:
     void ShowHashMoves();
     void StopAndJoin();
     
+    std::span<const std::byte> m_embeddedNetwork;
     std::unique_ptr<Engine> m_engine;
     std::thread m_searchThread;
 };

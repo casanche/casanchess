@@ -38,7 +38,7 @@ namespace {
     constexpr i32 SCReLU(i32 value) {
         value = std::clamp(value, 0, NNUEConstants::QUANT_FACTOR_L1);
         return (value * value + NNUEConstants::QUANT_FACTOR_L1 / 2)
-             / NNUEConstants::QUANT_FACTOR_L1;
+                    / NNUEConstants::QUANT_FACTOR_L1;
     }
 
     #if defined(__AVX2__)
@@ -79,39 +79,42 @@ namespace {
     }
 }
 
-// =========================
-// ===== SharedNetwork =====
-// =========================
+// =================
+// ===== Load ======
+// =================
 
-bool SharedNetwork::Load(const std::string& path) {
-    const std::string networkPath = path.empty() ? filepath : path;
+bool NNUE::LoadBytes(std::span<const std::byte> bytes) {
+    if(bytes.size() != sizeof(Network))
+        return false;
 
-    std::ifstream file(networkPath, std::ios::binary);
+    std::memcpy(&s_network, bytes.data(), sizeof(Network));
+    return true;
+}
 
-    if(!file.is_open()) {
-        std::cerr << "info string ERROR: NNUE file not found: " << networkPath << std::endl;
+bool NNUE::LoadFile(const std::string& path) {
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
+
+    if(!file) {
+        std::cerr << "info string ERROR: NNUE file not found: " << path << std::endl;
         return false;
     }
 
-    file.seekg(0, std::ios::end);
-    const std::streampos fileSize = file.tellg();
-    if(fileSize != static_cast<std::streamoff>(sizeof(Network))) {
-        std::cerr << "info string ERROR: NNUE file size mismatch: " << networkPath << std::endl;
+    if(file.tellg() != static_cast<std::streamoff>(sizeof(Network))) {
+        std::cerr << "info string ERROR: NNUE file size mismatch: " << path << std::endl;
         return false;
     }
 
-    file.seekg(0, std::ios::beg);
-    auto candidate = std::make_unique<Network>();
+    auto candidate = std::make_unique_for_overwrite<Network>();
+
+    file.seekg(0);
     if(!file.read(reinterpret_cast<char*>(candidate.get()), sizeof(Network))) {
-        std::cerr << "info string ERROR: Could not read NNUE file: " << networkPath << std::endl;
+        std::cerr << "info string ERROR: Could not read NNUE file: " << path << std::endl;
         return false;
     }
 
-    network = *candidate;
-    filepath = networkPath;
-    isLoaded = true;
-    std::cout << "info string NNUE loaded: " << filepath << std::endl;
+    std::memcpy(&s_network, candidate.get(), sizeof(Network));
 
+    std::cout << "info string NNUE loaded: " << path << std::endl;
     return true;
 }
 
@@ -163,10 +166,10 @@ EvaluationOutput NNUE::EvaluateOutputs(int color, int ply) const {
 int NNUE::EvaluateFromActivated(const i16* activated, int color, int ply) const {
     i16 hidden[ ARCH[L2][COL] ];
 
-    ComputeActivatedLayer(activated, hidden, s_shared.network.b2, s_shared.network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
+    ComputeActivatedLayer(activated, hidden, s_network.b2, s_network.w2, ARCH[L2][ROW], ARCH[L2][COL]);
 
-    i32 nonlinear = s_shared.network.b3[0];
-    nonlinear += DotProduct(hidden, s_shared.network.w3, ARCH[L3][ROW]);
+    i32 nonlinear = s_network.b3[0];
+    nonlinear += DotProduct(hidden, s_network.w3, ARCH[L3][ROW]);
 
     i32 linear = m_state->linearAccumulator[ply][color];
     linear -= m_state->linearAccumulator[ply][1-color];
@@ -178,8 +181,8 @@ int NNUE::EvaluateFromActivated(const i16* activated, int color, int ply) const 
 }
 
 int NNUE::DrawishnessFromActivated(const i16* activated) const {
-    i64 residual = s_shared.network.drawB;
-    residual += DotProduct(activated, s_shared.network.drawW, ARCH[L2][ROW]);
+    i64 residual = s_network.drawB;
+    residual += DotProduct(activated, s_network.drawW, ARCH[L2][ROW]);
 
     return static_cast<int>(residual * 100 / NNUEConstants::QUANT_FACTOR_B);
 }
@@ -189,8 +192,8 @@ void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {
     i16* acc_b = m_state->accumulator[ply][1];
 
     for(int i = 0; i < NNUE_SIZE; i++) {
-        acc_w[i] = s_shared.network.b1[i];
-        acc_b[i] = s_shared.network.b1[i];
+        acc_w[i] = s_network.b1[i];
+        acc_b[i] = s_network.b1[i];
     }
     m_state->linearAccumulator[ply][WHITE] = 0;
     m_state->linearAccumulator[ply][BLACK] = 0;
@@ -232,15 +235,15 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply, int ki
     i16* acc_w = m_state->accumulator[ply][0];
     i16* acc_b = m_state->accumulator[ply][1];
 
-    const i16* weights_w = &s_shared.network.w1[NNUE_SIZE * feature_w];
-    const i16* weights_b = &s_shared.network.w1[NNUE_SIZE * feature_b];
+    const i16* weights_w = &s_network.w1[NNUE_SIZE * feature_w];
+    const i16* weights_b = &s_network.w1[NNUE_SIZE * feature_b];
 
     for(int i = 0; i < NNUE_SIZE; i++) {
         acc_w[i] += weights_w[i];
         acc_b[i] += weights_b[i];
     }
-    m_state->linearAccumulator[ply][WHITE] += s_shared.network.linearW[feature_w];
-    m_state->linearAccumulator[ply][BLACK] += s_shared.network.linearW[feature_b];
+    m_state->linearAccumulator[ply][WHITE] += s_network.linearW[feature_w];
+    m_state->linearAccumulator[ply][BLACK] += s_network.linearW[feature_b];
 }
 
 void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply, int kingSquare_w, int kingSquare_b) {
@@ -258,15 +261,15 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply, int
     i16* acc_w = m_state->accumulator[ply][0];
     i16* acc_b = m_state->accumulator[ply][1];
 
-    const i16* weights_w = &s_shared.network.w1[NNUE_SIZE * feature_w];
-    const i16* weights_b = &s_shared.network.w1[NNUE_SIZE * feature_b];
+    const i16* weights_w = &s_network.w1[NNUE_SIZE * feature_w];
+    const i16* weights_b = &s_network.w1[NNUE_SIZE * feature_b];
 
     for(int i = 0; i < NNUE_SIZE; i++) {
         acc_w[i] -= weights_w[i];
         acc_b[i] -= weights_b[i];
     }
-    m_state->linearAccumulator[ply][WHITE] -= s_shared.network.linearW[feature_w];
-    m_state->linearAccumulator[ply][BLACK] -= s_shared.network.linearW[feature_b];
+    m_state->linearAccumulator[ply][WHITE] -= s_network.linearW[feature_w];
+    m_state->linearAccumulator[ply][BLACK] -= s_network.linearW[feature_b];
 }
 
 void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int ply, int kingSquare_w, int kingSquare_b) {
@@ -293,10 +296,10 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
     i16* acc_w = m_state->accumulator[ply][0];
     i16* acc_b = m_state->accumulator[ply][1];
 
-    const i16* weights_from_w = &s_shared.network.w1[NNUE_SIZE * feature_from_w];
-    const i16* weights_from_b = &s_shared.network.w1[NNUE_SIZE * feature_from_b];
-    const i16* weights_to_w = &s_shared.network.w1[NNUE_SIZE * feature_to_w];
-    const i16* weights_to_b = &s_shared.network.w1[NNUE_SIZE * feature_to_b];
+    const i16* weights_from_w = &s_network.w1[NNUE_SIZE * feature_from_w];
+    const i16* weights_from_b = &s_network.w1[NNUE_SIZE * feature_from_b];
+    const i16* weights_to_w = &s_network.w1[NNUE_SIZE * feature_to_w];
+    const i16* weights_to_b = &s_network.w1[NNUE_SIZE * feature_to_b];
 
     for(int i = 0; i < NNUE_SIZE; i++) {
         acc_w[i] -= weights_from_w[i];
@@ -306,10 +309,10 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
         acc_b[i] += weights_to_b[i];
 
     }
-    m_state->linearAccumulator[ply][WHITE] -= s_shared.network.linearW[feature_from_w];
-    m_state->linearAccumulator[ply][BLACK] -= s_shared.network.linearW[feature_from_b];
-    m_state->linearAccumulator[ply][WHITE] += s_shared.network.linearW[feature_to_w];
-    m_state->linearAccumulator[ply][BLACK] += s_shared.network.linearW[feature_to_b];
+    m_state->linearAccumulator[ply][WHITE] -= s_network.linearW[feature_from_w];
+    m_state->linearAccumulator[ply][BLACK] -= s_network.linearW[feature_from_b];
+    m_state->linearAccumulator[ply][WHITE] += s_network.linearW[feature_to_w];
+    m_state->linearAccumulator[ply][BLACK] += s_network.linearW[feature_to_b];
 }
 
 void NNUE::CopyAccumulator(int fromPly, int toPly) {

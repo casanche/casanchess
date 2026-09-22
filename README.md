@@ -36,16 +36,10 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
 
-## UCI options
-* **``Ambition``**: Favor positions less likely to draw. Maximum evaluation adjustment in centipawns.
-* **``ClearHash``**: Reset the transposition table entries.
-* **``Hash``**: Transposition table size in MB. Default: 16MB
-* **``NNUE_Path``**: Absolute or relative path to the NNUE file.
-* **``Ponder``**: Allows the engine to think on opponent's time.
-
-For the NNUE evaluation to work, the `.nnue` file must be accessible.
-By default, you should put the network file in the working directory (usually the same directory as the `casanchess` executable).
-Alternatively, you can explicitly set its location using the `NNUE_Path` UCI option.
+## Non-standard UCI options
+* **``Ambition``**: Modify the score to favor positions less likely to draw, estimated from a dedicated NNUE output head.
+Measured to actually reduce the percentage of draws.
+The value is the maximum score adjustment in centipawns; 0 is objective score and a bit faster. Default: 15.
 
 ## Contributing
 Contributions are more than welcome. Whether it's reporting bugs, suggesting new features, testing or improving the code, every contribution is appreciated.

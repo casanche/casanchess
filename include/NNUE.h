@@ -2,25 +2,16 @@
 
 #include "NNUE_Architecture.h"
 
-#include <string>
+#include <cstddef>
 #include <memory>
+#include <span>
+#include <string>
 
 using PieceBitboards = Bitboard[2][8]; //[COLOR][PIECE_TYPE]
 
 struct EvaluationOutput {
     int eval;
     int drawishness; // Draw residual after conditioning on eval, in centilogits
-};
-
-struct SharedNetwork {
-    // The actual network (from the binary file)
-    Network network;
-
-    // State of "Load"
-    bool isLoaded = false;
-    std::string filepath = "network-20260910.nnue";
-
-    bool Load(const std::string& path);
 };
 
 struct NNUE_State {
@@ -36,6 +27,9 @@ public:
     NNUE& operator=(const NNUE& other);
     ~NNUE() = default;
 
+    static bool LoadBytes(std::span<const std::byte> bytes);
+    static bool LoadFile(const std::string& path = NNUE_FILENAME);
+
     int Evaluate(int color, int ply) const;
     EvaluationOutput EvaluateOutputs(int color, int ply) const;
 
@@ -45,10 +39,6 @@ public:
     void Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int ply, int kingSquare_w, int kingSquare_b);
 
     void CopyAccumulator(int fromPly, int toPly);
-    
-    static bool Load(const std::string& path = "") { return s_shared.Load(path); }
-    static bool IsLoaded() { return s_shared.isLoaded; }
-    static std::string GetPath() { return s_shared.filepath; }
 
 private:
     void ActivateSCReLU(const i16* input, i16* output) const;
@@ -61,7 +51,7 @@ private:
 
 private:
     // Global
-    inline static SharedNetwork s_shared;
+    inline static Network s_network;
 
     // Local
     std::unique_ptr<NNUE_State> m_state = std::make_unique<NNUE_State>();
