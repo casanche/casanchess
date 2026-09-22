@@ -156,34 +156,3 @@ std::string Fen::GetSimplifiedFen(const Board& board) {
 
     return buffer;
 }
-
-EPDLine Fen::ReadEPDLine(const std::string& line) {
-    std::string name, content, temp;
-    std::istringstream stream(line);
-
-    EPDLine epdline;
-
-    //Fen
-    name = "fen";
-    content = "";
-    stream >> content;
-    stream >> temp; content += " " + temp;
-    stream >> temp; content += " " + temp;
-    stream >> temp; content += " " + temp;
-    content += " -";
-    epdline[name] = content;
-
-    //Field
-    while(stream >> temp) {
-        name = temp;
-        content = "";
-        while(content.back() != ';') {
-            stream >> temp; content += " " + temp;
-        }
-        content.erase(0, 1);
-        content.pop_back();
-        epdline[name] = content;
-    }
-
-    return epdline;
-}

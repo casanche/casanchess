@@ -5,8 +5,6 @@
 #include "ZobristKeys.h"
 
 #include <iostream>
-#include <sstream>
-#include <string>
 
 #include <gtest/gtest.h>
 
@@ -38,13 +36,5 @@ namespace TestCommon {
     private:
         std::streambuf* m_backup;
     };
-
-    struct EPDPosition {
-        std::string fen;
-        std::string bestMove;
-        std::string id;
-    };
-
-    EPDPosition ReadEPDLine(std::string line);
 
 }
