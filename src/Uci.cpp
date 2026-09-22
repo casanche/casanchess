@@ -54,7 +54,7 @@ void Uci::Launch() {
 
             //Options
             std::cout << "option name Ambition type spin default " << UCI_AMBITION_DEFAULT << " min 0 max 50" << std::endl;
-            std::cout << "option name ClearHash type button" << std::endl;
+            std::cout << "option name Clear Hash type button" << std::endl;
             std::cout << "option name Contempt type spin default 10 min -100 max 100" << std::endl;
             std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
             std::cout << "option name NNUE_Path type string default <empty>" << std::endl;
@@ -326,8 +326,10 @@ void Uci::SetOption(std::istringstream &stream) {
             if(token != "1")
                 return;
         }
-        else if(token == "ClearHash") {
-            tt.Clear();
+        else if(token == "Clear") {
+            stream >> token;
+            if(token == "Hash")
+                tt.Clear();
         }
         else if(token == "Ambition") {
             stream >> token; // should be 'value'
