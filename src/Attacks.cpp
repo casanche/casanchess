@@ -1,12 +1,11 @@
 #include "Attacks.h"
 #include "BitboardUtils.h"
 
-Bitboard Attacks::m_Rays[8][64] = {{0}}; //[DIRECTION][SQUARE]
-Bitboard Attacks::m_NonSlidingAttacks[2][8][64] = {{{0}}}; //[COLOR][PIECE][SQUARE]
-Bitboard Attacks::m_Between[64][64] = {{0}}; //[SQUARE][SQUARE]
-
-//Private functions
 namespace {
+    Bitboard rays[8][64] = {{0}}; //[DIRECTION][SQUARE]
+    Bitboard nonSlidingAttacks[2][8][64] = {{{0}}}; //[COLOR][PIECE][SQUARE]
+    Bitboard between[64][64] = {{0}}; //[SQUARE][SQUARE]
+
     const u64 MIN_BIT = ONE;
     const u64 MAX_BIT = (ONE << 63);
 
@@ -66,14 +65,14 @@ namespace {
 void Attacks::Init() {
     //Rays
     for(int square = 0; square < 64; square++) {
-        m_Rays[NORTH][square] = GenerateRay(NORTH, square);
-        m_Rays[SOUTH][square] = GenerateRay(SOUTH, square);
-        m_Rays[WEST][square] = GenerateRay(WEST, square);
-        m_Rays[EAST][square] = GenerateRay(EAST, square);
-        m_Rays[NORTH_WEST][square] = GenerateRay(NORTH_WEST, square);
-        m_Rays[NORTH_EAST][square] = GenerateRay(NORTH_EAST, square);
-        m_Rays[SOUTH_WEST][square] = GenerateRay(SOUTH_WEST, square);
-        m_Rays[SOUTH_EAST][square] = GenerateRay(SOUTH_EAST, square);
+        rays[NORTH][square] = GenerateRay(NORTH, square);
+        rays[SOUTH][square] = GenerateRay(SOUTH, square);
+        rays[WEST][square] = GenerateRay(WEST, square);
+        rays[EAST][square] = GenerateRay(EAST, square);
+        rays[NORTH_WEST][square] = GenerateRay(NORTH_WEST, square);
+        rays[NORTH_EAST][square] = GenerateRay(NORTH_EAST, square);
+        rays[SOUTH_WEST][square] = GenerateRay(SOUTH_WEST, square);
+        rays[SOUTH_EAST][square] = GenerateRay(SOUTH_EAST, square);
     }
 
     //Pawn attacks
@@ -83,12 +82,12 @@ void Attacks::Init() {
         //White pawns
         Bitboard attackLeft  = West(North(thePawn));
         Bitboard attackRight = East(North(thePawn));
-        m_NonSlidingAttacks[WHITE][PAWN][square] = attackLeft | attackRight;
+        nonSlidingAttacks[WHITE][PAWN][square] = attackLeft | attackRight;
 
         //Black pawns
         attackLeft  = East(South(thePawn));
         attackRight = West(South(thePawn));
-        m_NonSlidingAttacks[BLACK][PAWN][square] = attackLeft | attackRight;
+        nonSlidingAttacks[BLACK][PAWN][square] = attackLeft | attackRight;
     }
 
     //Knight attacks
@@ -105,8 +104,8 @@ void Attacks::Init() {
         Bitboard pos8 = West(South(theKnight, 1), 2); //1 down, 2 left
         Bitboard attacks = (pos1 | pos2 | pos3 | pos4 | pos5 | pos6 | pos7 | pos8);
 
-        m_NonSlidingAttacks[WHITE][KNIGHT][square] = attacks;
-        m_NonSlidingAttacks[BLACK][KNIGHT][square] = attacks;
+        nonSlidingAttacks[WHITE][KNIGHT][square] = attacks;
+        nonSlidingAttacks[BLACK][KNIGHT][square] = attacks;
     }
 
     //King attacks
@@ -123,8 +122,8 @@ void Attacks::Init() {
         Bitboard downright = East(South(theKing));
         Bitboard attacks = up | down | left | right | upleft | upright | downleft | downright;
 
-        m_NonSlidingAttacks[WHITE][KING][square] = attacks;
-        m_NonSlidingAttacks[BLACK][KING][square] = attacks;
+        nonSlidingAttacks[WHITE][KING][square] = attacks;
+        nonSlidingAttacks[BLACK][KING][square] = attacks;
     }
 
     //Between squares
@@ -136,24 +135,24 @@ void Attacks::Init() {
             DIRECTIONS direction = GetDirection(sq1, sq2);
             Bitboard targetSquare = (ONE << sq2);
 
-            bool straightOrDiagonal = m_Rays[direction][sq1] & targetSquare;
+            bool straightOrDiagonal = rays[direction][sq1] & targetSquare;
             if(!straightOrDiagonal)
                 continue;
 
-            m_Between[sq1][sq2] =  (m_Rays[direction][sq1] ^ m_Rays[direction][sq2]) & ~targetSquare; //ray from sq1 to sq2 (excluded)
+            between[sq1][sq2] = (rays[direction][sq1] ^ rays[direction][sq2]) & ~targetSquare; //ray from sq1 to sq2 (excluded)
         }
     }
 
 }
 
 Bitboard Attacks::AttacksPawns(COLOR color, int square) {
-    return m_NonSlidingAttacks[color][PAWN][square];
+    return nonSlidingAttacks[color][PAWN][square];
 }
 Bitboard Attacks::AttacksKnights(int square) {
-    return m_NonSlidingAttacks[WHITE][KNIGHT][square];
+    return nonSlidingAttacks[WHITE][KNIGHT][square];
 }
 Bitboard Attacks::AttacksKing(int square) {
-    return m_NonSlidingAttacks[WHITE][KING][square];
+    return nonSlidingAttacks[WHITE][KING][square];
 }
 //Classical approach
 Bitboard Attacks::AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard blockers) {
@@ -161,39 +160,39 @@ Bitboard Attacks::AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard bloc
 
     switch(pieceType) {
         case BISHOP: {
-            Bitboard nw = m_Rays[NORTH_WEST][square];
-            Bitboard ne = m_Rays[NORTH_EAST][square];
-            Bitboard sw = m_Rays[SOUTH_WEST][square];
-            Bitboard se = m_Rays[SOUTH_EAST][square];
+            Bitboard nw = rays[NORTH_WEST][square];
+            Bitboard ne = rays[NORTH_EAST][square];
+            Bitboard sw = rays[SOUTH_WEST][square];
+            Bitboard se = rays[SOUTH_EAST][square];
 
             Bitboard nwBlockers = blockers & nw;
             Bitboard neBlockers = blockers & ne;
             Bitboard swBlockers = blockers & sw;
             Bitboard seBlockers = blockers & se;
 
-            attacks |= nw ^ m_Rays[NORTH_WEST][ BitscanForward(nwBlockers | MAX_BIT) ];
-            attacks |= ne ^ m_Rays[NORTH_EAST][ BitscanForward(neBlockers | MAX_BIT) ];
-            attacks |= sw ^ m_Rays[SOUTH_WEST][ BitscanReverse(swBlockers | MIN_BIT) ];
-            attacks |= se ^ m_Rays[SOUTH_EAST][ BitscanReverse(seBlockers | MIN_BIT) ];
+            attacks |= nw ^ rays[NORTH_WEST][ BitscanForward(nwBlockers | MAX_BIT) ];
+            attacks |= ne ^ rays[NORTH_EAST][ BitscanForward(neBlockers | MAX_BIT) ];
+            attacks |= sw ^ rays[SOUTH_WEST][ BitscanReverse(swBlockers | MIN_BIT) ];
+            attacks |= se ^ rays[SOUTH_EAST][ BitscanReverse(seBlockers | MIN_BIT) ];
 
         }
             break;
 
         case ROOK: {
-            Bitboard north = m_Rays[NORTH][square];
-            Bitboard east = m_Rays[EAST][square];
-            Bitboard south = m_Rays[SOUTH][square];
-            Bitboard west = m_Rays[WEST][square];
+            Bitboard north = rays[NORTH][square];
+            Bitboard east = rays[EAST][square];
+            Bitboard south = rays[SOUTH][square];
+            Bitboard west = rays[WEST][square];
 
             Bitboard northBlockers = blockers & north;
             Bitboard eastBlockers = blockers & east;
             Bitboard southBlockers = blockers & south;
             Bitboard westBlockers = blockers & west;
 
-            attacks |= north ^ m_Rays[NORTH][ BitscanForward(northBlockers | MAX_BIT) ];
-            attacks |= east ^ m_Rays[EAST][ BitscanForward(eastBlockers | MAX_BIT) ];
-            attacks |= south ^ m_Rays[SOUTH][ BitscanReverse(southBlockers | MIN_BIT) ];
-            attacks |= west ^ m_Rays[WEST][ BitscanReverse(westBlockers | MIN_BIT) ];
+            attacks |= north ^ rays[NORTH][ BitscanForward(northBlockers | MAX_BIT) ];
+            attacks |= east ^ rays[EAST][ BitscanForward(eastBlockers | MAX_BIT) ];
+            attacks |= south ^ rays[SOUTH][ BitscanReverse(southBlockers | MIN_BIT) ];
+            attacks |= west ^ rays[WEST][ BitscanReverse(westBlockers | MIN_BIT) ];
         }
             break;
             
@@ -210,5 +209,5 @@ Bitboard Attacks::AttacksSliding(PIECE_TYPE pieceType, int square, Bitboard bloc
 }
 
 Bitboard Attacks::Between(int sq1, int sq2) {
-    return m_Between[sq1][sq2];
+    return between[sq1][sq2];
 }
