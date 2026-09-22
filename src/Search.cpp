@@ -52,7 +52,7 @@ const int MAX_QS_PLIES = 128;  // Maximum depth limit for quiescence search
 // Aspiration window parameters - used to narrow alpha-beta bounds around expected score
 const bool TURNON_ASPIRATION_WINDOW = true;
 const int ASPIRATION_WINDOW_DEPTH = 4;         // Minimum depth to enable aspiration window
-const int ASPIRATION_WINDOW = 25;              // Initial half-window size in centipawns
+const int ASPIRATION_WINDOW = 15;              // Initial half-window size in centipawns
 const int ASPIRATION_WINDOW_MULTIPLIER = 2;    // Incremental window resize
 
 const bool TURNOFF_NULLMOVE_PRUNING = false;
