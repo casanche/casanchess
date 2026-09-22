@@ -58,9 +58,9 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     }
 }
 
-TTEntry* TT::Probe(u64 zkey) {
+const TTEntry* TT::Probe(u64 zkey) const {
     u64 index = zkey & m_mask;
-    TTEntry* entry = &m_entries[index];
+    const TTEntry* entry = &m_entries[index];
 
     const bool zkeyMatch = (UpperBits<u32>(zkey) == entry->zkey);
     if(zkeyMatch)
@@ -142,9 +142,9 @@ void EvalCache::Store(u64 zkey, int eval) {
     entry.eval = SafeCastInt16(eval);
 }
 
-bool EvalCache::Probe(u64 zkey, int& eval) {
+bool EvalCache::Probe(u64 zkey, int& eval) const {
     u64 index = zkey & m_mask;
-    EvalEntry& entry = m_evalEntries[index];
+    const EvalEntry& entry = m_evalEntries[index];
 
     if(entry.zkey == UpperBits<u32>(zkey)) {
         eval = entry.eval;

@@ -8,10 +8,13 @@ const char PIECES_NOTATION[] = {'\0', '\0', 'N', 'B', 'R', 'Q', 'K', '\0'};
 
 Move::Move() : m_move(0) {}
 
-Move::Move(u32 from, u32 to, PIECE_TYPE piece, MOVE_TYPE moveType) : m_move(0) {
+Move::Move(int from, int to, PIECE_TYPE piece, MOVE_TYPE moveType) : m_move(0) {
+    assert(from >= 0 && from < 64);
+    assert(to >= 0 && to < 64);
+
     m_move =
-          PushBits(from, 6, 0)
-        | PushBits(to, 6, 6)
+          PushBits(static_cast<u32>(from), 6, 0)
+        | PushBits(static_cast<u32>(to), 6, 6)
         | PushBits(piece, 3, 12)
         | PushBits(moveType, 3, 15);
 }
@@ -90,7 +93,7 @@ std::string Move::PieceTypeToNotation(PIECE_TYPE pieceType) const {
     return std::string({PIECES_NOTATION[pieceType]});
 }
 
-void Move::Print() {
+void Move::Print() const {
     std::cout << "Printing move: ";
     std::cout << "\033[1;33m" << Notation() << "\033[0m" << std::flush;
     std::cout << std::endl << "From Square (6): " << FromSq() << ", bits: ";

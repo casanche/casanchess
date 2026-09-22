@@ -408,7 +408,7 @@ void Uci::ShowHashMoves() {
 
     for(auto move : moves) {
         board.MakeMove(move);
-        TTEntry* ttEntry = tt.Probe(search.TTKey(board));
+        const TTEntry* ttEntry = tt.Probe(search.TTKey(board));
         if(ttEntry)
             P(move.Notation() << " " << static_cast<u8>(ttEntry->type) << "\t" << ttEntry->score);
         board.TakeMove(move);

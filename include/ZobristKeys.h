@@ -21,7 +21,7 @@ public:
 
     inline u64 Key() const { return m_key; };
 
-    void SetKey(Board& board);
+    void SetKey(const Board& board);
     inline void SetKey(u64 key) { m_key = key; }
 
     void UpdateColor();

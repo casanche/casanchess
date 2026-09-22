@@ -29,7 +29,7 @@ bool BoardIdentity::operator==(const BoardIdentity& rhs) const {
 
 std::ostream& operator<<(std::ostream& os, const BoardIdentity& boardIdentity) {
     os << "BoardIdentity: {"
-       << "activePlayer=" << (boardIdentity.activePlayer ? "WHITE" : "BLACK") << ", "
+       << "activePlayer=" << (boardIdentity.activePlayer == WHITE ? "WHITE" : "BLACK") << ", "
        << "zkey=" << boardIdentity.zkey << ", "
        << "castlingRights=" << (int)boardIdentity.castlingRights << ", "
        << "enPassantSquare=" << boardIdentity.enPassantSquare << ", "
@@ -99,7 +99,7 @@ void SearchDebug::Increment(const std::string& theVariable) {
     debugVariables[theVariable]++;
 };
 
-void SearchDebug::Print() {
+void SearchDebug::Print() const {
     for(auto variable : debugVariables) {
         P("\t " << variable.first << " " << variable.second);
     }

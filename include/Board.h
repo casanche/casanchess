@@ -35,7 +35,7 @@ public:
     
     //Print, Debug
     void Print(bool bits = false) const;
-    void ShowHistory();
+    void ShowHistory() const;
     void ShowMoves();
 
     // Fen

@@ -5,7 +5,6 @@
 #include "Utils.h"
 
 #include <atomic>
-#include <fstream>
 #include <mutex>
 #include <string>
 #include <vector>

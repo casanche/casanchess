@@ -20,7 +20,7 @@ const bool DEBUG_SEARCH_TREE = false;
 // Elements used in Board comparison
 struct BoardIdentity {
     // Position
-    bool activePlayer;
+    COLOR activePlayer;
     u64 zkey;
     u8 castlingRights;
     Bitboard enPassantSquare;
@@ -50,7 +50,7 @@ class SearchDebug {
 public:
     void Clear() { debugVariables.clear(); };
     void Increment(const std::string& theVariable);
-    void Print();
+    void Print() const;
 
 private:
     std::map<std::string, int> debugVariables;

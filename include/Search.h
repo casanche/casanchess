@@ -8,9 +8,6 @@
 #include "Move.h"
 #include "PV.h"
 #include "SearchLimits.h"
-#include "Utils.h"
-
-#include <vector>
 
 using BOUND_TYPE = TTENTRY_TYPE;
 

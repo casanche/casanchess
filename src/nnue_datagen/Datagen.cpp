@@ -10,6 +10,7 @@
 #include <array>
 #include <cmath>
 #include <filesystem>
+#include <fstream>
 #include <format>
 #include <sstream>
 #include <thread>
@@ -429,7 +430,7 @@ MoveList Datagen::SortFilteredMoves(Board& board, Search& search) {
     MoveList goodMoves;
 
     Move hashMove = Move();
-    TTEntry* ttEntry = search.m_tt.Probe(search.TTKey(board));
+    const TTEntry* ttEntry = search.m_tt.Probe(search.TTKey(board));
     if(ttEntry)
         hashMove = ttEntry->bestMove;
 

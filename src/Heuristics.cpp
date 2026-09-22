@@ -1,10 +1,7 @@
 #include "Heuristics.h"
 
 #include "Board.h"
-#include "Evaluation.h"
-#include "Hash.h"
 #include "MoveScorer.h"
-#include "Search.h"
 
 #include <algorithm>
 

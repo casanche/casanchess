@@ -288,7 +288,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
     Move hashMove; // For move ordering
-    TTEntry* ttEntry = m_tt.Probe(TTKey(board));
+    const TTEntry* ttEntry = m_tt.Probe(TTKey(board));
     if(ttEntry)
         hashMove = ttEntry->bestMove;
 
@@ -453,7 +453,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     Move hashMove; // For move ordering
     int ttEval = NO_EVAL;
     
-    TTEntry* ttEntry = m_tt.Probe(TTKey(board));
+    const TTEntry* ttEntry = m_tt.Probe(TTKey(board));
     if(ttEntry) {
         D( m_debug.Increment("NegaMax: TT: Hit") );
         ttEval = ttEntry->eval;
@@ -763,7 +763,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
 
     // Probe transposition table.
     // Only non-PV nodes: PV nodes require the most accurate score possible.
-    TTEntry* ttEntry = m_tt.Probe(TTKey(board));
+    const TTEntry* ttEntry = m_tt.Probe(TTKey(board));
     if(ttEntry) {
         D( m_debug.Increment("Quiescence: TT: Hit") );
         hashMove = ttEntry->bestMove;

@@ -22,7 +22,7 @@ TEST_F(TT_Test, MateScoreAdjustment) {
     int mateIn5 = MATESCORE_MAX - 5;
     tt.Store(zkey, mateIn5, TTENTRY_TYPE::EXACT, Move(), 10, /*ply=*/3, 0);
 
-    TTEntry* entry = tt.Probe(zkey);
+    const TTEntry* entry = tt.Probe(zkey);
     ASSERT_NE(entry, nullptr);
 
     EXPECT_EQ(tt.ScoreFromHash(entry->score, 3), mateIn5);
@@ -33,7 +33,7 @@ TEST_F(TT_Test, MateScoreAdjustment) {
 TEST_F(TT_Test, NormalScoreUnchanged) {
     tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), 10, /*ply=*/5, 0);
 
-    TTEntry* entry = tt.Probe(zkey);
+    const TTEntry* entry = tt.Probe(zkey);
     ASSERT_NE(entry, nullptr);
 
     EXPECT_EQ(tt.ScoreFromHash(entry->score, 0), normalScore);
@@ -48,7 +48,7 @@ TEST_F(TT_Test, AgeBitfieldProtection) {
     // Same search. Try to store the same position with a lower-depth. Should NOT overwrite!
     tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), /*depth=*/1, /*ply=*/0, /*age=*/64);
 
-    TTEntry* entry = tt.Probe(zkey);
+    const TTEntry* entry = tt.Probe(zkey);
     ASSERT_NE(entry, nullptr);
 
     EXPECT_EQ(entry->depth, 21);
@@ -59,7 +59,7 @@ TEST_F(TT_Test, NullBestMoveIgnored) {
     tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, move, /*depth=*/1, /*ply=*/0, /*age=*/0);
     tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), /*depth=*/2, /*ply=*/0, /*age=*/0);
 
-    TTEntry* entry = tt.Probe(zkey);
+    const TTEntry* entry = tt.Probe(zkey);
     ASSERT_NE(entry, nullptr);
 
     EXPECT_EQ(entry->bestMove, move);

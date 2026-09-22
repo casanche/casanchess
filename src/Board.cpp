@@ -11,7 +11,6 @@ using namespace BitboardUtils;
 
 #include <cstring>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 const char PIECE_NOTATION[2][8] = { {' ', 'P', 'N', 'B', 'R', 'Q', 'K', '-',},
@@ -152,7 +151,7 @@ void Board::Print(bool bits) const {
     std::cout << "FEN (simplified): " << GetSimplifiedFen() << std::endl;
 }
 
-void Board::ShowHistory() {
+void Board::ShowHistory() const {
     for(uint i = 1; i <= m_ply; ++i) {
         std::cout << i << ". " << m_history[i].move.Notation() << " ";
     }

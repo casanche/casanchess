@@ -23,9 +23,6 @@ using namespace Attacks;
 #include "Board.h"
 #include "Utils.h" //random
 
-#include <algorithm>
-#include <iostream>
-
 namespace {
     enum class GENERATION_TYPE {Legal, Evasion, Tactical};
 
@@ -132,8 +129,6 @@ namespace {
     }
 
     void InitContext(Context &context, const Board& board) {
-        context.moves = nullptr;
-
         context.color = board.ActivePlayer();
         context.enemyColor = board.InactivePlayer();
 
@@ -435,9 +430,8 @@ namespace {
         MoveList moves; // Assuming RVO/NRVO optimization by the compiler to avoid the return copy
 
         Context context;
-        InitContext(context, board);
-
         context.moves = &moves;
+        InitContext(context, board);
 
         switch(type) {
             case GENERATION_TYPE::Legal:

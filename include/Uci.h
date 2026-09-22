@@ -2,7 +2,6 @@
 
 #include "Hash.h"
 #include "Search.h"
-#include "SearchLimits.h"
 
 #include <cstddef>
 #include <memory>

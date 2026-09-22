@@ -13,14 +13,14 @@ struct MoveData;
 class Move {
 public:
     Move();
-    Move(u32 from, u32 to, PIECE_TYPE piece, MOVE_TYPE moveType);
+    Move(int from, int to, PIECE_TYPE piece, MOVE_TYPE moveType);
 
     std::string Notation() const;
-    void Print();
+    void Print() const;
 
     inline u32            MoveAsNumber()  const { return                                       m_move; };
-    inline u32            FromSq()        const { return                  RetrieveBits(m_move, 6, 0);  };
-    inline u32            ToSq()          const { return                  RetrieveBits(m_move, 6, 6);  };
+    inline int            FromSq()        const { return static_cast<int>(RetrieveBits(m_move, 6, 0));  };
+    inline int            ToSq()          const { return static_cast<int>(RetrieveBits(m_move, 6, 6));  };
     inline PIECE_TYPE     PieceType()     const { return (PIECE_TYPE)     RetrieveBits(m_move, 3, 12); };
     inline MOVE_TYPE      MoveType()      const { return (MOVE_TYPE)      RetrieveBits(m_move, 3, 15); };
     inline PIECE_TYPE     CapturedType()  const { return (PIECE_TYPE)     RetrieveBits(m_move, 3, 18); };

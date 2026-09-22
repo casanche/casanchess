@@ -1,8 +1,6 @@
 #include "Fen.h"
 #include "Board.h"
-#include "Utils.h"
 
-#include <cassert>
 #include <sstream>
 
 void Fen::SetPosition(Board& board, std::string fenString) {
