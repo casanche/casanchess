@@ -592,12 +592,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         }
     }
 
-    //----- One-reply extension -------
-    if( moves.size() == 1 ) {
-        D( m_debug.Increment("NegaMax: Extension: One-reply") );
-        extension++;
-    }
-
     // --------- Move ordering ---------
     // Order moves to maximize search efficiency (hash move, captures, killers, history...)
     SortMoves(board, moves, hashMove, m_heuristics, m_ply);
