@@ -593,10 +593,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     //----- One-reply extension -------
-    // if( moves.size() == 1 ) {
-    //     D( m_debug.Increment("NegaMax: Extension: One-reply") );
-    //     extension++;
-    // }
+    if( moves.size() == 1 ) {
+        D( m_debug.Increment("NegaMax: Extension: One-reply") );
+        extension++;
+    }
 
     // --------- Move ordering ---------
     // Order moves to maximize search efficiency (hash move, captures, killers, history...)
@@ -635,14 +635,14 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // ----- Recapture extension ------
         // Extend if the move is a recapture of the same piece type
-        if(!extension
-            && move.MoveType() == CAPTURE
-            && board.LastMove().MoveType() == CAPTURE
-            && move.ToSq() == board.LastMove().ToSq()
-        ) {
-            D( m_debug.Increment("NegaMax: Extension: Recapture") );
-            localExtension++;
-        }
+        // if(!extension
+        //     && move.MoveType() == CAPTURE
+        //     && board.LastMove().MoveType() == CAPTURE
+        //     && move.ToSq() == board.LastMove().ToSq()
+        // ) {
+        //     D( m_debug.Increment("NegaMax: Extension: Recapture") );
+        //     localExtension++;
+        // }
 
         // -------- Late Move Reductions ----------
         // Reduce depth of less-promising moves
