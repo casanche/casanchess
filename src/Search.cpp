@@ -912,7 +912,6 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     int lmr_value = 0;
 
     // Logarithmic scaling for smooth reductions
-    int logScore = LogTable[moveScore + 1];
     int logDepth = LogTable[depth];
     int logMoveNumber = LogTable[moveNumber];
 
@@ -921,6 +920,9 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
 
     // History moves
     if(moveScore <= Scorer::HISTORY_MAX) {
+        int historyScore = Scorer::HISTORY_MIN + std::max(0, moveScore - Scorer::HISTORY_NEUTRAL);
+        int logScore = LogTable[historyScore + 1];
+
         lmr_value = -50 - 200*(isPV)
             + (
                 - (20 * logScore)
