@@ -89,7 +89,6 @@ void Search::ClearSearch(bool fullClear) {
 
     // Move ordering
     m_heuristics.killer.Clear();
-    m_heuristics.history.Age(); // Reduce history from old positions, but do not remove entirely
 
     // Debug
     m_debug.Clear();

@@ -48,9 +48,6 @@ private:
 
 class HistoryHeuristics {
 public:
-    void Age() {
-        ApplyToAll([](int& historyValue) { historyValue /= 2; });
-    }
     void Clear() {
         ApplyToAll([](int& historyValue) { historyValue = 0; });
     }
