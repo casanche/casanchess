@@ -75,7 +75,8 @@ private:
     }
 
     int Bonus(int depth) const {
-        int bonus = depth * depth;
+        constexpr int BONUS_MULTIPLIER = 32;
+        int bonus = BONUS_MULTIPLIER * depth;
         return std::min(MAX_BONUS, bonus);
     }
 
