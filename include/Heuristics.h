@@ -56,7 +56,7 @@ public:
         Update(move, color, Bonus(depth));
     }
     void BadHistory(const Move& move, COLOR color, int depth) {
-        Update(move, color, -Bonus(depth));
+        Update(move, color, -Bonus(depth) / 2);
     }
 
     int Get(const Move& move, COLOR color) const {
