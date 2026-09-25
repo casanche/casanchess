@@ -602,7 +602,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         assert(move.MoveType());
 
         moveNumber++;
-        bool childPV = (moveNumber == 1);
+        bool firstMove = (moveNumber == 1);
 
         int score, reduction = 0;
         int localExtension = 0;
@@ -611,19 +611,16 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             P("  NegamaxLoop, ply " << m_ply << " move: " << move.Notation());
 
         // ------- Futility pruning -------
-        // Prune quiet moves and bad captures if unlikely to raise alpha
-        const int futilityMargin = 0 + depth * 35;
-        if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinScore(alpha)
-            && depth <= 4
-            && eval + futilityMargin <= alpha
-            && ( move.Score() < 120 || (move.Score() >= 181 && move.Score() <= 188) )
+        // Prune moves unlikely to raise alpha
+        if(!TURNOFF_FUTILITY && !isPV && !firstMove && !inCheck && !IsWinScore(alpha)
         ) {
-            D( m_debug.Increment("NegaMax: Pruning: Futility") );
-            D( m_debug.Increment("NegaMax: Pruning: Futility - Depth " + std::to_string(depth)) );
-            if(eval + futilityMargin > bestScore) {
-                bestScore = eval + futilityMargin;
+            const int futilityMargin = FutilityMargin(move, depth);
+            if(futilityMargin <= alpha - eval) {
+                D( m_debug.Increment("NegaMax: Pruning: Futility") );
+                D( m_debug.Increment("NegaMax: Pruning: Futility - Depth " + std::to_string(depth)) );
+                bestScore = std::max(bestScore, eval + futilityMargin); // needed in case of fail-low
+                continue;
             }
-            continue;
         }
 
         // ----- Recapture extension ------
@@ -656,7 +653,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // PV move: full window, full depth
         // Other moves: zero window, reduced depth
-        if(isPV && childPV)
+        if(isPV && firstMove)
             score = -NegaMax(board, fullDepth, -beta, -alpha);
         else {
             score = -NegaMax(board, reducedDepth, -alpha-1, -alpha);
@@ -899,6 +896,19 @@ int Search::SearchBeyondTB(Board& board, const int depth, const int tbScore) {
     }
 
     return score;
+}
+
+int Search::FutilityMargin(Move move, int depth) const {
+    const int score = (int)move.Score();
+
+    const bool pruneQuiet = score < 120;
+    const bool pruneCapture = score >= 181 && score <= 188;
+
+    if(depth <= 4 && (pruneQuiet || pruneCapture)) {
+        return depth * 35;
+    }
+
+    return INFINITE; // don't prune
 }
 
 // Late Move Reductions: reduce the search depth for less-promising moves.
