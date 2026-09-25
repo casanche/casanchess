@@ -3,15 +3,15 @@
 #include "Move.h"
 #include "MoveGenerator.h"
 
-#include <bit>
 #include <cassert>
+#include <cmath>
 
 class Board;
 class TT;
 struct Heuristics;
 
-const int MAX_BONUS = 400;
-constexpr int MAX_HISTORY_VALUE = std::bit_floor( (uint)INFINITE / MAX_BONUS );
+constexpr int MAX_BONUS = 400;
+constexpr int MAX_HISTORY_VALUE = 1024; // could be tunable
 
 namespace Sorting {
     void SortMoves(Board &board, MoveList &moves, Move hashMove, const Heuristics &heuristics, int ply);
@@ -49,24 +49,21 @@ private:
 class HistoryHeuristics {
 public:
     void Age() {
-        ApplyToAll([](int& historyValue) { historyValue /= 8; });
-        m_maxValue /= 8;
+        ApplyToAll([](int& historyValue) { historyValue /= 2; });
     }
     void Clear() {
         ApplyToAll([](int& historyValue) { historyValue = 0; });
-        m_maxValue = 0;
     }
+
     void GoodHistory(const Move& move, COLOR color, int depth) {
-        int& historyValue = m_history[color][move.FromSq()][move.ToSq()];
-        int bonus = Bonus(depth);
-        historyValue += bonus - (bonus * historyValue) / MAX_HISTORY_VALUE; // Dumped update
-        UpdateMaxValue(historyValue);
+        Update(move, color, Bonus(depth));
     }
+    void BadHistory(const Move& move, COLOR color, int depth) {
+        Update(move, color, -Bonus(depth));
+    }
+
     int Get(const Move& move, COLOR color) const {
         return m_history[color][move.FromSq()][move.ToSq()];
-    }
-    int MaxValue() const {
-        return m_maxValue;
     }
 private:
     template<typename Func>
@@ -84,14 +81,15 @@ private:
         int bonus = depth * depth;
         return std::min(MAX_BONUS, bonus);
     }
-    void UpdateMaxValue(int historyValue) {
-        if(historyValue > m_maxValue) {
-            m_maxValue = historyValue;
-        }
+
+    // Damped update (less increase as we approach the maximum value)
+    void Update(const Move& move, COLOR color, int bonus) {
+        int& historyValue = m_history[color][move.FromSq()][move.ToSq()];
+        historyValue += bonus - std::abs(bonus) * historyValue / MAX_HISTORY_VALUE;
+        assert(std::abs(historyValue) <= MAX_HISTORY_VALUE);
     }
 
     int m_history[2][64][64] = {}; //[COLOR][SQUARE_FROM][SQUARE_TO]
-    int m_maxValue = 0;
 };
 
 struct Heuristics {

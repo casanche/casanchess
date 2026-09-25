@@ -68,8 +68,7 @@ Search::Search(TT& tt): m_tt(tt) {
     m_searchCount = 0;
 }
 
-// Reset state for a new position search.
-// Called at the beginning of each iteration in Iterative Deepening.
+// Reset state after a new root position
 void Search::ClearSearch(bool fullClear) {
     // Node counters
     m_nodes = 0;
@@ -598,6 +597,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Move loop ---------
     int moveNumber = 0;
+    MoveList quietsSearched;
 
     for(auto move : moves) {
         assert(move.MoveType());
@@ -694,9 +694,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
 
             // Update heuristics
-            if( move.IsQuiet() ) {
+            if(move.IsQuiet()) {
                 m_heuristics.killer.Update(move, m_ply);
                 m_heuristics.history.GoodHistory(move, board.ActivePlayer(), depth);
+                for(auto quiet : quietsSearched)
+                    m_heuristics.history.BadHistory(quiet, board.ActivePlayer(), depth);
             }
 
             return score;
@@ -708,6 +710,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
  
             m_pv.Update(m_ply, move);
         }
+
+        if(move.IsQuiet())
+            quietsSearched.add(move);
 
     } // End move loop
 
