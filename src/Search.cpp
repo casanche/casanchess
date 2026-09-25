@@ -928,13 +928,8 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
             ) / (LOG_TABLE_SCALE * LOG_TABLE_SCALE);
     }
 
-    // SEE << 0: very bad captures
-    else if(moveScore >= 181 && moveScore <= 184) {
-        lmr_value = 50 - 40*(isPV) + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
-    }
-
     // SEE < 0: bad captures
-    else if(moveScore >= 185 && moveScore <= 189) {
+    else if(moveScore >= 181 && moveScore <= 189) {
         lmr_value = -85 + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
     }
 
