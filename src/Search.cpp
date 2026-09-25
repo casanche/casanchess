@@ -617,7 +617,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(!TURNOFF_FUTILITY && !isPV && !childPV && !inCheck && !IsWinScore(alpha)
             && depth <= 4
             && eval + futilityMargin <= alpha
-            && ( move.Score() < 120 || (move.Score() >= 181 && move.Score() <= 188) )
+            && ( move.Score() < 120 || move.IsNegativeCapture() )
         ) {
             D( m_debug.Increment("NegaMax: Pruning: Futility") );
             D( m_debug.Increment("NegaMax: Pruning: Futility - Depth " + std::to_string(depth)) );
