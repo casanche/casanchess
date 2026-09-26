@@ -192,12 +192,7 @@ int Board::SEE(Move move) const {
 
     // Special case: promotions
     if(move.IsPromotion()) {
-        switch(move.PromotionType()) {
-            case PROMOTION_QUEEN:  attackingPiece = QUEEN;  break;
-            case PROMOTION_KNIGHT: attackingPiece = KNIGHT; break;
-            case PROMOTION_ROOK:   attackingPiece = ROOK;   break;
-            case PROMOTION_BISHOP: attackingPiece = BISHOP; break;
-        }
+        attackingPiece = move.PromotionPieceType();
         gain[0] += SEE::MATERIAL_VALUES[attackingPiece] - SEE::MATERIAL_VALUES[PAWN];
     }
 
@@ -330,6 +325,48 @@ bool Board::IsAttacked(COLOR color, int square) const {
 bool Board::AreHeavyPieces() const {
     const COLOR color = ActivePlayer();
     return Piece(color, ALL_PIECES) ^ (Piece(color, PAWN) | Piece(color, KING));
+}
+
+bool Board::GivesCheck(Move move) const {
+    const COLOR color = ActivePlayer();
+    const int fromSq = move.FromSq();
+    const int toSq = move.ToSq();
+    const Bitboard enemyKing = Piece(InactivePlayer(), KING);
+
+    // Simulate the move
+    Bitboard occupied = (m_allpieces ^ SquareBB(fromSq)) | SquareBB(toSq);
+
+    // En-passant
+    if(move.MoveType() == ENPASSANT) {
+        const int squareShift = color == WHITE ? -8 : 8;
+        occupied ^= SquareBB(toSq + squareShift);
+    }
+
+    // Castling
+    if(move.MoveType() == CASTLING) {
+        const int rookSq = (fromSq + toSq) / 2;
+        return AttacksSliding(ROOK, rookSq, occupied) & enemyKing;
+    }
+
+    // Direct check
+    Bitboard attacks = ZERO;
+    const PIECE_TYPE piece = move.IsPromotion() ? move.PromotionPieceType() : move.PieceType();
+    switch(piece) {
+        case PAWN:   attacks = AttacksPawns(color, toSq); break;
+        case KNIGHT: attacks = AttacksKnights(toSq); break;
+        case KING:   break; // a king never gives check
+        default:     attacks = AttacksSliding(piece, toSq, occupied);
+    }
+    if(attacks & enemyKing)
+        return true;
+
+    // Discovered check
+    const int enemyKingSq = BitscanForward(enemyKing);
+    const Bitboard diagonalSliders = Piece(color, BISHOP) | Piece(color, QUEEN);
+    const Bitboard straightSliders = Piece(color, ROOK) | Piece(color, QUEEN);
+    const Bitboard excludeMovingPiece = ~SquareBB(fromSq);
+    return (AttacksSliding(BISHOP, enemyKingSq, occupied) & diagonalSliders & excludeMovingPiece)
+         | (AttacksSliding(ROOK, enemyKingSq, occupied) & straightSliders & excludeMovingPiece);
 }
 
 bool Board::IsCheck() {

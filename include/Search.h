@@ -60,6 +60,7 @@ private:
     int SearchBeyondTB(Board& board, const int depth, const int tbScore);
 
     // NegaMax methods
+    int FutilityMargin(Move move, int depth) const;
     int LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV);
 
     // Debug

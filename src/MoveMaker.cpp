@@ -50,14 +50,7 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     }
     if(moveType == PROMOTION || moveType == PROMOTION_CAPTURE) {
         RemovePiece(board, toSq, color, PAWN);
-        PROMOTION_TYPE promotionType = move.PromotionType();
-        switch(promotionType) {
-            case(PROMOTION_QUEEN):  AddPiece(board, toSq, color, QUEEN);   break;
-            case(PROMOTION_KNIGHT): AddPiece(board, toSq, color, KNIGHT);  break;
-            case(PROMOTION_ROOK):   AddPiece(board, toSq, color, ROOK);    break;
-            case(PROMOTION_BISHOP): AddPiece(board, toSq, color, BISHOP);  break;
-            default: assert(false);
-        };
+        AddPiece(board, toSq, color, move.PromotionPieceType());
     }
 
     //Castling rights
@@ -137,14 +130,7 @@ void MoveMaker::TakeMove(Board& board, Move move) {
     //Promotions before moving piece
     if(moveType == PROMOTION || moveType == PROMOTION_CAPTURE) {
         AddPiece(board, toSq, color, PAWN);
-        PROMOTION_TYPE promotionType = move.PromotionType();
-        switch(promotionType) {
-            case(PROMOTION_QUEEN):  RemovePiece(board, toSq, color, QUEEN);   break;
-            case(PROMOTION_KNIGHT): RemovePiece(board, toSq, color, KNIGHT);  break;
-            case(PROMOTION_ROOK):   RemovePiece(board, toSq, color, ROOK);    break;
-            case(PROMOTION_BISHOP): RemovePiece(board, toSq, color, BISHOP);  break;
-            default: assert(false);
-        };
+        RemovePiece(board, toSq, color, move.PromotionPieceType());
     }
 
     // Move the active piece

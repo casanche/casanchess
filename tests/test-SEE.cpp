@@ -1,4 +1,5 @@
 #include "Board.h"
+#include "MoveScorer.h"
 
 #include "test-Common.h"
 using namespace TestCommon;
@@ -113,4 +114,17 @@ TEST(SEE, KingRecapture) {
     move.SetCapturedType(PAWN);
 
     EXPECT_EQ(board.SEE(move), 100);
+}
+
+// ============
+// == Scorer ==
+// ============
+TEST(SEE, Scorer_BackAndForth) {
+    constexpr int SCORE_RANGE = Scorer::NEGATIVECAPTURE_MAX - Scorer::NEGATIVECAPTURE_MIN;
+    constexpr int BUCKET = SEE::MATERIAL_VALUES[QUEEN] / SCORE_RANGE;
+
+    for(int see = -SEE::MATERIAL_VALUES[QUEEN]; see <= SEE::MATERIAL_VALUES[QUEEN]; see++) {
+        const int backAndForth = Scorer::SEEFromScore( Scorer::ScoreFromSEE(see) );
+        EXPECT_LE(std::abs(backAndForth - see), BUCKET);
+    }
 }

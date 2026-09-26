@@ -66,6 +66,7 @@ public:
     Bitboard AttackersTo(int square) const { return AttackersTo(ActivePlayer(), square); }
     PIECE_TYPE GetPieceAtSquare(COLOR color, int square) const;
     bool AreHeavyPieces() const;
+    bool GivesCheck(Move move) const;
     bool IsAttacked(COLOR color, int square) const;
     bool IsCheck();
     bool IsRepetitionDraw() const;
