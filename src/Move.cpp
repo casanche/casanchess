@@ -117,6 +117,24 @@ void Move::PrintBits32(u32 word, int startBit, int endBit) const {
     }
 }
 
+bool Move::IsUnderpromotion() const {
+    bool underpromotion = PromotionType() != PROMOTION_QUEEN;
+    assert( (!IsPromotion() && underpromotion) == false );
+    return underpromotion;
+}
+
+PIECE_TYPE Move::PromotionPieceType() const {
+    assert(IsPromotion());
+    switch(PromotionType()) {
+        case PROMOTION_QUEEN:  return QUEEN;
+        case PROMOTION_KNIGHT: return KNIGHT;
+        case PROMOTION_ROOK:   return ROOK;
+        case PROMOTION_BISHOP: return BISHOP;
+        default: assert(false);
+    }
+    return NO_PIECE;
+}
+
 MoveData Move::Data() const {
     MoveData data;
     data.fromSq = FromSq();
@@ -125,10 +143,4 @@ MoveData Move::Data() const {
     data.moveType = MoveType();
     data.capturedType = CapturedType();
     return data;
-}
-
-bool Move::IsUnderpromotion() const {
-    bool underpromotion = PromotionType() != PROMOTION_QUEEN;
-    assert( (!IsPromotion() && underpromotion) == false );
-    return underpromotion;
 }

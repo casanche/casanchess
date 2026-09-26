@@ -42,6 +42,8 @@ public:
     }
     bool IsUnderpromotion() const;
 
+    PIECE_TYPE PromotionPieceType() const;
+
     inline void SetCapturedType(PIECE_TYPE capturedType) {
         m_move &= ClearMask(3, 18); //Clears the bits 18-20
         m_move |= PushBits(capturedType, 3, 18);
@@ -61,9 +63,6 @@ public:
     bool operator!=(const Move& rmove) const {
         return !(*this == rmove);
     };
-
-    // Scorer
-    bool IsNegativeCapture() const { return Scorer::IsNegativeCapture(this->Score()); };
 
     // Static methods
     static std::string IndexToNotation(int index);

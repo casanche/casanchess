@@ -612,10 +612,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         // ------- Futility pruning -------
         // Prune moves unlikely to raise alpha
-        if(!TURNOFF_FUTILITY && !isPV && !firstMove && !inCheck && !IsWinScore(alpha)
-        ) {
+        if(!TURNOFF_FUTILITY && !isPV && !firstMove && !inCheck && !IsWinScore(alpha)) {
             const int futilityMargin = FutilityMargin(move, depth);
-            if(futilityMargin <= alpha - eval) {
+
+            if(futilityMargin <= alpha - eval
+                && !( move.IsQuiet() && board.GivesCheck(move) ) // don't prune quiet checks
+            ) {
                 D( m_debug.Increment("NegaMax: Pruning: Futility") );
                 D( m_debug.Increment("NegaMax: Pruning: Futility - Depth " + std::to_string(depth)) );
                 bestScore = std::max(bestScore, eval + futilityMargin); // needed in case of fail-low
@@ -905,7 +907,7 @@ int Search::FutilityMargin(Move move, int depth) const {
     const u8 score = move.Score();
 
     if(Scorer::IsHistoryMove(score)) {
-        const int margin = depth * (score - 30);
+        const int margin = depth * (score - 55);
         return std::max(0, margin);
     }
 
