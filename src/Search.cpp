@@ -901,7 +901,7 @@ int Search::SearchBeyondTB(Board& board, const int depth, const int tbScore) {
 }
 
 int Search::FutilityMargin(Move move, int depth) const {
-    if(depth > 4)
+    if(depth > 5)
         return INFINITE;
 
     const u8 score = move.Score();
