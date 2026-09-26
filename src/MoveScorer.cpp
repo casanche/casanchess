@@ -7,6 +7,9 @@ namespace Scorer {
     constexpr int SEE_MAX = SEE::MATERIAL_VALUES[QUEEN];
     constexpr int SEE_RANGE = SEE_MAX * 2;
 
+    constexpr int CAPTURE_SCORE_RANGE = POSITIVECAPTURE_MAX - POSITIVECAPTURE_MIN;
+    static_assert(CAPTURE_SCORE_RANGE == (NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN), "Same range for positive and negative captures.");
+
     constexpr int TACTICAL_RANGE = TACTICAL_MAX - TACTICAL_MIN;
 }
 
@@ -22,12 +25,9 @@ u8 Scorer::ScoreFromHistory(int historyValue, int historyLimit) {
 }
 
 u8 Scorer::ScoreFromSEE(int see) {
-    constexpr int SCORE_RANGE = POSITIVECAPTURE_MAX - POSITIVECAPTURE_MIN;
-    static_assert(SCORE_RANGE == (NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN), "Same range for positive and negative captures.");
-
     if(see > 0) {
         int normalized_see = std::clamp(see, 0, SEE_MAX);
-        int score = POSITIVECAPTURE_MIN + normalized_see * SCORE_RANGE / SEE_MAX;
+        int score = POSITIVECAPTURE_MIN + normalized_see * CAPTURE_SCORE_RANGE / SEE_MAX;
         
         assert(score >= POSITIVECAPTURE_MIN && score <= POSITIVECAPTURE_MAX);
         return SafeCastU8(score);
@@ -37,7 +37,7 @@ u8 Scorer::ScoreFromSEE(int see) {
     }
     else { // see < 0
         int normalized_see = std::clamp(see, -SEE_MAX, 0);
-        int score = NEGATIVECAPTURE_MAX + normalized_see * SCORE_RANGE / SEE_MAX;
+        int score = NEGATIVECAPTURE_MAX + normalized_see * CAPTURE_SCORE_RANGE / SEE_MAX;
         
         assert(score >= NEGATIVECAPTURE_MIN && score <= NEGATIVECAPTURE_MAX);
         return SafeCastU8(score);
@@ -46,9 +46,7 @@ u8 Scorer::ScoreFromSEE(int see) {
 
 // Converts a capture score back to its 'see' value (middle of the bin)
 int Scorer::SEEFromScore(u8 score) {
-    constexpr int SCORE_RANGE = POSITIVECAPTURE_MAX - POSITIVECAPTURE_MIN;
-    static_assert(SCORE_RANGE == (NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN), "Same range for positive and negative captures.");
-    constexpr int BUCKET = SEE_MAX / SCORE_RANGE;
+    constexpr int BUCKET = SEE_MAX / CAPTURE_SCORE_RANGE;
 
     if(IsNeutralCapture(score))
         return 0;

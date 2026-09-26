@@ -4,6 +4,7 @@
 #include "BitboardUtils.h"
 #include "Constants.h"
 #include "MoveGenerator.h"
+#include "MoveScorer.h"
 #include "Uci.h"
 
 #include <algorithm>

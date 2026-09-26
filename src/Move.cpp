@@ -125,14 +125,9 @@ bool Move::IsUnderpromotion() const {
 
 PIECE_TYPE Move::PromotionPieceType() const {
     assert(IsPromotion());
-    switch(PromotionType()) {
-        case PROMOTION_QUEEN:  return QUEEN;
-        case PROMOTION_KNIGHT: return KNIGHT;
-        case PROMOTION_ROOK:   return ROOK;
-        case PROMOTION_BISHOP: return BISHOP;
-        default: assert(false);
-    }
-    return NO_PIECE;
+    
+    constexpr PIECE_TYPE PROMOTION_PIECES[] = {QUEEN, KNIGHT, ROOK, BISHOP}; // [PROMOTION_TYPE]
+    return PROMOTION_PIECES[PromotionType()];
 }
 
 MoveData Move::Data() const {
