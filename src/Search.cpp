@@ -902,23 +902,18 @@ int Search::FutilityMargin(Move move, int depth) const {
     if(depth > 4)
         return INFINITE;
 
-    const int score = (int)move.Score();
+    const u8 score = move.Score();
 
     if(Scorer::IsHistoryMove(score)) {
         const int margin = depth * (score - 30);
         return std::max(0, margin);
     }
 
-    if(score >= 181 && score <= 188) {
-        return depth * 35;
+    if(Scorer::IsNegativeCapture(score)) {
+        const int see = Scorer::SEEFromScore(score);
+        const int margin = depth * (75 + see / 8);
+        return std::max(0, margin);
     }
-
-    // if(Scorer::IsNegativeCapture(score)) {
-    //     const int see = Scorer::SEEFromScore(score);
-    //     if(see < 0) {
-    //         return xxx;
-    //     }
-    // }
 
     return INFINITE;
 }

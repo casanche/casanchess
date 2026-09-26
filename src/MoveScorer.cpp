@@ -22,9 +22,10 @@ u8 Scorer::ScoreFromHistory(int historyValue, int historyLimit) {
 }
 
 u8 Scorer::ScoreFromSEE(int see) {
-    if(see > 0) {
-        constexpr int SCORE_RANGE = POSITIVECAPTURE_MAX - POSITIVECAPTURE_MIN;
+    constexpr int SCORE_RANGE = POSITIVECAPTURE_MAX - POSITIVECAPTURE_MIN;
+    static_assert(SCORE_RANGE == (NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN), "Same range for positive and negative captures.");
 
+    if(see > 0) {
         int normalized_see = std::clamp(see, 0, SEE_MAX);
         int score = POSITIVECAPTURE_MIN + normalized_see * SCORE_RANGE / SEE_MAX;
         
@@ -35,8 +36,6 @@ u8 Scorer::ScoreFromSEE(int see) {
         return NEUTRALCAPTURE;
     }
     else { // see < 0
-        constexpr int SCORE_RANGE = NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN;
-
         int normalized_see = std::clamp(see, -SEE_MAX, 0);
         int score = NEGATIVECAPTURE_MAX + normalized_see * SCORE_RANGE / SEE_MAX;
         
@@ -45,17 +44,22 @@ u8 Scorer::ScoreFromSEE(int see) {
     }
 }
 
+// Converts a capture score back to its 'see' value (middle of the bin)
 int Scorer::SEEFromScore(u8 score) {
-    if(IsNegativeCapture(score)) {
-        constexpr int SCORE_RANGE = NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN;
-        constexpr int BUCKET = SEE_MAX / SCORE_RANGE;
+    constexpr int SCORE_RANGE = POSITIVECAPTURE_MAX - POSITIVECAPTURE_MIN;
+    static_assert(SCORE_RANGE == (NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN), "Same range for positive and negative captures.");
+    constexpr int BUCKET = SEE_MAX / SCORE_RANGE;
 
-        // return (score - NEGATIVECAPTURE_MAX) * BUCKET;
-        return (score - NEGATIVECAPTURE_MAX) * SEE_MAX / SCORE_RANGE - BUCKET / 2;
+    if(IsNeutralCapture(score))
+        return 0;
+
+    if(IsNegativeCapture(score)) {
+        return (score - NEGATIVECAPTURE_MAX) * BUCKET - BUCKET / 2;
     }
 
-    // Positive captures not implemented yet
-    return 0;
+    // Positive captures
+    assert(score >= POSITIVECAPTURE_MIN && score <= POSITIVECAPTURE_MAX);
+    return (score - POSITIVECAPTURE_MIN) * BUCKET + BUCKET / 2;
 }
 
 // Converts a 'see' value to a 'tactical move' score
