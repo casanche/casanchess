@@ -899,16 +899,28 @@ int Search::SearchBeyondTB(Board& board, const int depth, const int tbScore) {
 }
 
 int Search::FutilityMargin(Move move, int depth) const {
+    if(depth > 4)
+        return INFINITE;
+
     const int score = (int)move.Score();
 
-    const bool pruneQuiet = score < 120;
-    const bool pruneCapture = score >= 181 && score <= 188;
+    if(Scorer::IsHistoryMove(score)) {
+        const int margin = depth * (score - 30);
+        return std::max(0, margin);
+    }
 
-    if(depth <= 4 && (pruneQuiet || pruneCapture)) {
+    if(score >= 181 && score <= 188) {
         return depth * 35;
     }
 
-    return INFINITE; // don't prune
+    // if(Scorer::IsNegativeCapture(score)) {
+    //     const int see = Scorer::SEEFromScore(score);
+    //     if(see < 0) {
+    //         return xxx;
+    //     }
+    // }
+
+    return INFINITE;
 }
 
 // Late Move Reductions: reduce the search depth for less-promising moves.

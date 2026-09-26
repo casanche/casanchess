@@ -45,6 +45,19 @@ u8 Scorer::ScoreFromSEE(int see) {
     }
 }
 
+int Scorer::SEEFromScore(u8 score) {
+    if(IsNegativeCapture(score)) {
+        constexpr int SCORE_RANGE = NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN;
+        constexpr int BUCKET = SEE_MAX / SCORE_RANGE;
+
+        // return (score - NEGATIVECAPTURE_MAX) * BUCKET;
+        return (score - NEGATIVECAPTURE_MAX) * SEE_MAX / SCORE_RANGE - BUCKET / 2;
+    }
+
+    // Positive captures not implemented yet
+    return 0;
+}
+
 // Converts a 'see' value to a 'tactical move' score
 u8 Scorer::TacticalScoreFromSEE(int see) {
     int normalized_see = std::clamp(see, -SEE_MAX, SEE_MAX) + SEE_MAX;

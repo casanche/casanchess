@@ -23,6 +23,7 @@ namespace Scorer {
     constexpr int UNDERPROMOTION = 0;
     u8 ScoreFromHistory(int historyValue, int historyLimit);
     u8 ScoreFromSEE(int see);
+    int SEEFromScore(u8 score);
 
     // Tactical positions
     constexpr int TACTICAL_PROMOTION_CAPTURE = 254;
