@@ -1,6 +1,7 @@
 #include "MoveScorer.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace Scorer {
     constexpr int SEE_MAX = SEE::MATERIAL_VALUES[QUEEN];
@@ -9,14 +10,15 @@ namespace Scorer {
     constexpr int TACTICAL_RANGE = TACTICAL_MAX - TACTICAL_MIN;
 }
 
-u8 Scorer::ScoreFromHistory(int minScore, int maxScore, int historyValue, int historyMax) {   
-    int scoreRange = maxScore - minScore;
-    int denominator = historyMax ? historyMax : 1;
+u8 Scorer::ScoreFromHistory(int historyValue, int historyLimit) {
+    assert(std::abs(historyValue) <= historyLimit);
 
-    int historyScore = minScore + historyValue * scoreRange / denominator;
+    constexpr int SCORE_RANGE = HISTORY_MAX - HISTORY_MIN;
+    int normalizedHistory = historyValue + historyLimit; // Shift to non-negative range
+    int score = HISTORY_MIN + normalizedHistory * SCORE_RANGE / (2 * historyLimit);
 
-    assert(historyScore >= minScore && historyScore <= maxScore);
-    return SafeCastU8(historyScore);
+    assert(score >= HISTORY_MIN && score <= HISTORY_MAX);
+    return SafeCastU8(score);
 }
 
 u8 Scorer::ScoreFromSEE(int see) {

@@ -19,8 +19,9 @@ namespace Scorer {
     constexpr int NEGATIVECAPTURE_MIN = 181;
     constexpr int HISTORY_MAX = 180;
     constexpr int HISTORY_MIN = 1;
+    constexpr int HISTORY_NEUTRAL = HISTORY_MIN + (HISTORY_MAX - HISTORY_MIN) / 2; // history value 0
     constexpr int UNDERPROMOTION = 0;
-    u8 ScoreFromHistory(int minScore, int maxScore, int historyValue, int historyMax);
+    u8 ScoreFromHistory(int historyValue, int historyLimit);
     u8 ScoreFromSEE(int see);
 
     // Tactical positions
@@ -49,6 +50,11 @@ namespace Scorer {
     inline bool IsHistoryMove(int score) {
         return score >= HISTORY_MIN
             && score <= HISTORY_MAX;
+    }
+
+    inline bool IsHistoryNegative(int score) {
+        return score >= HISTORY_MIN
+            && score < HISTORY_NEUTRAL;
     }
 
 }

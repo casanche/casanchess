@@ -68,8 +68,7 @@ Search::Search(TT& tt): m_tt(tt) {
     m_searchCount = 0;
 }
 
-// Reset state for a new position search.
-// Called at the beginning of each iteration in Iterative Deepening.
+// Reset state after a new root position
 void Search::ClearSearch(bool fullClear) {
     // Node counters
     m_nodes = 0;
@@ -90,7 +89,6 @@ void Search::ClearSearch(bool fullClear) {
 
     // Move ordering
     m_heuristics.killer.Clear();
-    m_heuristics.history.Age(); // Reduce history from old positions, but do not remove entirely
 
     // Debug
     m_debug.Clear();
@@ -598,6 +596,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
     // --------- Move loop ---------
     int moveNumber = 0;
+    MoveList quietsSearched;
 
     for(auto move : moves) {
         assert(move.MoveType());
@@ -694,9 +693,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
 
             // Update heuristics
-            if( move.IsQuiet() ) {
+            if(move.IsQuiet()) {
                 m_heuristics.killer.Update(move, m_ply);
                 m_heuristics.history.GoodHistory(move, board.ActivePlayer(), depth);
+                for(auto quiet : quietsSearched)
+                    m_heuristics.history.BadHistory(quiet, board.ActivePlayer(), depth);
             }
 
             return score;
@@ -708,6 +709,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
  
             m_pv.Update(m_ply, move);
         }
+
+        if(move.IsQuiet())
+            quietsSearched.add(move);
 
     } // End move loop
 
@@ -907,7 +911,6 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
     int lmr_value = 0;
 
     // Logarithmic scaling for smooth reductions
-    int logScore = LogTable[moveScore + 1];
     int logDepth = LogTable[depth];
     int logMoveNumber = LogTable[moveNumber];
 
@@ -916,6 +919,9 @@ int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool is
 
     // History moves
     if(moveScore <= Scorer::HISTORY_MAX) {
+        int historyScore = Scorer::HISTORY_MIN + std::max(0, moveScore - Scorer::HISTORY_NEUTRAL);
+        int logScore = LogTable[historyScore + 1];
+
         lmr_value = -50 - 200*(isPV)
             + (
                 - (20 * logScore)
