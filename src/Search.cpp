@@ -942,8 +942,8 @@ int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, 
     else
         return 0; // killers and queen promotions are never reduced
 
-    int reduction = LogTable[depth] + LogTable[moveNumber] - LOG_TABLE_SCALE;
-    reduction -= LOG_TABLE_SCALE * isPV;
+    int reduction = LogTable[depth] + LogTable[moveNumber] - 0.9 * LOG_TABLE_SCALE;
+    reduction -= 2.5 * LOG_TABLE_SCALE * isPV;
     reduction -= LOG_TABLE_SCALE * quality / QUALITY_PER_REDUCTION;
     reduction -= LOG_TABLE_SCALE * std::clamp(evalMargin, -200, 200) / 200; // eval vs alpha
 
