@@ -10,18 +10,28 @@ namespace Scorer {
     constexpr int CAPTURE_SCORE_RANGE = POSITIVECAPTURE_MAX - POSITIVECAPTURE_MIN;
     static_assert(CAPTURE_SCORE_RANGE == (NEGATIVECAPTURE_MAX - NEGATIVECAPTURE_MIN), "Same range for positive and negative captures.");
 
-    constexpr int TACTICAL_RANGE = TACTICAL_MAX - TACTICAL_MIN;
+    constexpr int HISTORY_SCORE_RANGE = HISTORY_MAX - HISTORY_MIN;
+
+    constexpr int TACTICAL_SCORE_RANGE = TACTICAL_MAX - TACTICAL_MIN;
 }
 
 u8 Scorer::ScoreFromHistory(int historyValue, int historyLimit) {
     assert(std::abs(historyValue) <= historyLimit);
 
-    constexpr int SCORE_RANGE = HISTORY_MAX - HISTORY_MIN;
     int normalizedHistory = historyValue + historyLimit; // Shift to non-negative range
-    int score = HISTORY_MIN + normalizedHistory * SCORE_RANGE / (2 * historyLimit);
+    int score = HISTORY_MIN + normalizedHistory * HISTORY_SCORE_RANGE / (2 * historyLimit);
 
     assert(score >= HISTORY_MIN && score <= HISTORY_MAX);
     return SafeCastU8(score);
+}
+
+// Converts a history score back to its 'history' value (middle of the bin)
+int Scorer::HistoryFromScore(u8 score, int historyLimit) {
+    assert(IsHistoryMove(score));
+
+    int historyValue = (score - HISTORY_NEUTRAL) * 2 * historyLimit / HISTORY_SCORE_RANGE;
+
+    return std::clamp(historyValue, -historyLimit, historyLimit); // prevent range overflows
 }
 
 u8 Scorer::ScoreFromSEE(int see) {
@@ -63,7 +73,7 @@ int Scorer::SEEFromScore(u8 score) {
 // Converts a 'see' value to a 'tactical move' score
 u8 Scorer::TacticalScoreFromSEE(int see) {
     int normalized_see = std::clamp(see, -SEE_MAX, SEE_MAX) + SEE_MAX;
-    int score = TACTICAL_MIN + normalized_see * TACTICAL_RANGE / SEE_RANGE;
+    int score = TACTICAL_MIN + normalized_see * TACTICAL_SCORE_RANGE / SEE_RANGE;
 
     assert(score >= TACTICAL_MIN && score <= TACTICAL_MAX);
     return SafeCastU8(score);
@@ -74,7 +84,7 @@ int Scorer::SEEFromTacticalScore(u8 score) {
     assert(score >= TACTICAL_MIN && score <= TACTICAL_MAX);
 
     int score_offset = score - TACTICAL_MIN;
-    int normalized_see = score_offset * SEE_RANGE / TACTICAL_RANGE;
+    int normalized_see = score_offset * SEE_RANGE / TACTICAL_SCORE_RANGE;
 
     int see = normalized_see - SEE_MAX;
 
