@@ -77,7 +77,7 @@ void TT::Clear() {
 
 // For a faster entry lookup using a mask: downsize entries (m_size) to fill in a power of 2
 void TT::SetSize(int sizeInMB) {
-    u64 maxEntries = sizeInMB * (1024 * 1024) / sizeof(TTEntry);
+    u64 maxEntries = u64(sizeInMB) * (1024 * 1024) / sizeof(TTEntry);
 
     m_size = std::bit_floor(maxEntries);
     m_mask = m_size - 1;

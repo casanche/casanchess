@@ -6,7 +6,6 @@
 #include <memory>
 
 constexpr uint DEFAULT_HASH_SIZE = 16; //In MegaBytes
-
 // 2^19 entries = 4 MB / 64 bits per entry
 constexpr u64 EVALCACHE_ENTRIES = 1 << 19;
 
@@ -31,6 +30,9 @@ struct TTEntry {
 
     void Clear();
 };
+
+// 2^32 entries * 16 bytes, so the zkey lower 32 bits do not overlap with the upper 32 bits
+constexpr uint MAX_HASH_SIZE = (u64(1) << 32) * sizeof(TTEntry) / (1024 * 1024); //In MegaBytes
 
 class TT {
 public:
