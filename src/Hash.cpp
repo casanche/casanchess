@@ -77,7 +77,7 @@ void TT::Clear() {
 
 // For a faster entry lookup using a mask: downsize entries (m_size) to fill in a power of 2
 void TT::SetSize(int sizeInMB) {
-    assert(sizeInMB >= 1 && sizeInMB <= (int)MAX_HASH_SIZE);
+    assert(sizeInMB >= MIN_HASH_SIZE && sizeInMB <= MAX_HASH_SIZE);
 
     u64 maxEntries = u64(sizeInMB) * (1024 * 1024) / sizeof(TTEntry);
 
@@ -91,7 +91,7 @@ void TT::SetSize(int sizeInMB) {
 }
 
 u64 TT::Occupancy(u64 sampleSize) const {
-    assert(m_size >= sampleSize);
+    assert(sampleSize <= m_size);
 
     u64 count = 0;
     for(u64 i = 0; i < sampleSize; ++i) {
