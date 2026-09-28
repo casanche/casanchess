@@ -561,6 +561,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         m_ply--;
         m_nullmoveAllowed = true;
 
+        if(m_limits.Stopped()) return 0;
+
         if(!IsTBUpperBound(nullScore) && nullScore >= beta) {
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff") );
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff - Depth " + std::to_string(depth)) );
