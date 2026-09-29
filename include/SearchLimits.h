@@ -47,8 +47,8 @@ public:
     void Stop() { m_stop.store(true, std::memory_order_relaxed); }
     void WaitIfNecessary();
 
-    bool Stopped() const { return m_stop.load(std::memory_order_relaxed); }
-    bool PonderHitReceived() const { return m_ponderhit.load(std::memory_order_relaxed); }
+    bool Stopped() const { return m_limitsReached || m_stop.load(std::memory_order_relaxed); }
+    bool PonderHitReceived() const { return m_uciLimits.ponder && m_ponderhit.load(std::memory_order_relaxed); }
 
     // Getters
     i64 AllocatedTime() const { return m_allocatedTime; }
@@ -87,7 +87,10 @@ private:
     // Root-level information
     size_t m_movesSize = 0; // Number of legal moves in the root position (used for time estimation)
 
+    // Internal stop
+    bool m_limitsReached = false; // Flag set when a nodes or time limit is reached
+
     // UCI signals
-    std::atomic<bool> m_stop = false; // Flag to stop the search (time limit, user input, etc.)
+    std::atomic<bool> m_stop = false; // Flag to stop the search from the UCI thread
     std::atomic<bool> m_ponderhit = false; // Flag to indicate that the ponder move was played
 };
