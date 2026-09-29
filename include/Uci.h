@@ -27,7 +27,7 @@ public:
     ~Uci();
 
     void Bench(int depth, bool verbose);
-    void Launch();
+    void Launch(std::istream& input);
 
     // Search Outputs
     static void Output(int depth, int seldepth, int score, u64 nodes, i64 time, uint nps, int tbHits, BOUND_TYPE bound, const std::string& PV, const TT& tt);

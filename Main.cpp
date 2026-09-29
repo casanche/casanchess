@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
         uci.Bench(benchDepth, false);
     }
     else {
-        uci.Launch();
+        uci.Launch(std::cin);
         std::cout << "info string [TIME] " << clock.Elapsed() << " ms" << std::endl;
     }
 
