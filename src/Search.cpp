@@ -927,9 +927,12 @@ int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, 
     assert(depth      >= 0 && depth      <= LOG_TABLE_SIZE - 1);
     assert(moveNumber >= 0 && moveNumber <= LOG_TABLE_SIZE - 1);
 
+    constexpr int REDUCTION_UNIT = 100;
+    static_assert(LOG_TABLE_SCALE == 100, "LMR terms are written in centi-reductions");
+
     const u8 score = move.Score();
 
-    // Quality modifies reductions based on history (for quiets) or SEE (for captures)
+    // Modifies reductions based on history (for quiets) or SEE (for captures)
     constexpr int QUALITY_PER_REDUCTION = 300; // 300 quality = 1 reduction less
 
     int quality;
@@ -942,10 +945,10 @@ int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, 
     else
         return 0; // killers and queen promotions are never reduced
 
-    int reduction = LogTable[depth] + LogTable[moveNumber] - 1.0 * LOG_TABLE_SCALE;
-    reduction -= 2.5 * LOG_TABLE_SCALE * isPV;
-    reduction -= LOG_TABLE_SCALE * quality / QUALITY_PER_REDUCTION;
-    reduction -= LOG_TABLE_SCALE * std::clamp(evalMargin, -200, 200) / 200; // eval vs alpha
+    int reduction = LogTable[depth] + LogTable[moveNumber] - REDUCTION_UNIT;
+    reduction -= 250 * isPV; // -2.5 reductions
+    reduction -= REDUCTION_UNIT * quality / QUALITY_PER_REDUCTION;
+    reduction -= REDUCTION_UNIT * std::clamp(evalMargin, -200, 200) / 200; // eval vs alpha (max 1 reduction)
 
-    return std::clamp(reduction / LOG_TABLE_SCALE, 0, 4);
+    return std::clamp(reduction / REDUCTION_UNIT, 0, 4);
 }
