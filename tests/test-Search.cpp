@@ -5,8 +5,6 @@
 
 #include <gtest/gtest.h>
 
-#include <iostream>
-
 int main(int argc, char** argv) {
     TestCommon::InitEngine();
 
@@ -20,6 +18,7 @@ protected:
     Search search;
     Board board;
 
+    TestCommon::MuteCout mute;
     int fixedNodes = 250000;
     UCI_Limits limits;
     int time = 2000; //ms
@@ -27,7 +26,6 @@ protected:
     ShortSearch(): tt(), search(tt) {}
 
     void SetUp() override {
-        std::cout.rdbuf(nullptr);
         limits = UCI_Limits::FixNodes(fixedNodes);
 
         tt.Clear();

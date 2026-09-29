@@ -1,5 +1,4 @@
 #include "Search.h"
-#include <iostream>
 
 #include "test-Common.h"
 using namespace TestCommon;
@@ -11,17 +10,10 @@ protected:
     Search search;
     Board board;
 
-    CoutHelper verbosity;
+    MuteCout mute;
     UCI_Limits limits = UCI_Limits::FixDepth(1);
 
     PositionMisc(): tt(), search(tt), board() {}
-
-    void SetUp() override {
-        verbosity.Mute();
-    }
-    void TearDown() override {
-        verbosity.Speak();
-    }
 };
 
 //https://www.talkchess.com/forum/viewtopic.php?p=710549

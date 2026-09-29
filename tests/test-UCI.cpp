@@ -10,14 +10,7 @@ using namespace TestCommon;
 
 class UCI : public ::testing::Test {
 protected:
-    CoutHelper verbosity;
-
-    void SetUp() override {
-        verbosity.Mute();
-    }
-    void TearDown() override {
-        verbosity.Speak();
-    }
+    MuteCout mute;
 
     // Simulates a UCI session. Returns the duration (ms)
     i64 RunUci(const std::string& commands) {
