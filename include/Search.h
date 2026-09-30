@@ -28,6 +28,7 @@ public:
     // Flow
     void PonderHit() { m_limits.PonderHit(); }
     void Stop() { m_limits.Stop(); }
+    void ResetSignals() { m_limits.ResetSignals(); }
 
     // Limits management
     const Limits& GetLimits() const { return m_limits; }

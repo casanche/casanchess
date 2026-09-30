@@ -22,17 +22,12 @@ namespace TestCommon {
         NNUE::LoadFile();
     }
 
-    class CoutHelper {
+    // Silences std::cout while alive
+    class MuteCout {
     public:
-        CoutHelper() {
-            m_backup = std::cout.rdbuf();
-        }
-        void Mute() {
-            std::cout.rdbuf(nullptr);
-        }
-        void Speak() {
-            std::cout.rdbuf(m_backup);
-        }
+        MuteCout()  : m_backup(std::cout.rdbuf(nullptr)) {}
+        ~MuteCout() { std::cout.rdbuf(m_backup); }
+
     private:
         std::streambuf* m_backup;
     };

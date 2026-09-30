@@ -34,13 +34,13 @@ Uci::~Uci() {
     StopAndJoin();
 }
 
-void Uci::Launch() {
+void Uci::Launch(std::istream& input) {
     Search& search = m_engine->search;
     Board& board = m_engine->board;
 
     std::string line;
 
-    while(std::getline(std::cin, line)) {
+    while(std::getline(input, line)) {
         if(line.ends_with('\r'))
             line.pop_back();
 
@@ -415,6 +415,7 @@ void Uci::ShowHashMoves() {
     }
 }
 
+// Leaves the engine idle. Call before starting a search or modifying engine state.
 void Uci::StopAndJoin() {
     m_engine->StopSearch();
 
@@ -422,6 +423,9 @@ void Uci::StopAndJoin() {
     if(m_searchThread.joinable()) {
         m_searchThread.join();
     }
+
+    // Reset UCI signals 'stop' and 'ponderhit'
+    m_engine->search.ResetSignals();
 }
 
 // =================

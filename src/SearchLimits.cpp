@@ -12,8 +12,8 @@ namespace {
 
 void Limits::StartNewSearch(COLOR color, const UCI_Limits& limits, size_t movesSize) {
     m_movesSize = movesSize;
+    m_limitsReached = false;
 
-    ResetSignals();
     AllocateLimits(color, limits, m_movesSize);
     RestartClock();
 }
@@ -24,7 +24,7 @@ bool Limits::LimitsReached(u64 nodes) {
 
     // Fixed nodes
     if(nodes >= m_forcedNodes) {
-        Stop();
+        m_limitsReached = true;
         return true;
     }
 
@@ -33,7 +33,7 @@ bool Limits::LimitsReached(u64 nodes) {
         // Time checks
         i64 elapsedTime = UpdatedElapsedTime();
         if(elapsedTime >= m_allocatedTime || elapsedTime >= m_forcedTime) {
-            Stop();
+            m_limitsReached = true;
             return true;
         }
 
@@ -122,9 +122,8 @@ void Limits::Infinite() {
 }
 
 void Limits::Apply_PonderHit() {
-    assert(PonderHitReceived() && m_uciLimits.ponder);
+    assert(PonderHitReceived());
 
-    m_ponderhit.store(false, std::memory_order_relaxed);
     m_uciLimits.ponder = false;
 
     AllocateLimits(m_color, m_uciLimits, m_movesSize);

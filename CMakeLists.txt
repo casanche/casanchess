@@ -242,6 +242,7 @@ if(BUILD_TESTS)
         tests/test-Hash.cpp
         tests/test-Misc.cpp
         tests/test-SEE.cpp
+        tests/test-UCI.cpp
         tests/test-Utils.cpp
         tests/test-ZobristKey.cpp
     )
