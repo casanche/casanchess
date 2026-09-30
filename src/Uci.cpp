@@ -59,7 +59,7 @@ void Uci::Launch() {
             std::cout << "option name Ambition type spin default " << UCI_AMBITION_DEFAULT << " min 0 max 50" << std::endl;
             std::cout << "option name Clear Hash type button" << std::endl;
             std::cout << "option name Contempt type spin default 10 min -100 max 100" << std::endl;
-            std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min 1 max 4096" << std::endl;
+            std::cout << "option name Hash type spin default " << DEFAULT_HASH_SIZE << " min " << MIN_HASH_SIZE << " max " << MAX_HASH_SIZE << std::endl;
             std::cout << "option name NNUE_Path type string default <empty>" << std::endl;
             std::cout << "option name Ponder type check default false" << std::endl;
             std::cout << "option name SyzygyPath type string default " << Syzygy::DEFAULT_PATH << std::endl;
@@ -300,7 +300,7 @@ void Uci::SetOption(std::istringstream &stream) {
                 return;
             stream >> token;
 
-            tt.SetSize( stoi(token) );
+            tt.SetSize( std::clamp(std::stoi(token), MIN_HASH_SIZE, MAX_HASH_SIZE) );
         }
         else if(token == "Ponder") {
             stream >> token; //should be 'value'

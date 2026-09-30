@@ -11,7 +11,7 @@ protected:
     int normalScore;
 
     void SetUp() override {
-        tt.SetSize(1);
+        tt.SetSize(MIN_HASH_SIZE);
         zkey = 0x123456789ABCDEF0;
         normalScore = 150;
     }
