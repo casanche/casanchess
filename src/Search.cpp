@@ -447,6 +447,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     int bestScore = NO_SCORE;
     int tbUpperBound = INFINITE_SCORE;
     int alphaOriginal = alpha; // For TT entry type calculation
+    bool ttFailedLow = false;
 
     Move hashMove; // For move ordering
     int ttEval = NO_EVAL;
@@ -460,6 +461,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(!isPV && ttEntry->depth >= depth) {
             D( m_debug.Increment("NegaMax: TT: Higher Depth") );
             int score = m_tt.ScoreFromHash(ttEntry->score, m_ply);
+            ttFailedLow = ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha;
             const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
 
             if(!invalidTBScore
@@ -543,7 +545,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         && m_nullmoveAllowed
         && eval >= beta  //very good score
         && depth > 1
-        // && depth >= NULLMOVE_REDUCTION_FACTOR + (depth / 5)  //enough depth
+        && !ttFailedLow
         && board.AreHeavyPieces()  // Avoid zugzwang in K+P endgames
     ) {
         D( m_debug.Increment("NegaMax: Pruning: NullMove: Hit") );
