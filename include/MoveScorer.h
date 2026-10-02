@@ -22,6 +22,7 @@ namespace Scorer {
     constexpr int HISTORY_NEUTRAL = HISTORY_MIN + (HISTORY_MAX - HISTORY_MIN) / 2; // history value 0
     constexpr int UNDERPROMOTION = 0;
     u8 ScoreFromHistory(int historyValue, int historyLimit);
+    int HistoryFromScore(u8 score, int historyLimit);
     u8 ScoreFromSEE(int see);
     int SEEFromScore(u8 score);
 
@@ -46,6 +47,18 @@ namespace Scorer {
     inline bool IsNegativeCapture(int score) {
         return score >= NEGATIVECAPTURE_MIN
             && score <= NEGATIVECAPTURE_MAX;
+    }
+
+    inline bool IsPositiveCapture(int score) {
+        return score >= POSITIVECAPTURE_MIN
+            && score <= POSITIVECAPTURE_MAX;
+    }
+
+    // Excludes promotion captures
+    inline bool IsNormalCapture(int score) {
+        return IsPositiveCapture(score)
+            || IsNeutralCapture(score)
+            || IsNegativeCapture(score);
     }
 
     inline bool IsHistoryMove(int score) {

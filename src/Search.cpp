@@ -645,7 +645,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
               && depth >= 2         // Avoid negative depths
               && !inCheck           // Not in check
         ) {
-            reduction = LateMoveReductions((int)move.Score(), depth, moveNumber, isPV);
+            reduction = LateMoveReductions(move, depth, moveNumber, isPV, eval - alpha);
         }
 
         board.MakeMove(move);
@@ -923,54 +923,32 @@ int Search::FutilityMargin(Move move, int depth) const {
 }
 
 // Late Move Reductions: reduce the search depth for less-promising moves.
-int Search::LateMoveReductions(int moveScore, int depth, int moveNumber, bool isPV) {
-    assert(moveScore  >= 0 && moveScore  <= LOG_TABLE_SIZE - 1);
+int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, int evalMargin) const {
     assert(depth      >= 0 && depth      <= LOG_TABLE_SIZE - 1);
     assert(moveNumber >= 0 && moveNumber <= LOG_TABLE_SIZE - 1);
 
-    int reduction = 0;
-    int lmr_value = 0;
+    constexpr int REDUCTION_UNIT = 100;
+    static_assert(LOG_TABLE_SCALE == 100, "LMR terms are written in centi-reductions");
 
-    // Logarithmic scaling for smooth reductions
-    int logDepth = LogTable[depth];
-    int logMoveNumber = LogTable[moveNumber];
+    const u8 score = move.Score();
 
-    // Coefficients are scaled by this amount to perform integer calculations
-    const int MULT_FACTOR = 100; 
+    // Modifies reductions based on history (for quiets) or SEE (for captures)
+    constexpr int QUALITY_PER_REDUCTION = 300; // 300 quality = 1 reduction less
 
-    // History moves
-    if(moveScore <= Scorer::HISTORY_MAX) {
-        int historyScore = Scorer::HISTORY_MIN + std::max(0, moveScore - Scorer::HISTORY_NEUTRAL);
-        int logScore = LogTable[historyScore + 1];
+    int quality;
+    if(Scorer::IsHistoryMove(score))
+        quality = Scorer::HistoryFromScore(score, MAX_HISTORY_VALUE); // History range: +-1024, comparable to SEE scale
+    else if(Scorer::IsNormalCapture(score))
+        quality = Scorer::SEEFromScore(score); // SEE range: +-1100, about a queen material value
+    else if(score == Scorer::UNDERPROMOTION)
+        quality = -MAX_HISTORY_VALUE; // treat underpromotions as the worst quiet move
+    else
+        return 0; // killers and queen promotions are never reduced
 
-        lmr_value = -50 - 200*(isPV)
-            + (
-                - (20 * logScore)
-                + (200 * logDepth)
-                + (30 * logMoveNumber)
-            ) / LOG_TABLE_SCALE
-            + (
-                - (30 * logScore * logDepth)
-                + (15 * logScore * logMoveNumber)
-            ) / (LOG_TABLE_SCALE * LOG_TABLE_SCALE);
-    }
+    int reduction = LogTable[depth] + LogTable[moveNumber] - REDUCTION_UNIT;
+    reduction -= 250 * isPV; // -2.5 reductions
+    reduction -= REDUCTION_UNIT * quality / QUALITY_PER_REDUCTION;
+    reduction -= REDUCTION_UNIT * std::clamp(evalMargin, -200, 200) / 200; // eval vs alpha (max 1 reduction)
 
-    // SEE << 0: very bad captures
-    else if(moveScore >= 181 && moveScore <= 184) {
-        lmr_value = 50 - 40*(isPV) + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
-    }
-
-    // SEE < 0: bad captures
-    else if(moveScore >= 185 && moveScore <= 189) {
-        lmr_value = -85 + ( (135*logDepth) + (40*logMoveNumber) ) / LOG_TABLE_SCALE;
-    }
-
-    // Killers 2,3,4: less-promising killer moves in non-PV nodes
-    else if(moveScore >= 191 && moveScore <= 193 && !isPV) {
-        lmr_value = -185 + ( (50*logDepth) + (165*logMoveNumber) ) / LOG_TABLE_SCALE;
-    }
-
-    reduction = lmr_value / MULT_FACTOR;
-    reduction = std::clamp(reduction, 0, 4);
-    return reduction;
+    return std::clamp(reduction / REDUCTION_UNIT, 0, 4);
 }
