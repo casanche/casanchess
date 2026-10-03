@@ -310,13 +310,13 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         // PV move: full window
         // Other moves: zero window
         if(isPV)
-            score = -NegaMax(board, depth-1, -beta, -alpha);
+            score = -NegaMax(board, depth-1, -beta, -alpha, false);
         else {
-            score = -NegaMax(board, depth-1, -alpha-1, -alpha);
+            score = -NegaMax(board, depth-1, -alpha-1, -alpha, true);
 
             // Score within window: new PV found! Re-search with full window
             if(score > alpha && score < beta)
-                score = -NegaMax(board, depth-1, -beta, -alpha);
+                score = -NegaMax(board, depth-1, -beta, -alpha, false);
         }
 
         board.TakeMove(move);
@@ -379,7 +379,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
 // Negamax search: core recursive alpha-beta search.
 // Implements most of the engine's search logic.
-int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
+int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
 
     D( m_debug.Increment("NegaMax: _: Entering function") );
@@ -394,6 +394,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     const bool isPV = (beta - alpha) != 1;
+    assert(!(isPV && cutNode));
     if(isPV)
         m_pv.ClearPly(m_ply);
 
@@ -549,9 +550,9 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         board.MakeNull();
         m_ply++;
 
-        int R = NULLMOVE_REDUCTION_FACTOR + (depth / 3);
+        int R = NULLMOVE_REDUCTION_FACTOR + (depth / 3) + (cutNode ? 0 : -1);
         int nullDepth = std::max(0, depth - R);
-        int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1);
+        int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1, !cutNode);
 
         board.TakeNull();
         m_ply--;
@@ -648,17 +649,17 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // PV move: full window, full depth
         // Other moves: zero window, reduced depth
         if(isPV && firstMove)
-            score = -NegaMax(board, fullDepth, -beta, -alpha);
+            score = -NegaMax(board, fullDepth, -beta, -alpha, false);
         else {
-            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha);
+            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha, !cutNode);
 
             // Reduced search failed high: re-search with full depth
             if(reduction && score > alpha)
-                score = -NegaMax(board, fullDepth, -alpha-1, -alpha);
+                score = -NegaMax(board, fullDepth, -alpha-1, -alpha, !cutNode);
 
             // Score within window: new PV found! Re-search with full window and depth
             if(score > alpha && score < beta) // 'score < beta' needed in fail-soft schemes
-                score = -NegaMax(board, fullDepth, -beta, -alpha);
+                score = -NegaMax(board, fullDepth, -beta, -alpha, false);
         }
 
         board.TakeMove(move);
