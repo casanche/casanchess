@@ -568,10 +568,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         if(!IsTBUpperBound(nullScore) && nullScore >= beta) {
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff") );
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff - Depth " + std::to_string(depth)) );
-            if(IsWinScore(nullScore))
-                nullScore = beta;  // Avoid reporting false mates in zugzwang
-            m_tt.Store(TTKey(board), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount, eval);
-            return nullScore;
+            return beta;
         }
     }
     // Allow non-consecutive null-move pruning
