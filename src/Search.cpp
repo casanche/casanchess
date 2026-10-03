@@ -457,11 +457,11 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         D( m_debug.Increment("NegaMax: TT: Hit") );
         ttEval = ttEntry->eval;
         hashMove = ttEntry->bestMove;
+        ttFailedLow = ttEntry->type == TTENTRY_TYPE::UPPER_BOUND;
 
         if(!isPV && ttEntry->depth >= depth) {
             D( m_debug.Increment("NegaMax: TT: Higher Depth") );
             int score = m_tt.ScoreFromHash(ttEntry->score, m_ply);
-            ttFailedLow = ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha;
             const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
 
             if(!invalidTBScore
