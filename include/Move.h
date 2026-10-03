@@ -28,6 +28,7 @@ public:
 
     MoveData Data() const;
 
+    inline bool IsNull() const { return MoveType() == NULLMOVE; }
     inline bool IsQuiet() const {
         return !IsCapture() && !IsPromotion();
     }

@@ -84,9 +84,6 @@ void Search::ClearSearch(bool fullClear) {
     m_plyqs  = 0;
     m_selPly = 0;
 
-    // Pruning flags
-    m_nullmoveAllowed = true;
-
     // Move ordering
     m_heuristics.killer.Clear();
 
@@ -151,9 +148,7 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
     m_searchCount++;
 
     for(m_depth = 1; m_depth <= m_limits.MaxDepth(); m_depth++) {
-        assert(m_ply == 0);
-        assert(m_plyqs == 0);
-        assert(m_nullmoveAllowed);
+        assert(m_ply == 0 && m_plyqs == 0);
         if(rootMoves.empty()) {
             m_bestScore = board.IsCheck() ? -MATESCORE_MAX : DrawScore(board);
             break;
@@ -542,10 +537,10 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     if(!TURNOFF_NULLMOVE_PRUNING
         && !isPV
         && !inCheck
-        && m_nullmoveAllowed
-        && eval >= beta  //very good score
+        && eval >= beta
         && depth > 1
         && !ttFailedLow
+        && !board.LastMove().IsNull() // Prevent two null moves in a row
         && board.AreHeavyPieces()  // Avoid zugzwang in K+P endgames
     ) {
         D( m_debug.Increment("NegaMax: Pruning: NullMove: Hit") );
@@ -553,7 +548,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         board.MakeNull();
         m_ply++;
-        m_nullmoveAllowed = false;
 
         int R = NULLMOVE_REDUCTION_FACTOR + (depth / 3);
         int nullDepth = std::max(0, depth - R);
@@ -561,7 +555,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         board.TakeNull();
         m_ply--;
-        m_nullmoveAllowed = true;
 
         if(m_limits.Stopped()) return 0;
 
@@ -571,8 +564,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
             return beta;
         }
     }
-    // Allow non-consecutive null-move pruning
-    m_nullmoveAllowed = true;
 
     // --------- Move generation -----------
     MoveList moves = MoveGenerator::GenerateMoves(board);
