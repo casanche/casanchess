@@ -58,15 +58,15 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     }
 }
 
-const TTEntry* TT::Probe(u64 zkey) const {
+bool TT::Probe(u64 zkey, TTEntry& entry) const {
     u64 index = zkey & m_mask;
-    const TTEntry* entry = &m_entries[index];
+    const TTEntry& stored = m_entries[index];
 
-    const bool zkeyMatch = (UpperBits<u32>(zkey) == entry->zkey);
-    if(zkeyMatch)
-        return entry;
-
-    return nullptr;
+    if(stored.zkey == UpperBits<u32>(zkey)) {
+        entry = stored;
+        return true;
+    }
+    return false;
 }
 
 void TT::Clear() {

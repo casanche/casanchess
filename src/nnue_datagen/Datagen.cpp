@@ -429,9 +429,9 @@ MoveList Datagen::SortFilteredMoves(Board& board, Search& search) {
     MoveList goodMoves;
 
     Move hashMove = Move();
-    const TTEntry* ttEntry = search.m_tt.Probe(search.TTKey(board));
-    if(ttEntry)
-        hashMove = ttEntry->bestMove;
+    TTEntry ttEntry;
+    if( search.m_tt.Probe(search.TTKey(board), ttEntry) )
+        hashMove = ttEntry.bestMove;
 
     Sorting::SortMoves(board, allMoves, hashMove, search.m_heuristics, 0);
 

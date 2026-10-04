@@ -46,7 +46,7 @@ public:
     TT& operator=(const TT&) = delete;
 
     void Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age, int eval = NO_EVAL);
-    const TTEntry* Probe(u64 zkey) const;
+    bool Probe(u64 zkey, TTEntry& entry) const;
 
     void Clear();
     void SetSize(int sizeInMB);
