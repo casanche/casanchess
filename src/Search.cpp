@@ -538,7 +538,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     // --------- Null-move pruning -----------
-    // Skip a move (null move) to quickly detect beta cutoffs
+    // Skip a move (null move). If a reduced search still fails high, the node is very likely to fail high.
     if(!TURNOFF_NULLMOVE_PRUNING
         && !isPV
         && !inCheck
