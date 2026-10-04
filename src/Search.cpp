@@ -616,6 +616,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
                 D( m_debug.Increment("NegaMax: Pruning: Futility") );
                 D( m_debug.Increment("NegaMax: Pruning: Futility - Depth " + std::to_string(depth)) );
                 bestScore = std::max(bestScore, eval + futilityMargin); // needed in case of fail-low
+                if(move.IsQuiet())
+                    quietsSearched.add(move);
                 continue;
             }
         }
