@@ -84,9 +84,6 @@ void Search::ClearSearch(bool fullClear) {
     m_plyqs  = 0;
     m_selPly = 0;
 
-    // Pruning flags
-    m_nullmoveAllowed = true;
-
     // Move ordering
     m_heuristics.killer.Clear();
 
@@ -151,9 +148,7 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
     m_searchCount++;
 
     for(m_depth = 1; m_depth <= m_limits.MaxDepth(); m_depth++) {
-        assert(m_ply == 0);
-        assert(m_plyqs == 0);
-        assert(m_nullmoveAllowed);
+        assert(m_ply == 0 && m_plyqs == 0);
         if(rootMoves.empty()) {
             m_bestScore = board.IsCheck() ? -MATESCORE_MAX : DrawScore(board);
             break;
@@ -315,13 +310,13 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         // PV move: full window
         // Other moves: zero window
         if(isPV)
-            score = -NegaMax(board, depth-1, -beta, -alpha);
+            score = -NegaMax(board, depth-1, -beta, -alpha, false);
         else {
-            score = -NegaMax(board, depth-1, -alpha-1, -alpha);
+            score = -NegaMax(board, depth-1, -alpha-1, -alpha, true);
 
             // Score within window: new PV found! Re-search with full window
             if(score > alpha && score < beta)
-                score = -NegaMax(board, depth-1, -beta, -alpha);
+                score = -NegaMax(board, depth-1, -beta, -alpha, false);
         }
 
         board.TakeMove(move);
@@ -384,7 +379,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
 // Negamax search: core recursive alpha-beta search.
 // Implements most of the engine's search logic.
-int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
+int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) {
     assert(alpha >= -INFINITE_SCORE && beta <= INFINITE_SCORE && alpha < beta);
 
     D( m_debug.Increment("NegaMax: _: Entering function") );
@@ -399,6 +394,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     const bool isPV = (beta - alpha) != 1;
+    assert(!(isPV && cutNode));
     if(isPV)
         m_pv.ClearPly(m_ply);
 
@@ -447,6 +443,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     int bestScore = NO_SCORE;
     int tbUpperBound = INFINITE_SCORE;
     int alphaOriginal = alpha; // For TT entry type calculation
+    bool ttFailedLow = false;
 
     Move hashMove; // For move ordering
     int ttEval = NO_EVAL;
@@ -456,6 +453,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         D( m_debug.Increment("NegaMax: TT: Hit") );
         ttEval = ttEntry->eval;
         hashMove = ttEntry->bestMove;
+        ttFailedLow = ttEntry->type == TTENTRY_TYPE::UPPER_BOUND;
 
         if(!isPV && ttEntry->depth >= depth) {
             D( m_debug.Increment("NegaMax: TT: Higher Depth") );
@@ -536,14 +534,14 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
     }
 
     // --------- Null-move pruning -----------
-    // Skip a move (null move) to quickly detect beta cutoffs
+    // Skip a move (null move). If a reduced search still fails high, the node is very likely to fail high.
     if(!TURNOFF_NULLMOVE_PRUNING
         && !isPV
         && !inCheck
-        && m_nullmoveAllowed
-        && eval >= beta  //very good score
+        && eval >= beta
         && depth > 1
-        // && depth >= NULLMOVE_REDUCTION_FACTOR + (depth / 5)  //enough depth
+        && !ttFailedLow
+        && !board.LastMove().IsNull() // Prevent two null moves in a row
         && board.AreHeavyPieces()  // Avoid zugzwang in K+P endgames
     ) {
         D( m_debug.Increment("NegaMax: Pruning: NullMove: Hit") );
@@ -551,29 +549,22 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
 
         board.MakeNull();
         m_ply++;
-        m_nullmoveAllowed = false;
 
-        int R = NULLMOVE_REDUCTION_FACTOR + (depth / 4);
+        int R = NULLMOVE_REDUCTION_FACTOR + (depth / 3) + (cutNode ? 0 : -1);
         int nullDepth = std::max(0, depth - R);
-        int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1);
+        int nullScore = -NegaMax(board, nullDepth, -beta, -beta + 1, !cutNode);
 
         board.TakeNull();
         m_ply--;
-        m_nullmoveAllowed = true;
 
         if(m_limits.Stopped()) return 0;
 
         if(!IsTBUpperBound(nullScore) && nullScore >= beta) {
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff") );
             D( m_debug.Increment("NegaMax: Pruning: NullMove: Beta Cutoff - Depth " + std::to_string(depth)) );
-            if(IsWinScore(nullScore))
-                nullScore = beta;  // Avoid reporting false mates in zugzwang
-            m_tt.Store(TTKey(board), nullScore, TTENTRY_TYPE::LOWER_BOUND, Move(), nullDepth, m_ply, m_searchCount, eval);
-            return nullScore;
+            return beta;
         }
     }
-    // Allow non-consecutive null-move pruning
-    m_nullmoveAllowed = true;
 
     // --------- Move generation -----------
     MoveList moves = MoveGenerator::GenerateMoves(board);
@@ -658,17 +649,17 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta) {
         // PV move: full window, full depth
         // Other moves: zero window, reduced depth
         if(isPV && firstMove)
-            score = -NegaMax(board, fullDepth, -beta, -alpha);
+            score = -NegaMax(board, fullDepth, -beta, -alpha, false);
         else {
-            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha);
+            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha, !cutNode);
 
             // Reduced search failed high: re-search with full depth
             if(reduction && score > alpha)
-                score = -NegaMax(board, fullDepth, -alpha-1, -alpha);
+                score = -NegaMax(board, fullDepth, -alpha-1, -alpha, !cutNode);
 
             // Score within window: new PV found! Re-search with full window and depth
             if(score > alpha && score < beta) // 'score < beta' needed in fail-soft schemes
-                score = -NegaMax(board, fullDepth, -beta, -alpha);
+                score = -NegaMax(board, fullDepth, -beta, -alpha, false);
         }
 
         board.TakeMove(move);

@@ -48,7 +48,7 @@ private:
     // Internal search algorithms
     int AspirationWindow(Board& board, const int depth, const int bestScore);
     int RootMax(Board &board, int depth, int alpha, int beta);
-    int NegaMax(Board  &board, int depth, int alpha, int beta);
+    int NegaMax(Board  &board, int depth, int alpha, int beta, bool cutNode);
     int QuiescenceSearch(Board &board, int alpha, int beta);
 
     // Root-relative
@@ -73,7 +73,6 @@ private:
     PV m_pv;
     int m_bestScore; // Best score found so far for the current search
     Move m_bestMove; // Best move found so far for the current search
-    bool m_nullmoveAllowed; // Prevents two consecutive null moves
     u8 m_searchCount; // Used as 'age' in transposition tables
     // Nodes
     u64 m_nodes; // Number of nodes searched
