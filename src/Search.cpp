@@ -524,7 +524,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     // --- Reverse Futility Pruning ---
     // Prune if static evaluation is too good (eval >> beta)
     const int staticMargin = 80;
-    if(depth <= 4 && !isPV && !inCheck) {
+    if(depth <= 4 && !isPV && !inCheck && !ttFailedLow) {
         int staticEval = eval - depth * staticMargin;
         if(staticEval >= beta) {
             D( m_debug.Increment("NegaMax: Pruning: Reverse Futility") );
