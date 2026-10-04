@@ -62,7 +62,7 @@ private:
 
     // NegaMax methods
     int FutilityMargin(Move move, int depth) const;
-    int LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, int evalMargin) const;
+    int LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, bool wasPV, int evalMargin) const;
 
     // Debug
     void ShowDebugInfo();

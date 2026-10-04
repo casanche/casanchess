@@ -643,7 +643,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
               && depth >= 2         // Avoid negative depths
               && !inCheck           // Not in check
         ) {
-            reduction = LateMoveReductions(move, depth, moveNumber, isPV, eval - alpha);
+            reduction = LateMoveReductions(move, depth, moveNumber, isPV, ttWasPV, eval - alpha);
         }
 
         board.MakeMove(move);
@@ -923,7 +923,7 @@ int Search::FutilityMargin(Move move, int depth) const {
 }
 
 // Late Move Reductions: reduce the search depth for less-promising moves.
-int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, int evalMargin) const {
+int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, bool wasPV, int evalMargin) const {
     assert(depth      >= 0 && depth      <= LOG_TABLE_SIZE - 1);
     assert(moveNumber >= 0 && moveNumber <= LOG_TABLE_SIZE - 1);
 
@@ -946,9 +946,11 @@ int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, 
         return 0; // killers and queen promotions are never reduced
 
     int reduction = LogTable[depth] + LogTable[moveNumber] - REDUCTION_UNIT;
-    reduction -= 250 * isPV; // -2.5 reductions
     reduction -= REDUCTION_UNIT * quality / QUALITY_PER_REDUCTION;
     reduction -= REDUCTION_UNIT * std::clamp(evalMargin, -200, 200) / 200; // eval vs alpha (max 1 reduction)
+
+    reduction -= 250 * isPV; // -2.5 reductions
+    reduction -= 100 * (wasPV && !isPV);
 
     return std::clamp(reduction / REDUCTION_UNIT, 0, 4);
 }
