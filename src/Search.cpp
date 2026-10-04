@@ -65,8 +65,6 @@ constexpr bool TURNOFF_FUTILITY = false;
 // Called once when the UCI interface starts up.
 Search::Search(TT& tt): m_tt(tt) {
     ClearSearch(true);
-
-    m_searchCount = 0;
 }
 
 // Reset state after a new root position
@@ -137,6 +135,7 @@ int Search::DrawScore(const Board& board) const {
 // Main loop: increase depth one by one and call the root search.
 // Manage time, aspiration window, and UCI output.
 void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool fullClear) {
+    m_tt.NewSearch();
     ClearSearch(fullClear);
 
     SetRootContext(board);
@@ -146,7 +145,6 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
     m_limits.StartNewSearch(board.ActivePlayer(), limits, rootMoves.size());
     
     D( m_debug.Increment("IterativeDeepening: _: Start") );
-    m_searchCount++;
 
     for(m_depth = 1; m_depth <= m_limits.MaxDepth(); m_depth++) {
         assert(m_ply == 0 && m_plyqs == 0);
@@ -372,7 +370,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
                                                             : TTENTRY_TYPE::EXACT;
         
         D( m_debug.Increment("RootMax: AlphaBeta: TT Store") );
-        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, m_searchCount);
+        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply);
     }
 
     return bestScore;
@@ -496,7 +494,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             || (tbScore >= beta  && tbBound == TTENTRY_TYPE::LOWER_BOUND)
             || (tbScore <= alpha && tbBound == TTENTRY_TYPE::UPPER_BOUND) )
         {
-            m_tt.Store(TTKey(board), tbScore, tbBound, Move(), MAX_DEPTH, m_ply, m_searchCount);
+            m_tt.Store(TTKey(board), tbScore, tbBound, Move(), MAX_DEPTH, m_ply);
             return tbScore;
         }
 
@@ -689,7 +687,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
         if(score >= beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
-            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
+            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, eval);
 
             // Update heuristics
             if(move.IsQuiet()) {
@@ -727,7 +725,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             + std::string(type == TTENTRY_TYPE::EXACT ? "Exact"
                         : type == TTENTRY_TYPE::LOWER_BOUND ? "LowerBound"
                                                             : "UpperBound")) );
-        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, m_searchCount, eval);
+        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, eval);
     }
 
     return bestScore;
@@ -867,7 +865,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             continue;
 
         if(score >= beta) {
-            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
+            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, standPat);
             return score;
         }
 

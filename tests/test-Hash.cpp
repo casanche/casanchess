@@ -25,7 +25,7 @@ TEST_F(TT_Test, ProbeFalse) {
 // Mate scores get adjusted by ply
 TEST_F(TT_Test, MateScoreAdjustment) {
     int mateIn5 = MATESCORE_MAX - 5;
-    tt.Store(zkey, mateIn5, TTENTRY_TYPE::EXACT, Move(), 10, /*ply=*/3, 0);
+    tt.Store(zkey, mateIn5, TTENTRY_TYPE::EXACT, Move(), 10, /*ply=*/3);
 
     TTEntry ttEntry;
     ASSERT_TRUE(tt.Probe(zkey, ttEntry));
@@ -36,7 +36,7 @@ TEST_F(TT_Test, MateScoreAdjustment) {
 
 // Normal scores should NOT be adjusted
 TEST_F(TT_Test, NormalScoreUnchanged) {
-    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), 10, /*ply=*/5, 0);
+    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), 10, /*ply=*/5);
 
     TTEntry ttEntry;
     ASSERT_TRUE(tt.Probe(zkey, ttEntry));
@@ -47,11 +47,13 @@ TEST_F(TT_Test, NormalScoreUnchanged) {
 
 // Age 6-bit bitfield behaves correctly after overflow (> 63)
 TEST_F(TT_Test, AgeBitfieldProtection) {
-    // SearchCount reached 64. Store a high-depth entry
-    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), /*depth=*/21, /*ply=*/0, /*age=*/64);
+    // Search number 64. Store a high-depth entry
+    for(int i = 0; i < 64; ++i)
+        tt.NewSearch();
+    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), /*depth=*/21, /*ply=*/0);
 
     // Same search. Try to store the same position with a lower-depth. Should NOT overwrite!
-    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), /*depth=*/1, /*ply=*/0, /*age=*/64);
+    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), /*depth=*/1, /*ply=*/0);
 
     TTEntry ttEntry;
     ASSERT_TRUE(tt.Probe(zkey, ttEntry));
@@ -61,8 +63,8 @@ TEST_F(TT_Test, AgeBitfieldProtection) {
 
 TEST_F(TT_Test, NullBestMoveIgnored) {
     Move move = Move(G1, F3, KNIGHT, MOVE_TYPE::NORMAL);
-    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, move, /*depth=*/1, /*ply=*/0, /*age=*/0);
-    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), /*depth=*/2, /*ply=*/0, /*age=*/0);
+    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, move, /*depth=*/1, /*ply=*/0);
+    tt.Store(zkey, normalScore, TTENTRY_TYPE::EXACT, Move(), /*depth=*/2, /*ply=*/0);
 
     TTEntry ttEntry;
     ASSERT_TRUE(tt.Probe(zkey, ttEntry));

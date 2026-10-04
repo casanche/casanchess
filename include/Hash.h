@@ -45,8 +45,10 @@ public:
     TT(const TT&) = delete;
     TT& operator=(const TT&) = delete;
 
-    void Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age, int eval = NO_EVAL);
+    void Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int eval = NO_EVAL);
     bool Probe(u64 zkey, TTEntry& entry) const;
+
+    void NewSearch() { m_age++; }
 
     void Clear();
     void SetSize(int sizeInMB);
@@ -61,6 +63,7 @@ private:
     TTEntry* m_entries;
     u64 m_size; // Number of entries
     u64 m_mask; // Mask for AND operations
+    u8 m_age = 0; // Search counter
 };
 
 // ================

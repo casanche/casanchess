@@ -27,7 +27,7 @@ TT::~TT() {
     delete [] m_entries;
 }
 
-void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age, int eval) {
+void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int eval) {
     assert(abs(score) <= MATESCORE_MAX);
     assert(depth <= MAX_DEPTH);
 
@@ -35,7 +35,7 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     TTEntry* entry = &m_entries[index];
 
     // Age bitfield protection
-    const u8 ttAge = age & 0x3F;
+    const u8 ttAge = m_age & 0x3F;
 
     //Replacement scheme
     const bool older = ttAge != entry-> age;
