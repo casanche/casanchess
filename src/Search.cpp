@@ -370,7 +370,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
                                                             : TTENTRY_TYPE::EXACT;
         
         D( m_debug.Increment("RootMax: AlphaBeta: TT Store") );
-        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply);
+        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, true);
     }
 
     return bestScore;
@@ -393,6 +393,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     }
 
     const bool isPV = (beta - alpha) != 1;
+    bool ttWasPV = isPV;
     assert(!(isPV && cutNode));
     if(isPV)
         m_pv.ClearPly(m_ply);
@@ -450,6 +451,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     
     if( m_tt.Probe(TTKey(board), ttEntry) ) {
         D( m_debug.Increment("NegaMax: TT: Hit") );
+        ttWasPV |= ttEntry.wasPV;
         ttEval = ttEntry.eval;
         hashMove = ttEntry.bestMove;
         ttFailedLow = ttEntry.type == TTENTRY_TYPE::UPPER_BOUND;
@@ -494,7 +496,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             || (tbScore >= beta  && tbBound == TTENTRY_TYPE::LOWER_BOUND)
             || (tbScore <= alpha && tbBound == TTENTRY_TYPE::UPPER_BOUND) )
         {
-            m_tt.Store(TTKey(board), tbScore, tbBound, Move(), MAX_DEPTH, m_ply);
+            m_tt.Store(TTKey(board), tbScore, tbBound, Move(), MAX_DEPTH, m_ply, ttWasPV);
             return tbScore;
         }
 
@@ -687,7 +689,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
         if(score >= beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
-            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, eval);
+            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, ttWasPV, eval);
 
             // Update heuristics
             if(move.IsQuiet()) {
@@ -725,7 +727,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             + std::string(type == TTENTRY_TYPE::EXACT ? "Exact"
                         : type == TTENTRY_TYPE::LOWER_BOUND ? "LowerBound"
                                                             : "UpperBound")) );
-        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, eval);
+        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, ttWasPV, eval);
     }
 
     return bestScore;
@@ -753,6 +755,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
 
     const bool isPV = (beta - alpha) != 1;
+    bool ttWasPV = isPV;
     Move hashMove; // For move ordering
     int ttEval = NO_EVAL;
 
@@ -761,6 +764,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     TTEntry ttEntry;
     if( m_tt.Probe(TTKey(board), ttEntry) ) {
         D( m_debug.Increment("Quiescence: TT: Hit") );
+        ttWasPV |= ttEntry.wasPV;
         hashMove = ttEntry.bestMove;
         ttEval = ttEntry.eval;
 
@@ -865,7 +869,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             continue;
 
         if(score >= beta) {
-            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, standPat);
+            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, ttWasPV, standPat);
             return score;
         }
 
