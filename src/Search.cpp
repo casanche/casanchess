@@ -14,12 +14,11 @@
 //
 // - Pruning:
 //    - Null-move pruning: quick pruning of clearly winning positions
-//    - Futility Pruning: pruning of non-promising moves
 //    - Reverse futility pruning: early pruning using static evaluation
+//    - Futility Pruning: pruning of non-promising moves
 //
 // - Extensions:
 //    - Check extension
-//    - One-reply extension
 //    - Recapture extension
 //
 // - Reductions:
@@ -47,19 +46,22 @@ using namespace Sorting;
 #include <iomanip> //debug output
 
 // Search parameters
-const int MAX_QS_PLIES = 128;  // Maximum depth limit for quiescence search
+constexpr int MAX_QS_PLIES = 128;  // Maximum depth limit for quiescence search
 
 // Aspiration window parameters - used to narrow alpha-beta bounds around expected score
-const bool TURNON_ASPIRATION_WINDOW = true;
-const int ASPIRATION_WINDOW_DEPTH = 4;         // Minimum depth to enable aspiration window
-const int ASPIRATION_WINDOW = 25;              // Initial half-window size in centipawns
-const int ASPIRATION_WINDOW_MULTIPLIER = 2;    // Incremental window resize
+constexpr bool TURNON_ASPIRATION_WINDOW = true;
+constexpr int ASPIRATION_WINDOW_DEPTH = 4;         // Minimum depth to enable aspiration window
+constexpr int ASPIRATION_WINDOW = 25;              // Initial half-window size in centipawns
+constexpr int ASPIRATION_WINDOW_MULTIPLIER = 2;    // Incremental window resize
 
-const bool TURNOFF_NULLMOVE_PRUNING = false;
-const int NULLMOVE_REDUCTION_FACTOR = 3;
+// Pruning parameters
+constexpr bool TURNOFF_NULLMOVE_PRUNING = false;
+constexpr int NULLMOVE_REDUCTION_FACTOR = 3;
 
-const bool TURNOFF_LMR = false;
-const bool TURNOFF_FUTILITY = false;
+constexpr int RFP_MARGIN = 80;
+
+constexpr bool TURNOFF_LMR = false;
+constexpr bool TURNOFF_FUTILITY = false;
 
 // Called once when the UCI interface starts up.
 Search::Search(TT& tt): m_tt(tt) {
@@ -523,13 +525,12 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
 
     // --- Reverse Futility Pruning ---
     // Prune if static evaluation is too good (eval >> beta)
-    const int staticMargin = 80;
-    if(depth <= 4 && !isPV && !inCheck) {
-        int staticEval = eval - depth * staticMargin;
-        if(staticEval >= beta) {
+    if(depth <= 4 && !isPV && !inCheck && !ttFailedLow) {
+        const int rfp_eval = eval - RFP_MARGIN * depth;
+        if(rfp_eval >= beta) {
             D( m_debug.Increment("NegaMax: Pruning: Reverse Futility") );
             D( m_debug.Increment("NegaMax: Pruning: Reverse Futility - Depth " + std::to_string(depth)) );
-            return staticEval;
+            return rfp_eval;
         }
     }
 
