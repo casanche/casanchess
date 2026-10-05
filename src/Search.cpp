@@ -6,29 +6,28 @@
 //    - Iterative deepening: initial loop of increasing depth
 //    - RootMax: special search for the root node
 //    - NegaMax: main recursive alpha-beta search
-//    - QuiescenceSearch: search in leaf nodes to avoid horizon effect
+//    - QuiescenceSearch (QS): search in leaf nodes to avoid horizon effect
 //
 // - Alpha-beta improvements:
-//    - Aspiration Window: narrow alpha-beta bounds around expected score
+//    - Aspiration Window (AW): narrow alpha-beta bounds around expected score
 //    - Principal Variation Search (PVS): narrow alpha-beta bounds for efficient PV search
 //
 // - Pruning:
-//    - Null-move pruning: quick pruning of clearly winning positions
-//    - Reverse futility pruning: early pruning using static evaluation
-//    - Futility Pruning: pruning of non-promising moves
+//    - Null-move pruning (NMP): quick pruning of clearly winning positions
+//    - Reverse futility pruning (RFP): early pruning using static evaluation
+//    - Futility Pruning (FP): pruning of non-promising moves
 //
 // - Extensions:
 //    - Check extension
 //    - Recapture extension
 //
 // - Reductions:
-//    - Late Move Reductions: reduce search depth for late non-promising moves
+//    - Internal Iterative Reduction (IIR): reduce positions without a hash move
+//    - Late Move Reductions (LMR): reduce search depth for late non-promising moves
 //
 // - Heuristics:
 //    - History heuristics: reward successful moves in past positions
 //    - Killer moves
-//    - Transposition tables
-//    - Time management
 
 
 #include "Search.h"
@@ -521,6 +520,13 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     if(!inCheck) {
         D( m_debug.Increment("NegaMax: Evaluation") );
         eval = StaticEvaluation(board, ttEval);
+    }
+
+    // --- Internal Iterative Reduction (IIR) ---
+    // Reduce depth of positions without a hash move (probably less important)
+    if(depth >= 4 && hashMove.IsNull()) {
+        D( m_debug.Increment("NegaMax: IIR") );
+        depth--;
     }
 
     // --- Reverse Futility Pruning ---
