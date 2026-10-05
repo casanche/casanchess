@@ -102,17 +102,10 @@ namespace {
         }
     }
 
-    bool ByScore(const Move &lmove, const Move &rmove) {
-        const u8 lscore = lmove.Score();
-        const u8 rscore = rmove.Score();
-
-        // First compare by score (descending)
-        if (lscore != rscore)
-            return lscore > rscore;
-        
-        // For moves with the same score, use the move as tiebreaker
+    // 'Score' is set in the high bits, we can compare the moves directly
+    constexpr auto ByScore = [](Move lmove, Move rmove) {
         return lmove.MoveAsNumber() > rmove.MoveAsNumber();
-    }
+    };
 
 } //unnamed namespace
 
