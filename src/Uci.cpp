@@ -407,7 +407,7 @@ void Uci::ShowHashMoves() {
     MoveList moves = MoveGenerator::GenerateMoves(board);
 
     for(auto move : moves) {
-        board.MakeMove(move);
+        board.MakeMove(move, false);
         TTEntry ttEntry;
         if( tt.Probe(search.TTKey(board), ttEntry) )
             P(move.Notation() << " " << static_cast<u8>(ttEntry.type) << "\t" << ttEntry.score);
