@@ -122,25 +122,16 @@ bool NNUE::LoadFile(const std::string& path) {
 // ===== NNUE =====
 // ================
 
-NNUE::NNUE() {
-    std::memset(m_state->accumulator, 0, sizeof(m_state->accumulator));
-    std::memset(m_state->linearAccumulator, 0, sizeof(m_state->linearAccumulator));
-}
-
 // Deep copy
-NNUE::NNUE(const NNUE& other) {
-    std::memcpy(m_state->accumulator, other.m_state->accumulator, sizeof(m_state->accumulator));
-    std::memcpy(m_state->linearAccumulator, other.m_state->linearAccumulator, sizeof(m_state->linearAccumulator));
-}
+NNUE::NNUE(const NNUE& other) :
+    m_state( std::make_unique<NNUE_State>(*other.m_state) )
+{}
 
 // Deep assignment
 NNUE& NNUE::operator=(const NNUE& other) {
-    if(this != &other) {
-        if(!m_state)
-            m_state = std::make_unique<NNUE_State>();
-        std::memcpy(m_state->accumulator, other.m_state->accumulator, sizeof(m_state->accumulator));
-        std::memcpy(m_state->linearAccumulator, other.m_state->linearAccumulator, sizeof(m_state->linearAccumulator));
-    }
+    if(this != &other)
+        *m_state = *other.m_state;
+
     return *this;
 }
 
