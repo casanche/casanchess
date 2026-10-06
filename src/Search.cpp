@@ -279,12 +279,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     MoveList moves = MoveGenerator::GenerateMoves(board);
     D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
-    Move hashMove; // For move ordering
-    TTEntry ttEntry;
-    if( m_tt.Probe(TTKey(board), ttEntry) )
-        hashMove = ttEntry.bestMove;
-
-    SortMoves(board, moves, hashMove, m_heuristics, m_ply);
+    SortMoves(board, moves, m_bestMove, m_heuristics, m_ply);
 
     if(!m_bestMove.MoveType() && !moves.empty())
         m_bestMove = moves[0]; // Safety net if first move at depth 1 is not completed
