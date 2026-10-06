@@ -76,9 +76,6 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
 
     //NNUE update
     if(update_nnue) {
-        // Copy Accumulator from previous ply
-        board.m_nnue.CopyAccumulator(ply-1, ply);
-
         bool isKing = (pieceType == KING);
         bool bucketChanged = false;
 
@@ -94,6 +91,8 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
         }
         // Incremental update
         else {
+            board.m_nnue.CopyAccumulator(ply-1, ply); // copy Accumulator from previous ply before incremental
+
             int kingSquare_w = BitscanForward(board.m_pieces[WHITE][KING]);
             int kingSquare_b = BitscanForward(board.m_pieces[BLACK][KING]);
 
