@@ -357,6 +357,7 @@ void NNUE::ComputeActivatedLayer(const i16* inputLayer, i16* outputLayer, const 
         const int offset = o * dimInput;
         i32 sum = biases[o] + DotProduct(inputLayer, weights + offset, dimInput);
 
+        sum = std::max(0, sum); // SCReLU will make it positive anyway; better division performance
         sum /= NNUEConstants::QUANT_FACTOR_W; // Revert scaling
         outputLayer[o] = static_cast<i16>(SCReLU(sum));
     }
