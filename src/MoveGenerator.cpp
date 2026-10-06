@@ -42,11 +42,8 @@ namespace {
         Bitboard allPieces;
 
         Bitboard ownKing;
-        Bitboard enemyKing;
         int ownKingSquare;
-        int enemyKingSquare;
     
-        Bitboard kingDangerSquares;
         Bitboard pinnedPieces;
     
         // Squares where capture is allowed. In case of check, the piece giving check
@@ -135,9 +132,7 @@ namespace {
         context.allPieces = board.AllPieces();
         
         context.ownKing = board.Piece(context.color, KING);
-        context.enemyKing = board.Piece(context.enemyColor, KING);
         context.ownKingSquare = BitscanForward(context.ownKing);
-        context.enemyKingSquare = BitscanForward(context.enemyKing);
 
         context.captureMask = ALL;
         context.pushMask = ALL;
@@ -145,7 +140,6 @@ namespace {
         context.generateQuiet = true;
 
         // Depend on previous variables
-        context.kingDangerSquares = GenerateKingDangerSquares(context, board);
         FillPinnedPiecesAndMasks(context, board,
             context.pinnedPieces,
             context.pinnedMoveMask
@@ -360,8 +354,7 @@ namespace {
                 // Check legality
                 // For blockers: move our pawn and remove the enemy pawn
                 Bitboard blockers = (context.allPieces ^ SquareBB(fromSq) ^ enemyPawn) | toBitboard;
-                int kingSquare = BitscanForward( board.Piece(context.color,KING) );
-                if(board.AttackersTo(context.color, kingSquare, blockers) & ~enemyPawn) //any attackers that are not the enemy pawn?
+                if(board.AttackersTo(context.color, context.ownKingSquare, blockers) & ~enemyPawn) //any attackers that are not the enemy pawn?
                     continue;
 
                 Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::ENPASSANT);
@@ -381,21 +374,14 @@ namespace {
         }
     }
     void GenerateKingMoves(Context &context, Board &board) {
-        PIECE_TYPE piece = KING;
-        Bitboard theKing = board.GetPieces(context.color, piece);
+        const Bitboard validSquares = context.generateQuiet ? ~context.ownPieces
+                                                            : context.enemyPieces;
+        Bitboard attacks = AttacksKing(context.ownKingSquare) & validSquares;
 
-        //Exit if no king on the board
-        assert(theKing);
-
-        //Attacks
-        int square = BitscanForward(theKing);
-        Bitboard attacks = AttacksKing(square) & ~context.ownPieces;
-
-        //Evade attacked squares
-        attacks &= ~context.kingDangerSquares;
-
-        //Moves
-        AddMoves(context, board, piece, square, attacks);
+        if(attacks) {
+            attacks &= ~GenerateKingDangerSquares(context, board); // evade attacked squares
+            AddMoves(context, board, KING, context.ownKingSquare, attacks);
+        }
 
         //Castling. Don't generate in evasion
         if(context.generateQuiet && !board.IsCheck())
@@ -451,8 +437,7 @@ namespace {
                         context.pushMask = ZERO; // No in-between moves are possible
                     } else {
                         assert((checkerType == BISHOP) || (checkerType == ROOK) || (checkerType == QUEEN));
-                        int kingSquare = BitscanForward( board.Piece(context.color, KING) );
-                        context.pushMask = Attacks::Between(checkerSquare, kingSquare);
+                        context.pushMask = Attacks::Between(checkerSquare, context.ownKingSquare);
                     }
                 }
             } break;
