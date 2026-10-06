@@ -54,8 +54,8 @@ namespace {
         // Squares where push is allowed. In case of check, squares that block a check
         Bitboard pushMask;
     
-        Bitboard pinnedCaptureMask[64];
-        Bitboard pinnedPushMask[64];
+        // Allowed destinations for pinned pieces. ALL if unpinned
+        Bitboard pinnedMoveMask[64];
 
         bool generateQuiet;
 
@@ -90,14 +90,12 @@ namespace {
         const Context &context,
         const Board &board,
         Bitboard &pinnedPieces,
-        Bitboard pinnedPushMask[64],
-        Bitboard pinnedCaptureMask[64]
+        Bitboard pinnedMoveMask[64]
     ) {
         // First, initialize the state
         pinnedPieces = ZERO;
         for(int i = 0; i < 64; ++i) {
-            pinnedPushMask[i] = ALL;
-            pinnedCaptureMask[i] = ALL;
+            pinnedMoveMask[i] = ALL;
         }
 
         // Generate sliding attacks from our king
@@ -119,8 +117,8 @@ namespace {
                 if(OnlyOne(pinnedCandidates)) {
                     int pinnedSquare = BitscanForward(pinnedCandidates);
                     pinnedPieces |= pinnedCandidates;
-                    pinnedPushMask[pinnedSquare] = lineBetween;
-                    pinnedCaptureMask[pinnedSquare] = SquareBB(pinnerSquare);
+                    // Move between king and pinner, or capture the pinner
+                    pinnedMoveMask[pinnedSquare] = lineBetween | SquareBB(pinnerSquare);
                 }
 
             }
@@ -150,8 +148,7 @@ namespace {
         context.kingDangerSquares = GenerateKingDangerSquares(context, board);
         FillPinnedPiecesAndMasks(context, board,
             context.pinnedPieces,
-            context.pinnedPushMask,
-            context.pinnedCaptureMask
+            context.pinnedMoveMask
         );
     }
 
@@ -315,7 +312,7 @@ namespace {
         for(int toSq : BitboardIterator(singlePush)) {
             Bitboard toBitboard = SquareBB(toSq);
             int fromSq = BitscanForward( RSouth(toBitboard) );
-            toBitboard &= context.pinnedPushMask[fromSq];
+            toBitboard &= context.pinnedMoveMask[fromSq];
             if(toBitboard) {
                 Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::NORMAL);
                 context.AddMove(move);
@@ -324,7 +321,7 @@ namespace {
         for(int toSq : BitboardIterator(doublePush)) {
             Bitboard toBitboard = SquareBB(toSq);
             int fromSq = BitscanForward( RSouth(toBitboard,2) );
-            toBitboard &= context.pinnedPushMask[fromSq];
+            toBitboard &= context.pinnedMoveMask[fromSq];
             if(toBitboard) {
                 Move move = Move(fromSq, toSq, PAWN, MOVE_TYPE::DOUBLE_PUSH);
                 context.AddMove(move);
@@ -333,7 +330,7 @@ namespace {
         for(int toSq : BitboardIterator(promotionPush)) {
             Bitboard toBitboard = SquareBB(toSq);
             int fromSq = BitscanForward( RSouth(toBitboard) );
-            toBitboard &= context.pinnedPushMask[fromSq];
+            toBitboard &= context.pinnedMoveMask[fromSq];
             AddPromotionMoves(context, board, fromSq, toBitboard);
         }
 
@@ -346,13 +343,13 @@ namespace {
             for(int toSq : BitboardIterator(attack[side])) {
                 Bitboard toBitboard = SquareBB(toSq);
                 int fromSq = BitscanForward( FromBitboard(toBitboard) );
-                toBitboard &= context.pinnedCaptureMask[fromSq];
+                toBitboard &= context.pinnedMoveMask[fromSq];
                 AddMoves(context, board, piece, fromSq, toBitboard);
             }
             for(int toSq : BitboardIterator(promotionAttack[side])) {
                 Bitboard toBitboard = SquareBB(toSq);
                 int fromSq = BitscanForward( FromBitboard(toBitboard) );
-                toBitboard &= context.pinnedCaptureMask[fromSq];
+                toBitboard &= context.pinnedMoveMask[fromSq];
                 AddPromotionMoves(context, board, fromSq, toBitboard);
             }
             for(int toSq : BitboardIterator(enpassant[side])) {
@@ -409,7 +406,7 @@ namespace {
 
         for(int fromSq : BitboardIterator(thePieces)) {
             Bitboard attacks = AttacksSliding(pieceType, fromSq, context.allPieces) & ~context.ownPieces;
-            attacks &= context.pinnedPushMask[fromSq] | context.pinnedCaptureMask[fromSq];
+            attacks &= context.pinnedMoveMask[fromSq];
             AddMoves(context, board, pieceType, fromSq, attacks);
         }
     }
