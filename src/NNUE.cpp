@@ -179,8 +179,8 @@ int NNUE::DrawishnessFromActivated(const i16* activated) const {
 }
 
 void NNUE::Inputs_FullUpdate(int ply, const PieceBitboards pieces) {
-    i16* acc_w = m_state->accumulator[ply][0];
-    i16* acc_b = m_state->accumulator[ply][1];
+    i16* acc_w = m_state->accumulator[ply][WHITE];
+    i16* acc_b = m_state->accumulator[ply][BLACK];
 
     for(int i = 0; i < NNUE_SIZE; i++) {
         acc_w[i] = s_network.b1[i];
@@ -223,8 +223,8 @@ void NNUE::Inputs_AddPiece(int color, int pieceType, int square, int ply, int ki
     assert(feature_w < NNUE_FEATURES);
     assert(feature_b < NNUE_FEATURES);
 
-    i16* acc_w = m_state->accumulator[ply][0];
-    i16* acc_b = m_state->accumulator[ply][1];
+    i16* acc_w = m_state->accumulator[ply][WHITE];
+    i16* acc_b = m_state->accumulator[ply][BLACK];
 
     const i16* weights_w = &s_network.w1[NNUE_SIZE * feature_w];
     const i16* weights_b = &s_network.w1[NNUE_SIZE * feature_b];
@@ -249,8 +249,8 @@ void NNUE::Inputs_RemovePiece(int color, int pieceType, int square, int ply, int
     assert(feature_w < NNUE_FEATURES);
     assert(feature_b < NNUE_FEATURES);
 
-    i16* acc_w = m_state->accumulator[ply][0];
-    i16* acc_b = m_state->accumulator[ply][1];
+    i16* acc_w = m_state->accumulator[ply][WHITE];
+    i16* acc_b = m_state->accumulator[ply][BLACK];
 
     const i16* weights_w = &s_network.w1[NNUE_SIZE * feature_w];
     const i16* weights_b = &s_network.w1[NNUE_SIZE * feature_b];
@@ -284,8 +284,8 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
     assert(feature_to_w < NNUE_FEATURES);
     assert(feature_to_b < NNUE_FEATURES);
 
-    i16* acc_w = m_state->accumulator[ply][0];
-    i16* acc_b = m_state->accumulator[ply][1];
+    i16* acc_w = m_state->accumulator[ply][WHITE];
+    i16* acc_b = m_state->accumulator[ply][BLACK];
 
     const i16* weights_from_w = &s_network.w1[NNUE_SIZE * feature_from_w];
     const i16* weights_from_b = &s_network.w1[NNUE_SIZE * feature_from_b];
@@ -293,17 +293,11 @@ void NNUE::Inputs_MovePiece(int color, int pieceType, int fromSq, int toSq, int 
     const i16* weights_to_b = &s_network.w1[NNUE_SIZE * feature_to_b];
 
     for(int i = 0; i < NNUE_SIZE; i++) {
-        acc_w[i] -= weights_from_w[i];
-        acc_b[i] -= weights_from_b[i];
-
-        acc_w[i] += weights_to_w[i];
-        acc_b[i] += weights_to_b[i];
-
+        acc_w[i] += weights_to_w[i] - weights_from_w[i];
+        acc_b[i] += weights_to_b[i] - weights_from_b[i];
     }
-    m_state->linearAccumulator[ply][WHITE] -= s_network.linearW[feature_from_w];
-    m_state->linearAccumulator[ply][BLACK] -= s_network.linearW[feature_from_b];
-    m_state->linearAccumulator[ply][WHITE] += s_network.linearW[feature_to_w];
-    m_state->linearAccumulator[ply][BLACK] += s_network.linearW[feature_to_b];
+    m_state->linearAccumulator[ply][WHITE] += s_network.linearW[feature_to_w] - s_network.linearW[feature_from_w];
+    m_state->linearAccumulator[ply][BLACK] += s_network.linearW[feature_to_b] - s_network.linearW[feature_from_b];
 }
 
 void NNUE::CopyAccumulator(int fromPly, int toPly) {
