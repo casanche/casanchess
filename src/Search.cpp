@@ -591,7 +591,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
 
     // --------- Move loop ---------
     int moveNumber = 0;
-    MoveList quietsSearched;
+    MoveList quietsFailed;
 
     for(auto move : moves) {
         assert(move.MoveType());
@@ -690,7 +690,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             if(move.IsQuiet()) {
                 m_heuristics.killer.Update(move, m_ply);
                 m_heuristics.history.GoodHistory(move, board.ActivePlayer(), depth);
-                for(auto quiet : quietsSearched)
+                for(auto quiet : quietsFailed)
                     m_heuristics.history.BadHistory(quiet, board.ActivePlayer(), depth);
             }
 
@@ -705,7 +705,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
         }
 
         if(move.IsQuiet())
-            quietsSearched.add(move);
+            quietsFailed.add(move);
 
     } // End move loop
 
