@@ -65,8 +65,6 @@ constexpr bool TURNOFF_FUTILITY = false;
 // Called once when the UCI interface starts up.
 Search::Search(TT& tt): m_tt(tt) {
     ClearSearch(true);
-
-    m_searchCount = 0;
 }
 
 // Reset state after a new root position
@@ -137,6 +135,7 @@ int Search::DrawScore(const Board& board) const {
 // Main loop: increase depth one by one and call the root search.
 // Manage time, aspiration window, and UCI output.
 void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool fullClear) {
+    m_tt.NewSearch();
     ClearSearch(fullClear);
 
     SetRootContext(board);
@@ -146,7 +145,6 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
     m_limits.StartNewSearch(board.ActivePlayer(), limits, rootMoves.size());
     
     D( m_debug.Increment("IterativeDeepening: _: Start") );
-    m_searchCount++;
 
     for(m_depth = 1; m_depth <= m_limits.MaxDepth(); m_depth++) {
         assert(m_ply == 0 && m_plyqs == 0);
@@ -282,9 +280,9 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
     Move hashMove; // For move ordering
-    const TTEntry* ttEntry = m_tt.Probe(TTKey(board));
-    if(ttEntry)
-        hashMove = ttEntry->bestMove;
+    TTEntry ttEntry;
+    if( m_tt.Probe(TTKey(board), ttEntry) )
+        hashMove = ttEntry.bestMove;
 
     SortMoves(board, moves, hashMove, m_heuristics, m_ply);
 
@@ -372,7 +370,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
                                                             : TTENTRY_TYPE::EXACT;
         
         D( m_debug.Increment("RootMax: AlphaBeta: TT Store") );
-        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, m_searchCount);
+        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, true);
     }
 
     return bestScore;
@@ -395,6 +393,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     }
 
     const bool isPV = (beta - alpha) != 1;
+    bool ttWasPV = isPV;
     assert(!(isPV && cutNode));
     if(isPV)
         m_pv.ClearPly(m_ply);
@@ -446,25 +445,26 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     int alphaOriginal = alpha; // For TT entry type calculation
     bool ttFailedLow = false;
 
+    TTEntry ttEntry;
     Move hashMove; // For move ordering
     int ttEval = NO_EVAL;
     
-    const TTEntry* ttEntry = m_tt.Probe(TTKey(board));
-    if(ttEntry) {
+    if( m_tt.Probe(TTKey(board), ttEntry) ) {
         D( m_debug.Increment("NegaMax: TT: Hit") );
-        ttEval = ttEntry->eval;
-        hashMove = ttEntry->bestMove;
-        ttFailedLow = ttEntry->type == TTENTRY_TYPE::UPPER_BOUND;
+        ttWasPV |= ttEntry.wasPV;
+        ttEval = ttEntry.eval;
+        hashMove = ttEntry.bestMove;
+        ttFailedLow = ttEntry.type == TTENTRY_TYPE::UPPER_BOUND;
 
-        if(!isPV && ttEntry->depth >= depth) {
+        if(!isPV && ttEntry.depth >= depth) {
             D( m_debug.Increment("NegaMax: TT: Higher Depth") );
-            int score = m_tt.ScoreFromHash(ttEntry->score, m_ply);
+            int score = m_tt.ScoreFromHash(ttEntry.score, m_ply);
             const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
 
             if(!invalidTBScore
-                && (ttEntry->type == TTENTRY_TYPE::EXACT
-                    || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-                    || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
+                && (ttEntry.type == TTENTRY_TYPE::EXACT
+                    || (ttEntry.type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+                    || (ttEntry.type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
             ) {
                 D( m_debug.Increment("NegaMax: TT: Cut-Off") );
                 return score;
@@ -496,7 +496,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             || (tbScore >= beta  && tbBound == TTENTRY_TYPE::LOWER_BOUND)
             || (tbScore <= alpha && tbBound == TTENTRY_TYPE::UPPER_BOUND) )
         {
-            m_tt.Store(TTKey(board), tbScore, tbBound, Move(), MAX_DEPTH, m_ply, m_searchCount);
+            m_tt.Store(TTKey(board), tbScore, tbBound, Move(), MAX_DEPTH, m_ply, ttWasPV);
             return tbScore;
         }
 
@@ -643,7 +643,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
               && depth >= 2         // Avoid negative depths
               && !inCheck           // Not in check
         ) {
-            reduction = LateMoveReductions(move, depth, moveNumber, isPV, eval - alpha);
+            reduction = LateMoveReductions(move, depth, moveNumber, isPV, ttWasPV, eval - alpha);
         }
 
         board.MakeMove(move);
@@ -689,7 +689,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
         if(score >= beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
-            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, m_searchCount, eval);
+            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, depth, m_ply, ttWasPV, eval);
 
             // Update heuristics
             if(move.IsQuiet()) {
@@ -727,7 +727,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             + std::string(type == TTENTRY_TYPE::EXACT ? "Exact"
                         : type == TTENTRY_TYPE::LOWER_BOUND ? "LowerBound"
                                                             : "UpperBound")) );
-        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, m_searchCount, eval);
+        m_tt.Store(TTKey(board), bestScore, type, bestMove, depth, m_ply, ttWasPV, eval);
     }
 
     return bestScore;
@@ -755,26 +755,28 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
 
     const bool isPV = (beta - alpha) != 1;
+    bool ttWasPV = isPV;
     Move hashMove; // For move ordering
     int ttEval = NO_EVAL;
 
     // Probe transposition table.
     // Only non-PV nodes: PV nodes require the most accurate score possible.
-    const TTEntry* ttEntry = m_tt.Probe(TTKey(board));
-    if(ttEntry) {
+    TTEntry ttEntry;
+    if( m_tt.Probe(TTKey(board), ttEntry) ) {
         D( m_debug.Increment("Quiescence: TT: Hit") );
-        hashMove = ttEntry->bestMove;
-        ttEval = ttEntry->eval;
+        ttWasPV |= ttEntry.wasPV;
+        hashMove = ttEntry.bestMove;
+        ttEval = ttEntry.eval;
 
         if(!isPV) {
             D( m_debug.Increment("Quiescence: TT: !isPV") );
-            int score = m_tt.ScoreFromHash(ttEntry->score, m_ply);
+            int score = m_tt.ScoreFromHash(ttEntry.score, m_ply);
             const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
 
             if(!invalidTBScore
-                && (ttEntry->type == TTENTRY_TYPE::EXACT
-                    || (ttEntry->type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-                    || (ttEntry->type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
+                && (ttEntry.type == TTENTRY_TYPE::EXACT
+                    || (ttEntry.type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+                    || (ttEntry.type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
             ) {
                 D( m_debug.Increment("Quiescence: TT: Cut-Off") );
                 return score;
@@ -867,7 +869,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             continue;
 
         if(score >= beta) {
-            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, m_searchCount, standPat);
+            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, ttWasPV, standPat);
             return score;
         }
 
@@ -921,7 +923,7 @@ int Search::FutilityMargin(Move move, int depth) const {
 }
 
 // Late Move Reductions: reduce the search depth for less-promising moves.
-int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, int evalMargin) const {
+int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, bool wasPV, int evalMargin) const {
     assert(depth      >= 0 && depth      <= LOG_TABLE_SIZE - 1);
     assert(moveNumber >= 0 && moveNumber <= LOG_TABLE_SIZE - 1);
 
@@ -944,9 +946,11 @@ int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, 
         return 0; // killers and queen promotions are never reduced
 
     int reduction = LogTable[depth] + LogTable[moveNumber] - REDUCTION_UNIT;
-    reduction -= 250 * isPV; // -2.5 reductions
     reduction -= REDUCTION_UNIT * quality / QUALITY_PER_REDUCTION;
     reduction -= REDUCTION_UNIT * std::clamp(evalMargin, -200, 200) / 200; // eval vs alpha (max 1 reduction)
+
+    reduction -= 250 * isPV; // -2.5 reductions
+    reduction -= 100 * (wasPV && !isPV);
 
     return std::clamp(reduction / REDUCTION_UNIT, 0, 4);
 }

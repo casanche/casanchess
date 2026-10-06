@@ -11,6 +11,7 @@ void TTEntry::Clear() {
     zkey = 0;
     score = NO_SCORE;
     eval = NO_EVAL;
+    wasPV = false;
     padding = 0;
     depth = 0;
     type = TTENTRY_TYPE::NONE;
@@ -27,18 +28,15 @@ TT::~TT() {
     delete [] m_entries;
 }
 
-void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, int age, int eval) {
+void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, bool wasPV, int eval) {
     assert(abs(score) <= MATESCORE_MAX);
     assert(depth <= MAX_DEPTH);
 
     u64 index = zkey & m_mask;
     TTEntry* entry = &m_entries[index];
 
-    // Age bitfield protection
-    const u8 ttAge = age & 0x3F;
-
     //Replacement scheme
-    const bool older = ttAge != entry-> age;
+    const bool older = entry-> age != m_age;
     const bool higherDepth = depth >= entry->depth;
 
     const bool replace = older || higherDepth;
@@ -49,8 +47,9 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
         entry->score = SafeCastInt16( ScoreToHash(score, ply) );
         entry->eval = SafeCastInt16(eval);
         entry->depth = SafeCastU8(depth);
+        entry->wasPV = wasPV;
         entry->type = type;
-        entry->age = ttAge;
+        entry->age = m_age;
 
         // Do not overwrite a valid bestMove with a null move for the same position
         if(bestMove.MoveType() != MOVE_TYPE::NULLMOVE || !zkeyMatch)
@@ -58,21 +57,25 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     }
 }
 
-const TTEntry* TT::Probe(u64 zkey) const {
+bool TT::Probe(u64 zkey, TTEntry& entry) const {
     u64 index = zkey & m_mask;
-    const TTEntry* entry = &m_entries[index];
+    const TTEntry& stored = m_entries[index];
 
-    const bool zkeyMatch = (UpperBits<u32>(zkey) == entry->zkey);
-    if(zkeyMatch)
-        return entry;
-
-    return nullptr;
+    if(stored.zkey == UpperBits<u32>(zkey)) {
+        entry = stored;
+        return true;
+    }
+    return false;
 }
 
 void TT::Clear() {
     for(u64 i=0; i < m_size; ++i) {
         m_entries[i].Clear();
     }
+}
+
+void TT::NewSearch() {
+    m_age = (m_age + 1) % TT_AGE_CYCLE;
 }
 
 // For a faster entry lookup using a mask: downsize entries (m_size) to fill in a power of 2
