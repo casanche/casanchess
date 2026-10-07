@@ -21,11 +21,10 @@ struct NNUE_State {
 
 class NNUE {
 public:
-    NNUE();
+    NNUE() = default;
 
     NNUE(const NNUE& other);
     NNUE& operator=(const NNUE& other);
-    ~NNUE() = default;
 
     static bool LoadBytes(std::span<const std::byte> bytes);
     static bool LoadFile(const std::string& path = NNUE_FILENAME);

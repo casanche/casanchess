@@ -70,7 +70,7 @@ u64 Board::Perft(int depth) {
         //Integrity check: before
         D( BoardIdentity bef = BoardIntegrityChecker::GenerateBoardIdentity(*this); );
 
-        MakeMove(move);
+        MakeMove(move, false);
         nodes += Perft(depth - 1);
         TakeMove(move);
 
@@ -103,7 +103,7 @@ void Board::Divide(int depth) {
     MoveList moves = MoveGenerator::GenerateMoves(*this);
 
     for(auto move : moves) {
-        MakeMove(move);
+        MakeMove(move, false);
         u64 nodes = Perft(depth-1);
         P( move.Notation() << " \t" << nodes );
         nodesTotal += nodes;
