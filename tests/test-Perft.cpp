@@ -193,3 +193,13 @@ TEST(Perft, Talkchess) {
     EXPECT_EQ(board.Perft(3), (u64)4593);
     EXPECT_EQ(board.Perft(4), (u64)50268);
 }
+// Detects en-passants that block a check: https://github.com/casanche/casanchess/pull/82
+TEST(Perft, Enpassant) {
+    Board board;
+    board.SetFen("8/2p5/8/KP1p2kr/5p2/8/4P1P1/6R1 w - - 0 1");
+
+    EXPECT_EQ(board.Perft(1), (u64)15);
+    EXPECT_EQ(board.Perft(2), (u64)256);
+    EXPECT_EQ(board.Perft(3), (u64)4346);
+    EXPECT_EQ(board.Perft(4), (u64)82383);
+}
