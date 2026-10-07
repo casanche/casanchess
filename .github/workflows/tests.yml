@@ -133,10 +133,10 @@ jobs:
 
         cmake --build build --config ${{ matrix.build_type }} --parallel
 
-    - name: Tests - Unit and Perft
+    - name: Tests - Unit, Perft and Search
       working-directory: ./build
       run: |
-        for exe_name in tests perft; do
+        for exe_name in tests perft searcht; do
           ./${CONFIG_DIR}${exe_name}${EXE_SUFFIX}
         done
 
