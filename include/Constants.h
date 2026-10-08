@@ -189,10 +189,3 @@ constexpr bool IsTBScore(const int score) {
 constexpr bool IsWinScore(const int score) {
     return abs(score) >= WINSCORE;
 }
-
-constexpr bool IsTBLowerBound(const int score) {
-    return IsTBScore(score) && (score > 0);
-}
-constexpr bool IsTBUpperBound(const int score) {
-    return IsTBScore(score) && (score < 0);
-}
