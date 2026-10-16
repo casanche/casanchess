@@ -128,3 +128,13 @@ TEST(SEE, Scorer_BackAndForth) {
         EXPECT_LE(std::abs(backAndForth - see), BUCKET);
     }
 }
+
+TEST(SEE, TacticalScore_ZeroBoundary) {
+    const auto roundTrip = [](int see) {
+        return Scorer::SEEFromTacticalScore(Scorer::TacticalScoreFromSEE(see));
+    };
+
+    EXPECT_LT(roundTrip(-1), 0);
+    EXPECT_EQ(roundTrip(0), 0);
+    EXPECT_GE(roundTrip(1), 0); // Positive SEE can quantize to zero, but must not be pruned.
+}
