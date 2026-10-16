@@ -241,6 +241,7 @@ if(BUILD_TESTS)
         tests/test-Evaluation.cpp
         tests/test-Hash.cpp
         tests/test-Misc.cpp
+        tests/test-PV.cpp
         tests/test-SEE.cpp
         tests/test-UCI.cpp
         tests/test-Utils.cpp

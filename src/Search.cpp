@@ -371,8 +371,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     // --------- Draw detection: repetition and 50-move rule -----------
     if(board.FiftyRule() >= 100) {
         D( m_debug.Increment("NegaMax: Draw: FiftyRule") );
-        const bool checkmate = board.IsCheck() && MoveGenerator::GenerateMoves(board).empty();
-        return checkmate ? -MATESCORE_MAX + m_ply : DrawScore(board);
+        return board.IsCheckmate() ? -MATESCORE_MAX + m_ply : DrawScore(board);
     }
     if(board.IsRepetitionDraw()) {
         D( m_debug.Increment("NegaMax: Draw: Repetition") );

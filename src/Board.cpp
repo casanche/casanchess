@@ -378,6 +378,10 @@ bool Board::IsCheck() {
     return m_kingAttackers[color];
 }
 
+bool Board::IsCheckmate() {
+    return IsCheck() && MoveGenerator::GenerateMoves(*this).empty();
+}
+
 // Detects a position repetition within a search (same Zobrist Key)
 bool Board::IsRepetitionDraw() const {
     const uint limit = std::min((uint)m_fiftyrule, m_ply);
