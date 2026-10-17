@@ -76,7 +76,6 @@ void Search::ClearSearch(bool fullClear) {
     // Search state
     m_pv.ClearTable();
     m_bestScore = NO_SCORE;
-    m_bestMove = Move();
 
     // Depth tracking
     m_ply = 0;
@@ -175,7 +174,7 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
     m_limits.WaitIfNecessary();
 
     const std::string ponder = m_pv.PonderString();
-    Uci::BestMove(m_bestMove.Notation(), ponder);
+    Uci::BestMove(BestMove().Notation(), ponder);
 }
 
 // Narrow alpha-beta bounds around expected score
@@ -202,7 +201,7 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
         BOUND_TYPE bound = (score <= alpha) ? BOUND_TYPE::UPPER_BOUND
                                             : BOUND_TYPE::LOWER_BOUND;
         // Bound results only display the best root move, not a full PV
-        const std::string pv = m_bestMove.Notation();
+        const std::string pv = BestMove().Notation();
 
         i64 elapsedTime = m_limits.UpdatedElapsedTime();
         Uci::Output(m_depth, m_selPly, score, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
@@ -245,10 +244,10 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     MoveList moves = MoveGenerator::GenerateMoves(board);
     D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
-    SortMoves(board, moves, m_bestMove, m_heuristics, m_ply);
+    SortMoves(board, moves, BestMove(), m_heuristics, m_ply);
 
-    if(!m_bestMove.MoveType() && !moves.empty())
-        m_bestMove = moves[0]; // Safety net if first move at depth 1 is not completed
+    if(!BestMove().MoveType() && !moves.empty())
+        m_pv.Update(m_ply, moves[0]); // Safety net if first move at depth 1 is not completed
 
     int moveNumber = 0;
 
@@ -293,9 +292,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         // Not useful to store in TT due to aspiration window
         if(score >= beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
-            if(move != m_bestMove)
+            if(move != BestMove())
                 m_pv.Update(m_ply, move);
-            m_bestMove = move;
 
             return score;
         }
@@ -304,10 +302,8 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update Alpha (score > alpha)") );
             alpha = score;
 
-            m_bestMove = move;
-            m_bestScore = score;
-
             m_pv.Update(m_ply, move);
+            m_bestScore = score;
 
             elapsedTime = m_limits.ElapsedTime();
             if(elapsedTime > UCI_OUTPUT_ROOTMAX_MINTIME) {
@@ -325,9 +321,6 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     }
 
     if(!m_limits.Stopped() && withinBounds) {
-        m_bestMove = bestMove;
-        m_bestScore = bestScore;
-        
         D( m_debug.Increment("RootMax: AlphaBeta: TT Store") );
         m_tt.Store(TTKey(board), bestScore, TTENTRY_TYPE::EXACT, bestMove, depth, m_ply, true);
     }

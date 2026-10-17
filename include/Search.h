@@ -34,12 +34,12 @@ public:
     const Limits& GetLimits() const { return m_limits; }
 
     // Getters
-    Move BestMove() const { return m_bestMove; };
+    Move BestMove() const { return m_pv.BestMove(); };
     int BestScore() const { return m_bestScore; };
     u64 GetNodes() const { return m_nodes; };
 
     // Interface
-    void MakeMove(Board &board) { board.MakeMove(m_bestMove); };
+    void MakeMove(Board &board) { board.MakeMove(BestMove()); };
 
     // Root-relative
     u64 TTKey(const Board& board) const { return board.ZKey() ^ m_ttKeyContext; }
@@ -68,8 +68,7 @@ private:
 
     // Search state
     PV m_pv;
-    int m_bestScore; // Best score found so far for the current search
-    Move m_bestMove; // Best move found so far for the current search
+    int m_bestScore;
     // Nodes
     u64 m_nodes; // Number of nodes searched
     uint m_tbHits; // Number of endgame table hits
