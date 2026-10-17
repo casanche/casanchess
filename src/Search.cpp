@@ -306,6 +306,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         if(score >= beta) {
             D( m_debug.Increment("RootMax: AlphaBeta: Beta Cutoff (score >= beta)") );
             m_bestMove = move;
+            m_pv.Update(m_ply, move);
 
             return score;
         }
