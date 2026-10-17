@@ -254,8 +254,6 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     int score;
     i64 elapsedTime;
 
-    m_pv.ClearPly(m_ply);
-
     MoveList moves = MoveGenerator::GenerateMoves(board);
     D( if(depth == 1) P("Number of moves in root position: " << moves.size()) );
 
