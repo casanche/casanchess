@@ -77,6 +77,7 @@ void Search::ClearSearch(bool fullClear) {
     m_pv.ClearTable();
     m_bestScore = NO_SCORE;
     m_bestMove = Move();
+    m_bestDepth = 0;
 
     // Depth tracking
     m_ply = 0;
@@ -165,7 +166,7 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
 
         // Stop the search if limits are reached, and publish the best move found so far before exit
         if(stopped) {
-            if(!pv.empty()) {
+            if(m_bestDepth == m_depth) {
                 i64 elapsedTime = m_limits.UpdatedElapsedTime();
                 Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
             }
@@ -317,6 +318,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
             m_bestMove = move;
             m_bestScore = score;
+            m_bestDepth = m_depth;
 
             m_pv.Update(m_ply, move);
 
