@@ -70,7 +70,6 @@ private:
     PV m_pv;
     int m_bestScore; // Best score found so far for the current search
     Move m_bestMove; // Best move found so far for the current search
-    int m_bestDepth; // Iteration that produced the best score
     // Nodes
     u64 m_nodes; // Number of nodes searched
     uint m_tbHits; // Number of endgame table hits

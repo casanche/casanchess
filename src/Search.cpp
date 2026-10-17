@@ -77,7 +77,6 @@ void Search::ClearSearch(bool fullClear) {
     m_pv.ClearTable();
     m_bestScore = NO_SCORE;
     m_bestMove = Move();
-    m_bestDepth = 0;
 
     // Depth tracking
     m_ply = 0;
@@ -158,23 +157,11 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
 
         AspirationWindow(board, m_depth, m_bestScore);
 
-        const bool stopped = m_limits.Stopped();
-
-        const std::string pv = m_pv.PVString();
-        const BOUND_TYPE bound = stopped ? BOUND_TYPE::LOWER_BOUND
-                                         : BOUND_TYPE::EXACT;
-
-        // Stop the search if limits are reached, and publish the best move found so far before exit
-        if(stopped) {
-            if(m_bestDepth == m_depth) {
-                i64 elapsedTime = m_limits.UpdatedElapsedTime();
-                Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
-            }
+        if(m_limits.Stopped())
             break;
-        }
 
         i64 elapsedTime = m_limits.UpdatedElapsedTime();
-        Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, bound, pv, m_tt);
+        Uci::Output(m_depth, m_selPly, m_bestScore, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::EXACT, m_pv.PVString(), m_tt);
 
         // Stop search if we used half of the allocated time, since
         // next iteration will likely use more than the allocated time
@@ -319,7 +306,6 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
             m_bestMove = move;
             m_bestScore = score;
-            m_bestDepth = m_depth;
 
             m_pv.Update(m_ply, move);
 
@@ -332,6 +318,11 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
     }
 
     const bool withinBounds = (bestScore > alphaOriginal) && (bestScore < beta);
+
+    if(m_limits.Stopped() && withinBounds) {
+        elapsedTime = m_limits.UpdatedElapsedTime();
+        Uci::Output(m_depth, m_selPly, alpha, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::LOWER_BOUND, m_pv.PVString(), m_tt);
+    }
 
     if(!m_limits.Stopped() && withinBounds) {
         m_bestMove = bestMove;
