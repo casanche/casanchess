@@ -32,12 +32,7 @@ Move PV::BestMove() const {
 }
 
 std::string PV::PonderString() const {
-    if(m_pvLength[0] > 1) {
-        const std::string ponderString = m_pvTable[0][1].Notation();
-        if(ponderString != "0000")
-            return ponderString;
-    }
-    return "";
+    return m_pvLength[0] > 1 ? m_pvTable[0][1].Notation() : "";
 }
 
 std::string PV::PVString() const {

@@ -115,7 +115,7 @@ TEST_F(PVTest, Ponder_FailHigh_NewMove) {
     for(const std::string& line : completed.lines) {
         const std::string move = InfoValue(line, "pv");
         if(move.empty()) continue;
-    
+
         if(move != previousMove && line.contains(" lowerbound ")) {
             failHighMove = move;
             failHighNodes = std::stoi( InfoValue(line, "nodes") );

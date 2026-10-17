@@ -315,6 +315,7 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
 
     const bool withinBounds = (bestScore > alphaOriginal) && (bestScore < beta);
 
+    // Stopped after improving the main line: output the updated line
     if(m_limits.Stopped() && withinBounds) {
         elapsedTime = m_limits.UpdatedElapsedTime();
         Uci::Output(m_depth, m_selPly, alpha, m_nodes, elapsedTime, m_limits.CalculateNPS(m_nodes), m_tbHits, BOUND_TYPE::LOWER_BOUND, m_pv.PVString(), m_tt);

@@ -68,7 +68,7 @@ private:
 
     // Search state
     PV m_pv;
-    int m_bestScore;
+    int m_bestScore; // Score of the main line
     // Nodes
     u64 m_nodes; // Number of nodes searched
     uint m_tbHits; // Number of endgame table hits
