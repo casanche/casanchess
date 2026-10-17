@@ -97,9 +97,8 @@ TEST_F(PVTest, Ponder_Stopped) {
     EXPECT_EQ(completed.ponder, stopped.ponder);
 
     // The stopped iteration should not print a line
-    for(const std::string& line : stopped.lines) {
+    for(const std::string& line : stopped.lines)
         EXPECT_NE(InfoValue(line, "depth"), "3");
-    }
 }
 
 // Fail-high in the root + new move
@@ -116,6 +115,7 @@ TEST_F(PVTest, Ponder_FailHigh_NewMove) {
     for(const std::string& line : completed.lines) {
         const std::string move = InfoValue(line, "pv");
         if(move.empty()) continue;
+    
         if(move != previousMove && line.contains(" lowerbound ")) {
             failHighMove = move;
             failHighNodes = std::stoi( InfoValue(line, "nodes") );
@@ -132,4 +132,40 @@ TEST_F(PVTest, Ponder_FailHigh_NewMove) {
 
     EXPECT_EQ(stopped.bestmove, failHighMove);
     EXPECT_TRUE(stopped.ponder.empty());
+}
+
+// Fail-high in the root + same move
+// Bestmove and ponder remains the same
+TEST_F(PVTest, Ponder_FailHigh_SameMove) {
+    UCI_PONDER = true;
+
+    board.SetFen("3r2k1/7p/p7/3r1R2/PQ2K1P1/3p2PP/1P2b3/8 b - - 1 35");
+    const SearchOutput completed = RunSearch(UCI_Limits::FixDepth(6));
+
+    int failHighNodes = 0;
+    std::string failHighMove;
+    std::string previousMove;
+    std::string previousLine;
+    for(const std::string& line : completed.lines) {
+        const std::string move = InfoValue(line, "pv");
+        if(move.empty()) continue;
+
+        const bool previousCompleted = !previousLine.contains("bound ");
+        if(move == previousMove && previousCompleted && line.contains(" lowerbound ")) {
+            failHighMove = move;
+            failHighNodes = std::stoi( InfoValue(line, "nodes") );
+            break;
+        }
+        previousMove = move;
+        previousLine = line;
+    }
+
+    if(failHighMove.empty())
+        GTEST_SKIP() << "This test needs fail-high at root with the same move";
+
+    tt.Clear();
+    const SearchOutput stopped = RunSearch(UCI_Limits::FixNodes(failHighNodes + 1));
+
+    EXPECT_EQ(stopped.bestmove, failHighMove);
+    EXPECT_FALSE(stopped.ponder.empty());
 }
