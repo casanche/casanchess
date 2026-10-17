@@ -5,6 +5,8 @@
 #include "ZobristKeys.h"
 
 #include <iostream>
+#include <sstream>
+#include <string>
 
 #include <gtest/gtest.h>
 
@@ -29,6 +31,19 @@ namespace TestCommon {
         ~MuteCout() { std::cout.rdbuf(m_backup); }
 
     private:
+        std::streambuf* m_backup;
+    };
+
+    // Captures std::cout while alive
+    class CaptureCout {
+    public:
+        CaptureCout()  : m_backup(std::cout.rdbuf( m_buffer.rdbuf() )) {}
+        ~CaptureCout() { std::cout.rdbuf(m_backup); }
+
+        std::string Str() const { return m_buffer.str(); }
+
+    private:
+        std::ostringstream m_buffer;
         std::streambuf* m_backup;
     };
 

@@ -350,6 +350,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     D( m_debug.Increment("NegaMax: _: Entering function") );
 
     m_nodes++;
+    m_pv.ClearPly(m_ply);
 
     //---------- Safety net -------------
     // Prevents the search from going too deep and crashing the engine
@@ -361,8 +362,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     const bool isPV = (beta - alpha) != 1;
     bool ttWasPV = isPV;
     assert(!(isPV && cutNode));
-    if(isPV)
-        m_pv.ClearPly(m_ply);
 
     // --------- Termination checks -----------
     if(m_limits.LimitsReached(m_nodes))
@@ -371,8 +370,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     // --------- Draw detection: repetition and 50-move rule -----------
     if(board.FiftyRule() >= 100) {
         D( m_debug.Increment("NegaMax: Draw: FiftyRule") );
-        const bool checkmate = board.IsCheck() && MoveGenerator::GenerateMoves(board).empty();
-        return checkmate ? -MATESCORE_MAX + m_ply : DrawScore(board);
+        return board.IsCheckmate() ? -MATESCORE_MAX + m_ply : DrawScore(board);
     }
     if(board.IsRepetitionDraw()) {
         D( m_debug.Increment("NegaMax: Draw: Repetition") );
@@ -621,6 +619,13 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             bestMove = move;
         }
 
+        if(score > alpha) {
+            D( m_debug.Increment("NegaMax: AlphaBeta: Update Alpha (score > alpha)") );
+            alpha = score;
+ 
+            m_pv.Update(m_ply, move);
+        }
+
         if(score >= beta) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Beta Cutoff (score >= beta)") );
 
@@ -635,13 +640,6 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             }
 
             return score;
-        }
-
-        if(score > alpha) {
-            D( m_debug.Increment("NegaMax: AlphaBeta: Update Alpha (score > alpha)") );
-            alpha = score;
- 
-            m_pv.Update(m_ply, move);
         }
 
         if(move.IsQuiet())
