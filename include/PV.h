@@ -14,6 +14,7 @@ public:
 
     void Update(int ply, Move move);
 
+    Move BestMove() const;
     std::string PonderString() const;
     std::string PVString() const;
 
