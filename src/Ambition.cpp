@@ -1,6 +1,7 @@
 // Ambition.cpp
 //
-// Favors positions with a lower estimated draw probability.
+// Favors positions with a lower estimated draw probability,
+// unless the root player is worse.
 
 #include "Ambition.h"
 
@@ -26,6 +27,10 @@ namespace {
     constexpr int SIGMOID_LIMIT = 12 * LOGIT_SCALE;
     constexpr int SIGMOID_SIZE = 2 * SIGMOID_LIMIT + 1;
     constexpr int MAX_DRAW_PROBABILITY_DELTA = 15143; // round(32768 * tanh(0.5))
+
+    // Ambition fades out linearly when the root player is worse by up to this margin.
+    // A draw is a good result for the worse side, so it should not be avoided there.
+    constexpr int WORSE_SIDE_MARGIN = 50;
 
     constexpr int DivideRounded(int value, int divisor) {
         return (value + divisor / 2) / divisor;
@@ -61,11 +66,19 @@ namespace {
         // Scale the probability change to an adjustment between -Ambition and +Ambition
         return maximumAdjustment * probabilityDelta / MAX_DRAW_PROBABILITY_DELTA;
     }
+
+    // Full weight when the root player is level or better, zero when worse by the margin
+    int RootWeight(int rootEval) {
+        return std::clamp(rootEval + WORSE_SIDE_MARGIN, 0, WORSE_SIDE_MARGIN);
+    }
 }
 
 int Ambition::Apply(const EvaluationOutput& output, int maximumAdjustment, bool rootPlayerToMove) {
-    const int adjustment = DrawAdjustment(output, maximumAdjustment);
     const int rootSign = rootPlayerToMove ? 1 : -1;
+    const int rootEval = rootSign * output.eval;
+
+    const int adjustment = DrawAdjustment(output, maximumAdjustment)
+        * RootWeight(rootEval) / WORSE_SIDE_MARGIN;
 
     const int adjustedEval = output.eval - rootSign * adjustment;
     return std::clamp(adjustedEval, -WINSCORE + 1, WINSCORE - 1);
