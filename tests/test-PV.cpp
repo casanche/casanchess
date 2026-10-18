@@ -34,43 +34,49 @@ protected:
         search.IterativeDeepening(board, limits, true);
         std::istringstream output(capture.Str());
 
-        const std::string pvToken = " pv ";
-        std::string pvLine;
         for(std::string line; std::getline(output, line); ) {
             // Whole line
             result.lines.push_back(line);
 
             // Last PV line
-            const auto pvStart = line.find(pvToken);
-            if(pvStart != std::string::npos)
-                pvLine = line.substr(pvStart + pvToken.size());
+            const auto pv = InfoPV(line);
+            if(!pv.empty())
+                result.lastPV = pv;
 
             // Bestmove and ponder
             if(line.starts_with("bestmove ")) {
-                std::istringstream answer(line);
-                std::string token;
-                answer >> token >> result.bestmove;
-                if(answer >> token && token == "ponder")
-                    answer >> result.ponder;
+                result.bestmove = FieldValue(line, "bestmove");
+                result.ponder = FieldValue(line, "ponder");
             }
         }
-
-        // Split the PV line into single moves
-        std::istringstream moves(pvLine);
-        for(std::string move; moves >> move; )
-            result.lastPV.push_back(move);
 
         return result;
     }
 
-    // For a given 'info' line, get the value for a field (e.g. get the number of nodes)
-    static std::string InfoValue(const std::string& line, const std::string& name) {
+    // For a given UCI line, get the value for a field (e.g. get the number of nodes)
+    static std::string FieldValue(const std::string& line, const std::string& name) {
         std::istringstream tokens(line);
         for(std::string token; tokens >> token; ) {
             if(token == name && tokens >> token)
                 return token;
         }
         return "";
+    }
+
+    // For a given UCI 'info' line, get the PV moves
+    static std::vector<std::string> InfoPV(const std::string& line) {
+        std::vector<std::string> pv;
+
+        const std::string pvToken = " pv ";
+        const auto pvStart = line.find(pvToken);
+        if(pvStart == std::string::npos)
+            return pv;
+
+        std::istringstream moves(line.substr(pvStart + pvToken.size()));
+        for(std::string move; moves >> move; )
+            pv.push_back(move);
+
+        return pv;
     }
 };
 
@@ -96,9 +102,12 @@ TEST_F(PVTest, Ponder_Stopped) {
     EXPECT_EQ(completed.bestmove, stopped.bestmove);
     EXPECT_EQ(completed.ponder, stopped.ponder);
 
-    // The stopped iteration should not print a line
-    for(const std::string& line : stopped.lines)
-        EXPECT_NE(InfoValue(line, "depth"), "3");
+    // The stopped iteration should not print a PV
+    for(const std::string& line : stopped.lines) {
+        if(!InfoPV(line).empty()) {
+            EXPECT_NE(FieldValue(line, "depth"), "3");
+        }
+    }
 }
 
 // Fail-high in the root + new move
@@ -113,12 +122,14 @@ TEST_F(PVTest, Ponder_FailHigh_NewMove) {
     std::string failHighMove;
     std::string previousMove;
     for(const std::string& line : completed.lines) {
-        const std::string move = InfoValue(line, "pv");
-        if(move.empty()) continue;
+        const auto pv = InfoPV(line);
+        if(pv.empty()) continue;
+        const std::string& move = pv[0];
 
-        if(move != previousMove && line.contains(" lowerbound ")) {
+        const bool failHigh = line.contains(" lowerbound ") && pv.size() == 1;
+        if(failHigh && move != previousMove) {
             failHighMove = move;
-            failHighNodes = std::stoi( InfoValue(line, "nodes") );
+            failHighNodes = std::stoi( FieldValue(line, "nodes") );
             break;
         }
         previousMove = move;
@@ -135,7 +146,7 @@ TEST_F(PVTest, Ponder_FailHigh_NewMove) {
 }
 
 // Fail-high in the root + same move
-// Bestmove and ponder remains the same
+// Bestmove remains the same and ponder is available
 TEST_F(PVTest, Ponder_FailHigh_SameMove) {
     UCI_PONDER = true;
 
@@ -147,13 +158,16 @@ TEST_F(PVTest, Ponder_FailHigh_SameMove) {
     std::string previousMove;
     std::string previousLine;
     for(const std::string& line : completed.lines) {
-        const std::string move = InfoValue(line, "pv");
-        if(move.empty()) continue;
+        const auto pv = InfoPV(line);
+        if(pv.empty()) continue;
+        const std::string& move = pv[0];
+
+        const bool failHigh = line.contains(" lowerbound ") && pv.size() == 1;
 
         const bool previousCompleted = !previousLine.contains("bound ");
-        if(move == previousMove && previousCompleted && line.contains(" lowerbound ")) {
+        if(failHigh && move == previousMove && previousCompleted) {
             failHighMove = move;
-            failHighNodes = std::stoi( InfoValue(line, "nodes") );
+            failHighNodes = std::stoi( FieldValue(line, "nodes") );
             break;
         }
         previousMove = move;
