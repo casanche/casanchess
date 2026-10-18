@@ -225,27 +225,6 @@ int Search::AspirationWindow(Board& board, const int depth, const int bestScore)
     return score;
 }
 
-int Search::PVS(Board& board, int depth, int reduction, int alpha, int beta, bool fullWindow, bool cutNode) {
-    if(fullWindow)
-        return -NegaMax(board, depth, -beta, -alpha, false);
-
-    const int reducedDepth = std::max(0, depth - reduction);
-    int score = -NegaMax(board, reducedDepth, -alpha-1, -alpha, !cutNode);
-
-    // Reduced search failed high: re-search with full depth
-    if(reduction && score > alpha)
-        score = -NegaMax(board, depth, -alpha-1, -alpha, !cutNode);
-
-    // Outside the window: no new PV
-    if(score <= alpha || score >= beta) // 'score >= beta' needed in fail-soft schemes
-        return score;
-
-    // New PV found! Re-search with full window
-    const int pvScore = -NegaMax(board, depth, -beta, -alpha, false);
-
-    return pvScore;
-}
-
 // Root search. Handle special root-level logic.
 // Iterate over all moves, call NegaMax, and update the best move found.
 int Search::RootMax(Board &board, int depth, int alpha, int beta) {
@@ -789,6 +768,31 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
 
     return bestScore;
+}
+
+int Search::PVS(Board& board, int depth, int reduction, int alpha, int beta, bool fullWindow, bool cutNode) {
+    if(fullWindow)
+        return -NegaMax(board, depth, -beta, -alpha, false);
+
+    const int reducedDepth = std::max(0, depth - reduction);
+    int score = -NegaMax(board, reducedDepth, -alpha-1, -alpha, !cutNode);
+
+    // Reduced search failed high: re-search with full depth
+    if(reduction && score > alpha)
+        score = -NegaMax(board, depth, -alpha-1, -alpha, !cutNode);
+
+    // Outside the window: no new PV
+    if(score <= alpha || score >= beta) // 'score >= beta' needed in fail-soft schemes
+        return score;
+
+    // New PV found! Re-search with full window
+    const int pvScore = -NegaMax(board, depth, -beta, -alpha, false);
+
+    // Special case: don't lose a mate score after re-search
+    if(IsMateScore(score))
+        return std::max(score, pvScore);
+
+    return pvScore;
 }
 
 int Search::FutilityMargin(Move move, int depth) const {
