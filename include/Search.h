@@ -47,6 +47,7 @@ public:
 private:
     // Internal search algorithms
     int AspirationWindow(Board& board, const int depth, const int bestScore);
+    int PVS(Board& board, int depth, int reduction, int alpha, int beta, bool fullWindow, bool cutNode);
     int RootMax(Board &board, int depth, int alpha, int beta);
     int NegaMax(Board  &board, int depth, int alpha, int beta, bool cutNode);
     int QuiescenceSearch(Board &board, int alpha, int beta);
