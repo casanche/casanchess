@@ -19,8 +19,7 @@ endif()
 # =============================================================================
 # Project Options
 # =============================================================================
-option(BUILD_TESTS "Build standard tests" OFF)
-option(BUILD_TESTS_EXTRA "Build extra tests (Perft and Searcht)" OFF)
+option(BUILD_TESTS "Build tests" OFF)
 option(BUILD_NNUE_TOOLS "Build NNUE tools (NNUE_Datagen and NNUE_Convert)" OFF)
 option(ENABLE_LTO "Enable Link Time Optimization for Release builds" ON)
 option(ENABLE_STATIC "Enable static compilation" ON)
@@ -250,16 +249,9 @@ if(BUILD_TESTS)
 
     target_link_libraries(tests PRIVATE engine_static gtest)
 
-    # Extra tests
-    if(BUILD_TESTS_EXTRA)
-        # Perft test
-        add_executable(perft tests/test-Perft.cpp)
-        target_link_libraries(perft PRIVATE engine_static gtest)
-
-        # Search test
-        add_executable(searcht tests/test-Search.cpp)
-        target_link_libraries(searcht PRIVATE engine_static gtest)
-    endif()
+    # Perft test executable
+    add_executable(perft tests/test-Perft.cpp)
+    target_link_libraries(perft PRIVATE engine_static gtest)
 endif()
 
 # =============================================================================
