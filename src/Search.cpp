@@ -54,13 +54,13 @@ constexpr int ASPIRATION_WINDOW = 25;              // Initial half-window size i
 constexpr int ASPIRATION_WINDOW_MULTIPLIER = 2;    // Incremental window resize
 
 // Pruning parameters
-constexpr bool TURNOFF_NULLMOVE_PRUNING = false;
+constexpr bool TURNON_NULLMOVE_PRUNING = true;
 constexpr int NULLMOVE_REDUCTION_FACTOR = 3;
 
 constexpr int RFP_MARGIN = 80;
 
-constexpr bool TURNOFF_LMR = false;
-constexpr bool TURNOFF_FUTILITY = false;
+constexpr bool TURNON_LMR = true;
+constexpr bool TURNON_FUTILITY = true;
 
 // Called once when the UCI interface starts up.
 Search::Search(TT& tt): m_tt(tt) {
@@ -461,7 +461,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
 
     // --------- Null-move pruning -----------
     // Skip a move (null move). If a reduced search still fails high, the node is very likely to fail high.
-    if(!TURNOFF_NULLMOVE_PRUNING
+    if(TURNON_NULLMOVE_PRUNING
         && !isPV
         && !inCheck
         && eval >= beta
@@ -531,7 +531,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
 
         // ------- Futility pruning -------
         // Prune moves unlikely to raise alpha
-        if(!TURNOFF_FUTILITY && !isPV && !firstMove && !inCheck && !IsWinScore(alpha)) {
+        if(TURNON_FUTILITY && !isPV && !firstMove && !inCheck && !IsWinScore(alpha)) {
             const int futilityMargin = FutilityMargin(move, depth);
 
             if(futilityMargin <= alpha - eval
@@ -557,7 +557,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
 
         // -------- Late Move Reductions ----------
         // Reduce depth of less-promising moves
-        if( !TURNOFF_LMR
+        if( TURNON_LMR
               && moveNumber > 1     // Never reduce the first move
               && depth >= 2         // Avoid negative depths
               && !inCheck           // Not in check
