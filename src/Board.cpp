@@ -364,9 +364,8 @@ bool Board::GivesCheck(Move move) const {
     const int enemyKingSq = BitscanForward(enemyKing);
     const Bitboard diagonalSliders = Piece(color, BISHOP) | Piece(color, QUEEN);
     const Bitboard straightSliders = Piece(color, ROOK) | Piece(color, QUEEN);
-    const Bitboard excludeMovingPiece = ~SquareBB(fromSq);
-    return (AttacksSliding(BISHOP, enemyKingSq, occupied) & diagonalSliders & excludeMovingPiece)
-         | (AttacksSliding(ROOK, enemyKingSq, occupied) & straightSliders & excludeMovingPiece);
+    return (AttacksSliding(BISHOP, enemyKingSq, occupied) & diagonalSliders)
+         | (AttacksSliding(ROOK, enemyKingSq, occupied) & straightSliders);
 }
 
 bool Board::IsCheck() {
