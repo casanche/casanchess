@@ -266,23 +266,15 @@ int Search::RootMax(Board &board, int depth, int alpha, int beta) {
         m_ply++;
 
         // -------- Principal Variation Search (PVS) -----------
-        // PV move: full window
-        // Other moves: zero window
-        if(isPV)
-            score = -NegaMax(board, depth-1, -beta, -alpha, false);
-        else {
-            score = -NegaMax(board, depth-1, -alpha-1, -alpha, true);
-
-            // Score within window: new PV found! Re-search with full window
-            if(score > alpha && score < beta)
-                score = -NegaMax(board, depth-1, -beta, -alpha, false);
-        }
+        const bool fullWindow = isPV;
+        score = PVS(board, depth - 1, 0, alpha, beta, fullWindow, false);
 
         board.TakeMove(move);
         m_ply--;
 
         if(m_limits.Stopped()) break;
 
+        // -------- Updates after search -----------
         if(score > bestScore) {
             D( m_debug.Increment("RootMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
@@ -576,30 +568,17 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
         m_ply++;
 
         // -------- Principal Variation Search (PVS) -----------
-        int fullDepth = depth - 1 + extension + localExtension;
-        int reducedDepth = std::max(0, fullDepth - reduction);
+        const bool fullWindow = isPV && firstMove;
+        const int extendedDepth = depth + extension + localExtension;
 
-        // PV move: full window, full depth
-        // Other moves: zero window, reduced depth
-        if(isPV && firstMove)
-            score = -NegaMax(board, fullDepth, -beta, -alpha, false);
-        else {
-            score = -NegaMax(board, reducedDepth, -alpha-1, -alpha, !cutNode);
-
-            // Reduced search failed high: re-search with full depth
-            if(reduction && score > alpha)
-                score = -NegaMax(board, fullDepth, -alpha-1, -alpha, !cutNode);
-
-            // Score within window: new PV found! Re-search with full window and depth
-            if(score > alpha && score < beta) // 'score < beta' needed in fail-soft schemes
-                score = -NegaMax(board, fullDepth, -beta, -alpha, false);
-        }
+        score = PVS(board, extendedDepth - 1, reduction, alpha, beta, fullWindow, cutNode);
 
         board.TakeMove(move);
         m_ply--;
 
         if(m_limits.Stopped()) return 0;
 
+        // -------- Updates after search -----------
         if(score > bestScore) {
             D( m_debug.Increment("NegaMax: AlphaBeta: Update BestMove (score > bestScore)") );
             bestScore = score;
@@ -789,6 +768,31 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
 
     return bestScore;
+}
+
+int Search::PVS(Board& board, int depth, int reduction, int alpha, int beta, bool fullWindow, bool cutNode) {
+    if(fullWindow)
+        return -NegaMax(board, depth, -beta, -alpha, false);
+
+    const int reducedDepth = std::max(0, depth - reduction);
+    int score = -NegaMax(board, reducedDepth, -alpha-1, -alpha, !cutNode);
+
+    // Reduced search failed high: re-search with full depth
+    if(reduction && score > alpha)
+        score = -NegaMax(board, depth, -alpha-1, -alpha, !cutNode);
+
+    // Outside the window: no new PV
+    if(score <= alpha || score >= beta) // 'score >= beta' needed in fail-soft schemes
+        return score;
+
+    // New PV found! Re-search with full window
+    const int pvScore = -NegaMax(board, depth, -beta, -alpha, false);
+
+    // Special case: don't lose a mate score after re-search
+    if(IsMateScore(score))
+        return std::max(score, pvScore);
+
+    return pvScore;
 }
 
 int Search::FutilityMargin(Move move, int depth) const {
