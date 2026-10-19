@@ -17,7 +17,7 @@ void Syzygy::Free() {
     tb_free();
 }
 
-bool Syzygy::Probe_WDL(Board &board, TB_RESULT &tb_result) {
+bool Syzygy::Probe_WDL(const Board& board, TB_RESULT& tb_result) {
     // Probe only after a 50-move rule reset
     if(board.FiftyRule() != 0) {
         return false;

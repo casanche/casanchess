@@ -6,7 +6,7 @@
 using namespace TestCommon;
 #include <gtest/gtest.h>
 
-testing::AssertionResult IsIncrementalCorrect(Board& board) {
+testing::AssertionResult IsIncrementalCorrect(const Board& board) {
     // Evaluate with incremental update (input)
     const EvaluationOutput incremental = Evaluation::EvaluateOutputs(board);
 

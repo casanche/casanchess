@@ -62,7 +62,7 @@ namespace {
     };
 
     // Empty squares attacked by the enemy pieces, so our king cannot move there
-    Bitboard GenerateKingDangerSquares(const Context &context, const Board &board) {
+    Bitboard GenerateKingDangerSquares(const Context& context, const Board& board) {
         Bitboard dangerSquares = ZERO;
         Bitboard blockers = context.allPieces ^ context.ownKing;
         // Loop over enemy pieces
@@ -84,9 +84,9 @@ namespace {
     }
 
     void FillPinnedPiecesAndMasks(
-        const Context &context,
-        const Board &board,
-        Bitboard &pinnedPieces,
+        const Context& context,
+        const Board& board,
+        Bitboard& pinnedPieces,
         Bitboard pinnedMoveMask[64]
     ) {
         // First, initialize the state
@@ -123,7 +123,7 @@ namespace {
 
     }
 
-    void InitContext(Context &context, const Board& board) {
+    void InitContext(Context& context, const Board& board) {
         context.color = board.ActivePlayer();
         context.enemyColor = board.InactivePlayer();
 
@@ -150,7 +150,7 @@ namespace {
     // === Move generation methods ===
     // ===============================
 
-    void AddMoves(Context &context, Board &board, PIECE_TYPE piece, int fromSq, Bitboard possibleMoves) {
+    void AddMoves(Context& context, const Board& board, PIECE_TYPE piece, int fromSq, Bitboard possibleMoves) {
         // ===================
         // == Capture moves ==
         // ===================
@@ -183,7 +183,7 @@ namespace {
         }
     }
 
-    void AddPromotionMoves(Context &context, Board &board, int fromSq, Bitboard promotionMoves) {
+    void AddPromotionMoves(Context& context, const Board& board, int fromSq, Bitboard promotionMoves) {
         assert(PopCount(promotionMoves) <= 1);
 
         bool isCapture = promotionMoves & context.enemyPieces;
@@ -212,7 +212,7 @@ namespace {
             }
         }
     }
-    void AddCastlingMoves(Context &context, Board &board) {
+    void AddCastlingMoves(Context& context, const Board& board) {
         u8 castlingRights = board.CastlingRights();
 
         if(context.color == WHITE) {
@@ -260,7 +260,7 @@ namespace {
         }
     }
 
-    void GeneratePawnMoves(Context &context, Board &board) {
+    void GeneratePawnMoves(Context& context, const Board& board) {
         enum ATTACK_SIDE {LEFT, RIGHT};
 
         //Relative functions (white/black)
@@ -363,7 +363,7 @@ namespace {
             }
         }
     }
-    void GenerateKnightMoves(Context &context, Board &board) {
+    void GenerateKnightMoves(Context& context, const Board& board) {
         PIECE_TYPE piece = KNIGHT;
         Bitboard theKnights = board.GetPieces(context.color, piece);
         theKnights &= ~context.pinnedPieces;
@@ -373,7 +373,7 @@ namespace {
             AddMoves(context, board, piece, square, attacks);
         }
     }
-    void GenerateKingMoves(Context &context, Board &board) {
+    void GenerateKingMoves(Context& context, const Board& board) {
         const Bitboard validSquares = context.generateQuiet ? ~context.ownPieces
                                                             : context.enemyPieces;
         Bitboard attacks = AttacksKing(context.ownKingSquare) & validSquares;
@@ -387,7 +387,7 @@ namespace {
         if(context.generateQuiet && !board.IsCheck())
             AddCastlingMoves(context, board);
     }
-    void GenerateSlidingMoves(PIECE_TYPE pieceType, Context &context, Board &board) {
+    void GenerateSlidingMoves(PIECE_TYPE pieceType, Context& context, const Board& board) {
         Bitboard thePieces = board.GetPieces(context.color, pieceType);
 
         for(int fromSq : BitboardIterator(thePieces)) {
@@ -397,7 +397,7 @@ namespace {
         }
     }
 
-    void GeneratePseudoMoves(Context &context, Board &board) {
+    void GeneratePseudoMoves(Context& context, const Board& board) {
         GenerateKingMoves(context, board);
         GenerateKnightMoves(context, board);
         GeneratePawnMoves(context, board);
@@ -407,7 +407,7 @@ namespace {
         GenerateSlidingMoves(QUEEN, context, board);
     }
 
-    MoveList Generate(Board& board, GENERATION_TYPE type) {
+    MoveList Generate(const Board& board, GENERATION_TYPE type) {
         MoveList moves; // Assuming RVO/NRVO optimization by the compiler to avoid the return copy
 
         Context context;
@@ -449,17 +449,17 @@ namespace {
 
 } // namespace
 
-MoveList MoveGenerator::GenerateMoves(Board &board) {
+MoveList MoveGenerator::GenerateMoves(const Board& board) {
     if(board.IsCheck())
         return GenerateEvasionMoves(board);
     return Generate(board, GENERATION_TYPE::Legal);
 }
 
-MoveList MoveGenerator::GenerateEvasionMoves(Board &board) {
+MoveList MoveGenerator::GenerateEvasionMoves(const Board& board) {
     return Generate(board, GENERATION_TYPE::Evasion);
 }
 
-MoveList MoveGenerator::GenerateTacticalMoves(Board &board) {
+MoveList MoveGenerator::GenerateTacticalMoves(const Board& board) {
     return Generate(board, GENERATION_TYPE::Tactical);
 }
 

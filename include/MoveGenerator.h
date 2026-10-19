@@ -42,12 +42,12 @@ public:
 
 namespace MoveGenerator {
     // Generate all legal moves
-    MoveList GenerateMoves(Board &board);
+    MoveList GenerateMoves(const Board& board);
     
     // Generate check evasions when in check
-    MoveList GenerateEvasionMoves(Board &board);
+    MoveList GenerateEvasionMoves(const Board& board);
     // Generate tactical moves (captures and promotions)
-    MoveList GenerateTacticalMoves(Board &board);
+    MoveList GenerateTacticalMoves(const Board& board);
     
     // Pick a random move from the move list
     Move RandomMove(const MoveList& moveList);
