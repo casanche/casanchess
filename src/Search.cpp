@@ -405,11 +405,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             int score = m_tt.ScoreFromHash(ttEntry.score, m_ply);
             const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
 
-            if(!invalidTBScore
-                && (ttEntry.type == TTENTRY_TYPE::EXACT
-                    || (ttEntry.type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-                    || (ttEntry.type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
-            ) {
+            if(!invalidTBScore && CanCutoff(ttEntry.type, score, alpha, beta)) {
                 D( m_debug.Increment("NegaMax: TT: Cut-Off") );
                 return score;
             }
@@ -669,11 +665,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             int score = m_tt.ScoreFromHash(ttEntry.score, m_ply);
             const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
 
-            if(!invalidTBScore
-                && (ttEntry.type == TTENTRY_TYPE::EXACT
-                    || (ttEntry.type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-                    || (ttEntry.type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
-            ) {
+            if(!invalidTBScore && CanCutoff(ttEntry.type, score, alpha, beta)) {
                 D( m_debug.Increment("Quiescence: TT: Cut-Off") );
                 return score;
             }
@@ -848,4 +840,10 @@ int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, 
     reduction -= 100 * (wasPV && !isPV);
 
     return std::clamp(reduction / REDUCTION_UNIT, 0, 4);
+}
+
+bool Search::CanCutoff(TTENTRY_TYPE type, int score, int alpha, int beta) {
+    return type == TTENTRY_TYPE::EXACT
+        || (type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+        || (type == TTENTRY_TYPE::LOWER_BOUND && score >= beta);
 }
