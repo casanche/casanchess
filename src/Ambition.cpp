@@ -1,6 +1,6 @@
 // Ambition.cpp
 //
-// Favors positions with a lower estimated draw probability.
+// Favors sharp positions vs drawish continuations
 
 #include "Ambition.h"
 
@@ -26,6 +26,8 @@ namespace {
     constexpr int SIGMOID_LIMIT = 12 * LOGIT_SCALE;
     constexpr int SIGMOID_SIZE = 2 * SIGMOID_LIMIT + 1;
     constexpr int MAX_DRAW_PROBABILITY_DELTA = 15143; // round(32768 * tanh(0.5))
+
+    constexpr int WORSE_SIDE_MARGIN = 50;
 
     constexpr int DivideRounded(int value, int divisor) {
         return (value + divisor / 2) / divisor;
@@ -61,11 +63,18 @@ namespace {
         // Scale the probability change to an adjustment between -Ambition and +Ambition
         return maximumAdjustment * probabilityDelta / MAX_DRAW_PROBABILITY_DELTA;
     }
+
+    int Fading(int adjustment, int rootEval) {
+        const int weight = std::clamp(rootEval + WORSE_SIDE_MARGIN, 0, WORSE_SIDE_MARGIN);
+        return adjustment * weight / WORSE_SIDE_MARGIN;
+    }
 }
 
 int Ambition::Apply(const EvaluationOutput& output, int maximumAdjustment, bool rootPlayerToMove) {
-    const int adjustment = DrawAdjustment(output, maximumAdjustment);
     const int rootSign = rootPlayerToMove ? 1 : -1;
+    const int rootEval = rootSign * output.eval;
+
+    const int adjustment = Fading(DrawAdjustment(output, maximumAdjustment), rootEval);
 
     const int adjustedEval = output.eval - rootSign * adjustment;
     return std::clamp(adjustedEval, -WINSCORE + 1, WINSCORE - 1);
