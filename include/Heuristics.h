@@ -14,9 +14,9 @@ constexpr int MAX_BONUS = 400;
 constexpr int MAX_HISTORY_VALUE = 1024; // could be tunable
 
 namespace Sorting {
-    void SortMoves(Board &board, MoveList &moves, Move hashMove, const Heuristics &heuristics, int ply);
-    void SortEvasions(Board &board, MoveList &moves, Move hashMove);
-    void SortTactical(Board &board, MoveList &moves, Move hashMove);
+    void SortMoves(const Board& board, MoveList& moves, Move hashMove, const Heuristics& heuristics, int ply);
+    void SortEvasions(const Board& board, MoveList& moves, Move hashMove);
+    void SortTactical(const Board& board, MoveList& moves, Move hashMove);
 }
 
 class KillerHeuristics {

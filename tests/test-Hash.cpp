@@ -24,14 +24,14 @@ TEST_F(TT_Test, ProbeFalse) {
 
 // Mate scores get adjusted by ply
 TEST_F(TT_Test, MateScoreAdjustment) {
-    int mateIn5 = MATESCORE_MAX - 5;
+    int mateIn5 = MateAtPly(5);
     tt.Store(zkey, mateIn5, TTENTRY_TYPE::EXACT, Move(), 10, /*ply=*/3, /*wasPV=*/false);
 
     TTEntry ttEntry;
     ASSERT_TRUE(tt.Probe(zkey, ttEntry));
 
     EXPECT_EQ(tt.ScoreFromHash(ttEntry.score, 3), mateIn5);
-    EXPECT_EQ(tt.ScoreFromHash(ttEntry.score, 0), MATESCORE_MAX - 2);
+    EXPECT_EQ(tt.ScoreFromHash(ttEntry.score, 0), MateAtPly(2));
 }
 
 // Normal scores should NOT be adjusted

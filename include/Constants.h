@@ -189,3 +189,6 @@ constexpr bool IsTBScore(const int score) {
 constexpr bool IsWinScore(const int score) {
     return abs(score) >= WINSCORE;
 }
+
+constexpr int MateAtPly(int ply)  { return  MATESCORE_MAX - ply; }
+constexpr int MatedAtPly(int ply) { return -MATESCORE_MAX + ply; }

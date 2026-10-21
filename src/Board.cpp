@@ -34,10 +34,6 @@ Board::Board() {
 void Board::ClearBits() {
     std::memset(m_pieces, 0, sizeof(m_pieces));
 
-    for(COLOR color : {WHITE, BLACK}) {
-        m_kingAttackers[color] = 0;
-    }
-
     for(int i = 0; i < MAX_PLY_HISTORY; ++i) {
         m_history[i].Clear();
     }
@@ -92,7 +88,7 @@ void Board::InitStateAndHistory() {
     m_zobristKey.SetKey(*this);
     m_history[m_ply].zkey = ZKey();
 
-    m_checkCalculated = false;
+    UpdateCheckers();
 
     m_nnue.Inputs_FullUpdate(m_ply, m_pieces);
 }
@@ -364,21 +360,11 @@ bool Board::GivesCheck(Move move) const {
     const int enemyKingSq = BitscanForward(enemyKing);
     const Bitboard diagonalSliders = Piece(color, BISHOP) | Piece(color, QUEEN);
     const Bitboard straightSliders = Piece(color, ROOK) | Piece(color, QUEEN);
-    const Bitboard excludeMovingPiece = ~SquareBB(fromSq);
-    return (AttacksSliding(BISHOP, enemyKingSq, occupied) & diagonalSliders & excludeMovingPiece)
-         | (AttacksSliding(ROOK, enemyKingSq, occupied) & straightSliders & excludeMovingPiece);
+    return (AttacksSliding(BISHOP, enemyKingSq, occupied) & diagonalSliders)
+         | (AttacksSliding(ROOK, enemyKingSq, occupied) & straightSliders);
 }
 
-bool Board::IsCheck() {
-    COLOR color = ActivePlayer();
-    if(!m_checkCalculated) {
-        UpdateKingAttackers(color);
-        m_checkCalculated = true;
-    }
-    return m_kingAttackers[color];
-}
-
-bool Board::IsCheckmate() {
+bool Board::IsCheckmate() const {
     return IsCheck() && MoveGenerator::GenerateMoves(*this).empty();
 }
 
@@ -413,6 +399,7 @@ void Board::Mirror() {
     }
     m_zobristKey.SetKey(*this);
     UpdateBitboards();
+    UpdateCheckers();
 }
 
 int Board::SquareToIndex(std::string square) const {
@@ -464,9 +451,9 @@ void Board::UpdateBitboards() {
     m_allpieces = m_pieces[WHITE][ALL_PIECES] | m_pieces[BLACK][ALL_PIECES];
 }
 
-void Board::UpdateKingAttackers(COLOR color) {
-    Bitboard theKing = GetPieces(color, KING);
-    int kingSquare = BitscanForward(theKing);
+void Board::UpdateCheckers() {
+    const COLOR color = ActivePlayer();
+    const int kingSquare = BitscanForward( GetPieces(color, KING) );
 
-    m_kingAttackers[color] = AttackersTo(color, kingSquare);
+    m_history[m_ply].checkers = AttackersTo(color, kingSquare);
 }

@@ -11,5 +11,5 @@ namespace Syzygy {
     void Free();
 
     // bool ProbeRoot(Board &board);
-    bool Probe_WDL(Board &board, TB_RESULT &tb_result);
+    bool Probe_WDL(const Board& board, TB_RESULT& tb_result);
 }

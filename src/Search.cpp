@@ -54,13 +54,13 @@ constexpr int ASPIRATION_WINDOW = 25;              // Initial half-window size i
 constexpr int ASPIRATION_WINDOW_MULTIPLIER = 2;    // Incremental window resize
 
 // Pruning parameters
-constexpr bool TURNOFF_NULLMOVE_PRUNING = false;
+constexpr bool TURNON_NULLMOVE_PRUNING = true;
 constexpr int NULLMOVE_REDUCTION_FACTOR = 3;
 
 constexpr int RFP_MARGIN = 80;
 
-constexpr bool TURNOFF_LMR = false;
-constexpr bool TURNOFF_FUTILITY = false;
+constexpr bool TURNON_LMR = true;
+constexpr bool TURNON_FUTILITY = true;
 
 // Called once when the UCI interface starts up.
 Search::Search(TT& tt): m_tt(tt) {
@@ -148,7 +148,7 @@ void Search::IterativeDeepening(Board &board, const UCI_Limits& limits, bool ful
     for(m_depth = 1; m_depth <= m_limits.MaxDepth(); m_depth++) {
         assert(m_ply == 0 && m_plyqs == 0);
         if(rootMoves.empty()) {
-            m_bestScore = board.IsCheck() ? -MATESCORE_MAX : DrawScore(board);
+            m_bestScore = board.IsCheck() ? MatedAtPly(0) : DrawScore(board);
             break;
         }
 
@@ -350,7 +350,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     // --------- Draw detection: repetition and 50-move rule -----------
     if(board.FiftyRule() >= 100) {
         D( m_debug.Increment("NegaMax: Draw: FiftyRule") );
-        return board.IsCheckmate() ? -MATESCORE_MAX + m_ply : DrawScore(board);
+        return board.IsCheckmate() ? MatedAtPly(m_ply) : DrawScore(board);
     }
     if(board.IsRepetitionDraw()) {
         D( m_debug.Increment("NegaMax: Draw: Repetition") );
@@ -359,8 +359,8 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
 
     //---------- Mate distance pruning -------------
     // Prevents the search from reporting mates that are too far away
-    alpha = std::max(alpha, -MATESCORE_MAX + m_ply);
-    beta = std::min(beta, +MATESCORE_MAX - m_ply - 1);
+    alpha = std::max(alpha, MatedAtPly(m_ply));
+    beta = std::min(beta, MateAtPly(m_ply + 1));
     if(alpha >= beta) {
         D( m_debug.Increment("NegaMax: Pruning: MateDistance") );
         return alpha;
@@ -405,11 +405,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
             int score = m_tt.ScoreFromHash(ttEntry.score, m_ply);
             const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
 
-            if(!invalidTBScore
-                && (ttEntry.type == TTENTRY_TYPE::EXACT
-                    || (ttEntry.type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-                    || (ttEntry.type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
-            ) {
+            if(!invalidTBScore && CanCutoff(ttEntry.type, score, alpha, beta)) {
                 D( m_debug.Increment("NegaMax: TT: Cut-Off") );
                 return score;
             }
@@ -461,7 +457,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
 
     // --------- Null-move pruning -----------
     // Skip a move (null move). If a reduced search still fails high, the node is very likely to fail high.
-    if(!TURNOFF_NULLMOVE_PRUNING
+    if(TURNON_NULLMOVE_PRUNING
         && !isPV
         && !inCheck
         && eval >= beta
@@ -501,7 +497,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
     if( moves.empty() ) {
         if(inCheck) {
             D( m_debug.Increment("NegaMax: EmptyMoves: Checkmate") );
-            return -MATESCORE_MAX + m_ply; // Checkmate
+            return MatedAtPly(m_ply); // Checkmate
         }
         else {
             D( m_debug.Increment("NegaMax: EmptyMoves: Stalemate") );
@@ -531,7 +527,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
 
         // ------- Futility pruning -------
         // Prune moves unlikely to raise alpha
-        if(!TURNOFF_FUTILITY && !isPV && !firstMove && !inCheck && !IsWinScore(alpha)) {
+        if(TURNON_FUTILITY && !isPV && !firstMove && !inCheck && !IsWinScore(alpha)) {
             const int futilityMargin = FutilityMargin(move, depth);
 
             if(futilityMargin <= alpha - eval
@@ -557,7 +553,7 @@ int Search::NegaMax(Board &board, int depth, int alpha, int beta, bool cutNode) 
 
         // -------- Late Move Reductions ----------
         // Reduce depth of less-promising moves
-        if( !TURNOFF_LMR
+        if( TURNON_LMR
               && moveNumber > 1     // Never reduce the first move
               && depth >= 2         // Avoid negative depths
               && !inCheck           // Not in check
@@ -669,11 +665,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
             int score = m_tt.ScoreFromHash(ttEntry.score, m_ply);
             const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
 
-            if(!invalidTBScore
-                && (ttEntry.type == TTENTRY_TYPE::EXACT
-                    || (ttEntry.type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
-                    || (ttEntry.type == TTENTRY_TYPE::LOWER_BOUND && score >= beta))
-            ) {
+            if(!invalidTBScore && CanCutoff(ttEntry.type, score, alpha, beta)) {
                 D( m_debug.Increment("Quiescence: TT: Cut-Off") );
                 return score;
             }
@@ -709,7 +701,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     // Checkmate (ignore stalemate)
     if( moves.empty() && inCheck ) {
         D( m_debug.Increment("Quiescence: EmptyMoves: Checkmate") );
-        return -MATESCORE_MAX + m_ply;
+        return MatedAtPly(m_ply);
     }
 
     // Different move ordering for efficiency
@@ -848,4 +840,10 @@ int Search::LateMoveReductions(Move move, int depth, int moveNumber, bool isPV, 
     reduction -= 100 * (wasPV && !isPV);
 
     return std::clamp(reduction / REDUCTION_UNIT, 0, 4);
+}
+
+bool Search::CanCutoff(TTENTRY_TYPE type, int score, int alpha, int beta) {
+    return type == TTENTRY_TYPE::EXACT
+        || (type == TTENTRY_TYPE::UPPER_BOUND && score <= alpha)
+        || (type == TTENTRY_TYPE::LOWER_BOUND && score >= beta);
 }

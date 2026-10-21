@@ -65,6 +65,9 @@ private:
     // Debug
     void ShowDebugInfo();
 
+    // Static
+    static bool CanCutoff(TTENTRY_TYPE type, int score, int alpha, int beta);
+
     // --- Private variables ---
 
     // Search state

@@ -68,11 +68,11 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     board.m_history[ply].enpassant = board.m_enPassantSquare;
     board.m_history[ply].move = move;
 
-    //Update helper bitboards
+    // Update helper bitboards
     board.UpdateBitboards();
 
-    //Reset check calculation
-    board.m_checkCalculated = false;
+    // Calculate king checkers
+    board.UpdateCheckers();
 
     //NNUE update
     if(update_nnue) {
@@ -164,9 +164,6 @@ void MoveMaker::TakeMove(Board& board, Move move) {
     //Update helper bitboards
     board.UpdateBitboards();
 
-    //Reset check calculation
-    board.m_checkCalculated = false;
-
     //Asserts
     assert(BoardIntegrityChecker::CheckIntegrity(board));
     assert(board.m_allpieces & SquareBB(fromSq));
@@ -205,9 +202,7 @@ void MoveMaker::MakeNull(Board& board) {
     board.m_history[ply].zkey = board.ZKey();
     board.m_history[ply].enpassant = board.m_enPassantSquare;
     board.m_history[ply].move = move;
-
-    //Reset check calculation
-    board.m_checkCalculated = false;
+    board.m_history[ply].checkers = ZERO;
 
     //Asserts
     assert(move.MoveType() == NULLMOVE);
@@ -226,9 +221,6 @@ void MoveMaker::TakeNull(Board& board) {
     board.m_castlingRights = board.m_history[ply].castling;
     board.m_zobristKey.SetKey( board.m_history[ply].zkey );
     board.m_enPassantSquare = board.m_history[ply].enpassant;
-
-    //Reset check calculation
-    board.m_checkCalculated = false;
 }
 
 void MoveMaker::AddPiece(Board& board, int square, COLOR color, PIECE_TYPE pieceType) {

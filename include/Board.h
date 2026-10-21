@@ -10,6 +10,7 @@
 struct BoardHistory {
     u64 zkey;
     u64 enpassant;
+    Bitboard checkers;
     Move move;
     u8 castling;
     u8 fiftyrule;
@@ -18,6 +19,7 @@ struct BoardHistory {
     void Clear() {
         zkey = 0;
         enpassant = 0;
+        checkers = 0;
         move = Move();
         castling = 0;
         fiftyrule = 0;
@@ -68,8 +70,8 @@ public:
     bool AreHeavyPieces() const;
     bool GivesCheck(Move move) const;
     bool IsAttacked(COLOR color, int square) const;
-    bool IsCheck();
-    bool IsCheckmate();
+    bool IsCheck() const { return Checkers(); }
+    bool IsCheckmate() const;
     bool IsRepetitionDraw() const;
     void Mirror();
     int SquareToIndex(std::string square) const;
@@ -78,7 +80,7 @@ public:
     inline COLOR ActivePlayer() const       { return m_activePlayer; }
     inline Bitboard AllPieces() const       { return m_allpieces; }
     inline u8 CastlingRights() const        { return m_castlingRights; }
-    inline Bitboard Checkers() const        { return m_kingAttackers[m_activePlayer]; }
+    inline Bitboard Checkers() const        { return m_history[m_ply].checkers; }
     inline Bitboard EnPassantSquare() const { return m_enPassantSquare; }
     inline u8 FiftyRule() const             { return m_fiftyrule; }
     inline Bitboard GetPieces(COLOR color, PIECE_TYPE pieceType) const { return m_pieces[color][pieceType]; }
@@ -96,7 +98,7 @@ private:
     void InitStateAndHistory();
 
     void UpdateBitboards();
-    void UpdateKingAttackers(COLOR color);
+    void UpdateCheckers();
 
     //Setters
     void PutPiece(COLOR color, PIECE_TYPE pieceType, int square);
@@ -115,10 +117,6 @@ private:
     //Pieces
     PieceBitboards m_pieces;
     Bitboard m_allpieces;
-
-    //Helpers
-    Bitboard m_kingAttackers[2]; //pieces that attack the king
-    bool m_checkCalculated;
 
     //History
     uint m_initialMoveNumber;

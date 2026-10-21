@@ -8,7 +8,7 @@
 //Unnamed namespace (private functions)
 namespace {
 
-    void RateMoves(Board &board, MoveList &moves, Move hashMove, const Heuristics &heuristics, int ply) {
+    void RateMoves(const Board& board, MoveList& moves, Move hashMove, const Heuristics& heuristics, int ply) {
     
         Move killer1 = heuristics.killer.Primary(ply);
         Move killer2 = heuristics.killer.Secondary(ply);
@@ -73,7 +73,7 @@ namespace {
         }
     }
 
-    void RateTactical(Board &board, MoveList &moves, Move hashMove) {
+    void RateTactical(const Board& board, MoveList& moves, Move hashMove) {
         // Hash > Promotions > Captures
         for(auto& move : moves) {
             if(move == hashMove) {
@@ -89,7 +89,7 @@ namespace {
         }
     }
 
-    void RateEvasions([[maybe_unused]] Board &board, MoveList &moves, Move hashMove) {
+    void RateEvasions([[maybe_unused]] const Board& board, MoveList& moves, Move hashMove) {
         // Hash > Captures > Other moves
         for(auto& move : moves) {
             if(move == hashMove) {
@@ -109,17 +109,17 @@ namespace {
 
 } //unnamed namespace
 
-void Sorting::SortMoves(Board &board, MoveList& moves, Move hashMove, const Heuristics &heuristics, int ply) {
+void Sorting::SortMoves(const Board& board, MoveList& moves, Move hashMove, const Heuristics& heuristics, int ply) {
     RateMoves(board, moves, hashMove, heuristics, ply);
     std::ranges::sort(moves, ByScore);
 }
 
-void Sorting::SortEvasions(Board &board, MoveList& moves, Move hashMove) {
+void Sorting::SortEvasions(const Board& board, MoveList& moves, Move hashMove) {
     RateEvasions(board, moves, hashMove);
     std::ranges::sort(moves, ByScore);
 }
 
-void Sorting::SortTactical(Board &board, MoveList& moves, Move hashMove) {
+void Sorting::SortTactical(const Board& board, MoveList& moves, Move hashMove) {
     RateTactical(board, moves, hashMove);
     std::ranges::sort(moves, ByScore);
 }

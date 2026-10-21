@@ -101,7 +101,6 @@ jobs:
               -DENABLE_STATIC=ON \
               -DENABLE_LTO=ON \
               -DBUILD_TESTS=ON \
-              -DBUILD_TESTS_EXTRA=ON \
               -DBUILD_NNUE_TOOLS=ON
             cmake --build build --parallel
 
@@ -128,7 +127,6 @@ jobs:
           -DENABLE_STATIC=ON \
           -DENABLE_LTO=ON \
           -DBUILD_TESTS=ON \
-          -DBUILD_TESTS_EXTRA=ON \
           -DBUILD_NNUE_TOOLS=ON
 
         cmake --build build --config ${{ matrix.build_type }} --parallel

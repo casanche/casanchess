@@ -147,7 +147,7 @@ TEST_F(PVTest, Mate) {
     board.SetFen("8/8/8/8/4K1Q1/8/7k/8 w - - 0 1");
     const SearchOutput result = RunSearch(UCI_Limits::FixDepth(3));
 
-    EXPECT_EQ(search.BestScore(), MATESCORE_MAX - 3);
+    EXPECT_EQ(search.BestScore(), MateAtPly(3));
     EXPECT_EQ(result.lastPV.size(), 3);
 }
 
