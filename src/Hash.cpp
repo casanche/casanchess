@@ -20,20 +20,21 @@ void TTEntry::Clear() {
 }
 
 TT::TT() {
-    m_entries = nullptr;
+    m_buckets = nullptr;
     SetSize(DEFAULT_HASH_SIZE);
 }
 
 TT::~TT() {
-    delete [] m_entries;
+    delete [] m_buckets;
 }
 
 void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth, int ply, bool wasPV, int eval) {
     assert(abs(score) <= MATESCORE_MAX);
     assert(depth <= MAX_DEPTH);
 
-    u64 index = zkey & m_mask;
-    TTEntry* entry = &m_entries[index];
+    u64 bucketIndex = (zkey / 4) & m_mask;
+    u64 entryIndex = zkey % 4;
+    TTEntry* entry = &m_buckets[bucketIndex].entries[entryIndex];
 
     //Replacement scheme
     const bool older = entry-> age != m_age;
@@ -58,8 +59,9 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
 }
 
 bool TT::Probe(u64 zkey, TTEntry& entry) const {
-    u64 index = zkey & m_mask;
-    const TTEntry& stored = m_entries[index];
+    u64 bucketIndex = (zkey / 4) & m_mask;
+    u64 entryIndex = zkey % 4;
+    const TTEntry& stored = m_buckets[bucketIndex].entries[entryIndex];
 
     if(stored.zkey == UpperBits<u32>(zkey)) {
         entry = stored;
@@ -69,8 +71,10 @@ bool TT::Probe(u64 zkey, TTEntry& entry) const {
 }
 
 void TT::Clear() {
-    for(u64 i=0; i < m_size; ++i) {
-        m_entries[i].Clear();
+    for(u64 i = 0; i < m_size; ++i) {
+        for(TTEntry& entry : m_buckets[i].entries) {
+            entry.Clear();
+        }
     }
 }
 
@@ -78,27 +82,29 @@ void TT::NewSearch() {
     m_age = (m_age + 1) % TT_AGE_CYCLE;
 }
 
-// For a faster entry lookup using a mask: downsize entries (m_size) to fill in a power of 2
+// For a faster entry lookup using a mask: downsize buckets (m_size) to fill in a power of 2
 void TT::SetSize(int sizeInMB) {
     assert(sizeInMB >= MIN_HASH_SIZE && sizeInMB <= MAX_HASH_SIZE);
 
-    u64 maxEntries = u64(sizeInMB) * (1024 * 1024) / sizeof(TTEntry);
+    u64 maxBuckets = u64(sizeInMB) * (1024 * 1024) / sizeof(TTBucket);
 
-    m_size = std::bit_floor(maxEntries);
+    m_size = std::bit_floor(maxBuckets);
     m_mask = m_size - 1;
 
-    delete [] m_entries;
-    m_entries = new TTEntry[m_size];
+    delete [] m_buckets;
+    m_buckets = new TTBucket[m_size];
 
     Clear();
 }
 
-u64 TT::Occupancy(u64 sampleSize) const {
-    assert(sampleSize <= m_size);
+int TT::Occupancy() const {
+    constexpr int SAMPLE_SIZE = 1000;
 
-    u64 count = 0;
-    for(u64 i = 0; i < sampleSize; ++i) {
-        count += (m_entries[i].zkey != 0);
+    int count = 0;
+    for(int i = 0; i < SAMPLE_SIZE / 4; ++i) {
+        for(const TTEntry& entry : m_buckets[i].entries) {
+            count += (entry.zkey != 0);
+        }
     }
     return count;
 }
