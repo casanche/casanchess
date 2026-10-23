@@ -32,41 +32,42 @@ void TT::Store(u64 zkey, int score, TTENTRY_TYPE type, Move bestMove, int depth,
     assert(abs(score) <= MATESCORE_MAX);
     assert(depth <= MAX_DEPTH);
 
-    u64 bucketIndex = (zkey / 4) & m_mask;
-    u64 entryIndex = zkey % 4;
-    TTEntry* entry = &m_buckets[bucketIndex].entries[entryIndex];
+    u64 bucketIndex = zkey & m_mask;
+    TTEntry& entry = SelectEntry(m_buckets[bucketIndex], UpperBits<u32>(zkey));
 
     //Replacement scheme
-    const bool older = entry-> age != m_age;
-    const bool higherDepth = depth >= entry->depth;
+    const bool older = entry.age != m_age;
+    const bool higherDepth = depth >= entry.depth;
 
     const bool replace = older || higherDepth;
     if(replace) {
-        const bool zkeyMatch = (UpperBits<u32>(zkey) == entry->zkey);
+        const bool zkeyMatch = (UpperBits<u32>(zkey) == entry.zkey);
     
-        entry->zkey = UpperBits<u32>(zkey);
-        entry->score = SafeCastInt16( ScoreToHash(score, ply) );
-        entry->eval = SafeCastInt16(eval);
-        entry->depth = SafeCastU8(depth);
-        entry->wasPV = wasPV;
-        entry->type = type;
-        entry->age = m_age;
+        entry.zkey = UpperBits<u32>(zkey);
+        entry.score = SafeCastInt16( ScoreToHash(score, ply) );
+        entry.eval = SafeCastInt16(eval);
+        entry.depth = SafeCastU8(depth);
+        entry.wasPV = wasPV;
+        entry.type = type;
+        entry.age = m_age;
 
         // Do not overwrite a valid bestMove with a null move for the same position
         if(bestMove.MoveType() != MOVE_TYPE::NULLMOVE || !zkeyMatch)
-            entry->bestMove = bestMove;
+            entry.bestMove = bestMove;
     }
 }
 
 bool TT::Probe(u64 zkey, TTEntry& entry) const {
-    u64 bucketIndex = (zkey / 4) & m_mask;
-    u64 entryIndex = zkey % 4;
-    const TTEntry& stored = m_buckets[bucketIndex].entries[entryIndex];
+    u64 bucketIndex = zkey & m_mask;
+    const TTBucket& bucket = m_buckets[bucketIndex];
 
-    if(stored.zkey == UpperBits<u32>(zkey)) {
-        entry = stored;
-        return true;
+    for(const TTEntry& stored : bucket.entries) {
+        if(stored.zkey == UpperBits<u32>(zkey)) {
+            entry = stored;
+            return true;
+        }
     }
+
     return false;
 }
 
@@ -98,10 +99,11 @@ void TT::SetSize(int sizeInMB) {
 }
 
 int TT::Occupancy() const {
-    constexpr int SAMPLE_SIZE = 1000;
+    constexpr int ENTRIES_SAMPLE = 1000;
+    constexpr int BUCKETS_SAMPLE = ENTRIES_SAMPLE / 4;
 
     int count = 0;
-    for(int i = 0; i < SAMPLE_SIZE / 4; ++i) {
+    for(size_t i = 0; i < BUCKETS_SAMPLE; ++i) {
         for(const TTEntry& entry : m_buckets[i].entries) {
             count += (entry.zkey != 0);
         }
@@ -129,6 +131,36 @@ int TT::ScoreToHash(int score, int ply) {
         else          return score - ply;
     }
     return score;
+}
+
+// Exact match > Older > Shallower
+TTEntry& TT::SelectEntry(TTBucket& bucket, u32 zkey) const {
+    size_t selectedIndex = 0;
+
+    for(size_t i = 0; i < bucket.entries.size(); ++i) {
+        TTEntry& candidate = bucket.entries[i];
+        const TTEntry& selected = bucket.entries[selectedIndex];
+
+        if(candidate.zkey == zkey)
+            return candidate; // Exact match
+        
+        const bool candidateOld = candidate.age != m_age;
+        const bool selectedOld = selected.age != m_age;
+
+        // Prefer older
+        if(candidateOld && !selectedOld) {
+            selectedIndex = i;
+            continue;
+        }
+        if(!candidateOld && selectedOld)
+            continue;
+
+        // Prefer shallower
+        if(candidate.depth < selected.depth)
+            selectedIndex = i;
+    }
+
+    return bucket.entries[selectedIndex];
 }
 
 // ================

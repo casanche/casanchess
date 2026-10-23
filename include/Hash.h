@@ -43,9 +43,9 @@ struct alignas(64) TTBucket {
 };
 static_assert(sizeof(TTBucket) == 64, "TTBucket must be 64 bytes.");
 
-// 2^N entries * 16 bytes
-// Max N = 32, so the zkey lower 32 bits (TT index) do not overlap with the upper 32 bits (stored zkey)
-constexpr int MAX_HASH_SIZE = (u64(1) << 32) * sizeof(TTEntry) / (1024 * 1024); //In MegaBytes
+// Max: 2^32 buckets * 64 bytes
+// So that the zkey lower 32 bits (TT index) do not overlap with the upper 32 bits (stored zkey)
+constexpr int MAX_HASH_SIZE = (u64(1) << 32) * sizeof(TTBucket) / (1024 * 1024); //In MegaBytes
 
 class TT {
 public:
@@ -69,6 +69,9 @@ public:
 
 private:
     static int ScoreToHash(int score, int ply);
+
+    // "Store" methods
+    TTEntry& SelectEntry(TTBucket& bucket, u32 zkey) const;
 
     TTBucket* m_buckets;
     u64 m_size; // Number of buckets
