@@ -3,6 +3,7 @@
 #include "Constants.h"
 #include "Move.h"
 
+#include <array>
 #include <memory>
 
 constexpr int MIN_HASH_SIZE = 1; //In MegaBytes
@@ -37,9 +38,14 @@ struct TTEntry {
 };
 static_assert(sizeof(TTEntry) == 16, "TTEntry must be 16 bytes.");
 
-// 2^N entries * 16 bytes
-// Max N = 32, so the zkey lower 32 bits (TT index) do not overlap with the upper 32 bits (stored zkey)
-constexpr int MAX_HASH_SIZE = (u64(1) << 32) * sizeof(TTEntry) / (1024 * 1024); //In MegaBytes
+struct alignas(64) TTBucket {
+    std::array<TTEntry, 4> entries;
+};
+static_assert(sizeof(TTBucket) == 64, "TTBucket must be 64 bytes.");
+
+// Max: 2^32 buckets * 64 bytes
+// So that the zkey lower 32 bits (TT index) do not overlap with the upper 32 bits (stored zkey)
+constexpr int MAX_HASH_SIZE = (u64(1) << 32) * sizeof(TTBucket) / (1024 * 1024); //In MegaBytes
 
 class TT {
 public:
@@ -58,15 +64,17 @@ public:
     void Clear();
     void SetSize(int sizeInMB);
 
-    u64 Size() { return m_size; };
-    u64 Occupancy(u64 sampleSize = 1000) const;
+    int Occupancy() const; // UCI hashfull (per mil)
     static int ScoreFromHash(int score, int ply);
 
 private:
     static int ScoreToHash(int score, int ply);
 
-    TTEntry* m_entries;
-    u64 m_size; // Number of entries
+    // "Store" methods
+    TTEntry& SelectEntry(TTBucket& bucket, u32 zkey) const;
+
+    TTBucket* m_buckets;
+    u64 m_size; // Number of buckets
     u64 m_mask; // Mask for AND operations
     u8 m_age = 0; // Search counter
 };
