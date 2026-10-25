@@ -27,7 +27,7 @@ namespace {
     constexpr int SIGMOID_SIZE = 2 * SIGMOID_LIMIT + 1;
     constexpr int MAX_DRAW_PROBABILITY_DELTA = 15143; // round(32768 * tanh(0.5))
 
-    constexpr int WORSE_SIDE_MARGIN = 50;
+    constexpr int WORSE_SIDE_MARGIN = 30;
 
     constexpr int DivideRounded(int value, int divisor) {
         return (value + divisor / 2) / divisor;

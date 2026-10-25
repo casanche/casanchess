@@ -11,8 +11,8 @@
 
 struct Engine;
 
-constexpr int UCI_AMBITION_DEFAULT = 15;
-constexpr int UCI_DRAW_CONTEMPT_DEFAULT = 30;
+constexpr int UCI_AMBITION_DEFAULT = 25;
+constexpr int UCI_DRAW_CONTEMPT_DEFAULT = 15;
 constexpr int UCI_OUTPUT_ROOTMAX_MINTIME = 1000; //ms
 
 inline bool UCI_PONDER = false;
