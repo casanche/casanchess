@@ -12,6 +12,8 @@
 #include <cmath>
 
 namespace {
+    constexpr int AMBITION_ACTIVATION_THRESHOLD = -30;
+
     constexpr int LOGIT_SCALE = 100;
     constexpr int RESIDUAL_LIMIT = 2 * LOGIT_SCALE;
 
@@ -26,8 +28,6 @@ namespace {
     constexpr int SIGMOID_LIMIT = 12 * LOGIT_SCALE;
     constexpr int SIGMOID_SIZE = 2 * SIGMOID_LIMIT + 1;
     constexpr int MAX_DRAW_PROBABILITY_DELTA = 15143; // round(32768 * tanh(0.5))
-
-    constexpr int WORSE_SIDE_MARGIN = 30;
 
     constexpr int DivideRounded(int value, int divisor) {
         return (value + divisor / 2) / divisor;
@@ -65,8 +65,8 @@ namespace {
     }
 
     int Fading(int adjustment, int rootEval) {
-        const int weight = std::clamp(rootEval + WORSE_SIDE_MARGIN, 0, WORSE_SIDE_MARGIN);
-        return adjustment * weight / WORSE_SIDE_MARGIN;
+        const int weight = std::clamp(rootEval - AMBITION_ACTIVATION_THRESHOLD, 0, -AMBITION_ACTIVATION_THRESHOLD);
+        return adjustment * weight / -AMBITION_ACTIVATION_THRESHOLD;
     }
 }
 
