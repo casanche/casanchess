@@ -43,7 +43,7 @@ cmake --build build --config Release --parallel
 
 ## Non-standard UCI options
 * **``Ambition``**: Modifies the score to favor positions less likely to draw, estimated from a dedicated NNUE output head.
-The value is the maximum score adjustment in centipawns; 0 disables the feature and is slightly faster. Default: 25.
+The value is the maximum score adjustment in centipawns; 0 disables the feature and is slightly faster. Default: 20.
 
 ## Contributing
 Contributions are more than welcome. Whether it's reporting bugs, suggesting new features, testing or improving the code, every contribution is appreciated.
