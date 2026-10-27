@@ -106,8 +106,8 @@ void Limits::AllocateLimits(COLOR color, const UCI_Limits& uciLimits, size_t mov
 
     m_allocatedTime = (myTimeSafe / movesToGo) + myInc;
 
-    // Safety net: don't use more than the remaining time
-    m_allocatedTime = std::min(m_allocatedTime, (i64)myTimeSafe);
+    // Safety net: never use more than half the remaining time
+    m_allocatedTime = std::min(m_allocatedTime, (i64)myTimeSafe / 2);
 
     // Extra adjustments: root-level information
     if(movesSize == 1)
