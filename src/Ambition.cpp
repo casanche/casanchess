@@ -12,6 +12,8 @@
 #include <cmath>
 
 namespace {
+    constexpr int AMBITION_ACTIVATION_THRESHOLD = -30;
+
     constexpr int LOGIT_SCALE = 100;
     constexpr int RESIDUAL_LIMIT = 2 * LOGIT_SCALE;
 
@@ -25,9 +27,7 @@ namespace {
     // Probabilities beyond +/-12 round to zero or one at this scale
     constexpr int SIGMOID_LIMIT = 12 * LOGIT_SCALE;
     constexpr int SIGMOID_SIZE = 2 * SIGMOID_LIMIT + 1;
-    constexpr int MAX_DRAW_PROBABILITY_DELTA = 15143; // round(32768 * tanh(0.5))
-
-    constexpr int WORSE_SIDE_MARGIN = 50;
+    constexpr int MAX_DRAW_PROBABILITY_DELTA = 15143; // round(32768 * tanh(0.5)) --> depends on RESIDUAL_LIMIT!
 
     constexpr int DivideRounded(int value, int divisor) {
         return (value + divisor / 2) / divisor;
@@ -64,18 +64,18 @@ namespace {
         return maximumAdjustment * probabilityDelta / MAX_DRAW_PROBABILITY_DELTA;
     }
 
-    int Fading(int adjustment, int rootEval) {
-        const int weight = std::clamp(rootEval + WORSE_SIDE_MARGIN, 0, WORSE_SIDE_MARGIN);
-        return adjustment * weight / WORSE_SIDE_MARGIN;
+    int Fading(int adjustment, int rootPovEval) {
+        const int weight = std::clamp(rootPovEval - AMBITION_ACTIVATION_THRESHOLD, 0, -AMBITION_ACTIVATION_THRESHOLD);
+        return adjustment * weight / -AMBITION_ACTIVATION_THRESHOLD;
     }
 }
 
 int Ambition::Apply(const EvaluationOutput& output, int maximumAdjustment, bool rootPlayerToMove) {
-    const int rootSign = rootPlayerToMove ? 1 : -1;
-    const int rootEval = rootSign * output.eval;
+    const int rootPovSign = rootPlayerToMove ? 1 : -1;
+    const int rootPovEval = rootPovSign * output.eval;
 
-    const int adjustment = Fading(DrawAdjustment(output, maximumAdjustment), rootEval);
+    const int adjustment = Fading(DrawAdjustment(output, maximumAdjustment), rootPovEval);
 
-    const int adjustedEval = output.eval - rootSign * adjustment;
+    const int adjustedEval = output.eval - rootPovSign * adjustment;
     return std::clamp(adjustedEval, -WINSCORE + 1, WINSCORE - 1);
 }
