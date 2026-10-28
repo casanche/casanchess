@@ -646,32 +646,6 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         return Evaluation::Evaluate(board, m_rootPlayer, UCI_AMBITION);
     }
 
-    const bool isPV = (beta - alpha) != 1;
-    bool ttWasPV = isPV;
-    Move hashMove; // For move ordering
-    int ttEval = NO_EVAL;
-
-    // Probe transposition table.
-    // Only non-PV nodes: PV nodes require the most accurate score possible.
-    TTEntry ttEntry;
-    if( m_tt.Probe(TTKey(board), ttEntry) ) {
-        D( m_debug.Increment("Quiescence: TT: Hit") );
-        ttWasPV |= ttEntry.wasPV;
-        hashMove = ttEntry.bestMove;
-        ttEval = ttEntry.eval;
-
-        if(!isPV) {
-            D( m_debug.Increment("Quiescence: TT: !isPV") );
-            int score = m_tt.ScoreFromHash(ttEntry.score, m_ply);
-            const bool invalidTBScore = IsTBScore(score) && board.FiftyRule() != 0;
-
-            if(!invalidTBScore && CanCutoff(ttEntry.type, score, alpha, beta)) {
-                D( m_debug.Increment("Quiescence: TT: Cut-Off") );
-                return score;
-            }
-        }
-    }
-
     bool inCheck = board.IsCheck();
     int bestScore = NO_SCORE;
 
@@ -680,7 +654,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     int standPat = 0;
     if(!inCheck) {
         D( m_debug.Increment("Quiescence: Evaluation") );
-        standPat = StaticEvaluation(board, ttEval);
+        standPat = StaticEvaluation(board, NO_EVAL);
 
         if(standPat > alpha) {
             if(standPat >= beta) {
@@ -705,14 +679,13 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     }
 
     // Different move ordering for efficiency
-    inCheck ? SortEvasions(board, moves, hashMove)
-            : SortTactical(board, moves, hashMove);
+    inCheck ? SortEvasions(board, moves, Move())
+            : SortTactical(board, moves, Move());
 
     for(auto move : moves) {
 
         if(!inCheck && move.IsCapture() && !move.IsPromotion()) {
-            const int seeValue = (move == hashMove) ? board.SEE(move)
-                                                    : Scorer::SEEFromTacticalScore( move.Score() );
+            const int seeValue = Scorer::SEEFromTacticalScore(move.Score());
 
             // Prune negative SEE captures
             if(seeValue < 0) {
@@ -752,10 +725,8 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         if(score > bestScore)
             bestScore = score;
 
-        if(score >= beta) {
-            m_tt.Store(TTKey(board), score, TTENTRY_TYPE::LOWER_BOUND, move, 0, m_ply, ttWasPV, standPat);
+        if(score >= beta)
             return score;
-        }
 
         if(score > alpha)
             alpha = score;
