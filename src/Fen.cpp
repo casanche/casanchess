@@ -1,4 +1,5 @@
 #include "Fen.h"
+
 #include "Board.h"
 
 #include <sstream>
@@ -57,7 +58,8 @@ void Fen::SetPosition(Board& board, std::string fenString) {
     fenStream >> token;
     if(token != "-") {
         int square = board.SquareToIndex(token);
-        board.m_enPassantSquare = SquareBB(square);
+        if( board.IsAttackedByPawn(board.InactivePlayer(), square) )
+            board.m_enPassantSquare = SquareBB(square);
     }
 
     //50-move rule

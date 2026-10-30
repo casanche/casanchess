@@ -239,32 +239,6 @@ int Board::SEE(Move move) const {
 }
 
 //Attackers
-Bitboard Board::AttackersTo(COLOR color, int square) const {
-    assert(square >= 0 && square < 64);
-
-    Bitboard attackers = ZERO;
-
-    COLOR enemyColor = (COLOR)!color;
-
-    //Non-sliding
-    attackers |= AttacksPawns(color, square) & GetPieces(enemyColor, PAWN);
-    attackers |= AttacksKnights(square) & GetPieces(enemyColor, KNIGHT);
-    attackers |= AttacksKing(square) & GetPieces(enemyColor, KING);
-
-    //Eliminate enemy king for sliding calculation
-    Bitboard blockers = m_allpieces ^ GetPieces(color, KING);
-
-    //Bishop
-    Bitboard potentialAttackers = AttacksSliding(BISHOP, square, blockers);
-    attackers |= potentialAttackers & ( GetPieces(enemyColor, BISHOP) | GetPieces(enemyColor, QUEEN) );
-
-    //Rook
-    potentialAttackers = AttacksSliding(ROOK, square, blockers);
-    attackers |= potentialAttackers & ( GetPieces(enemyColor, ROOK) | GetPieces(enemyColor, QUEEN) );
-
-    return attackers;
-}
-
 Bitboard Board::AttackersTo(COLOR color, int square, Bitboard blockers) const {
     assert(square >= 0 && square < 64);
     
@@ -303,19 +277,13 @@ PIECE_TYPE Board::GetPieceAtSquare(COLOR color, int square) const {
 }
 
 bool Board::IsAttacked(COLOR color, int square) const {
+    return AttackersTo(color, square, m_allpieces);
+}
+
+bool Board::IsAttackedByPawn(COLOR color, int square) const {
     COLOR enemyColor = (COLOR)!color;
 
-    if( AttacksPawns(color, square) & Piece(enemyColor, PAWN) ) return true;
-    if( AttacksKnights(square) & Piece(enemyColor, KNIGHT) ) return true;
-    if( AttacksKing(square) & Piece(enemyColor, KING) ) return true;
-
-    Bitboard blockers = m_allpieces;
-    Bitboard diagonalPieces = Piece(enemyColor, BISHOP) | Piece(enemyColor, QUEEN);
-    if( AttacksSliding(BISHOP, square, blockers) & diagonalPieces ) return true;
-    Bitboard straightPieces = Piece(enemyColor, ROOK) | Piece(enemyColor, QUEEN);
-    if( AttacksSliding(ROOK, square, blockers) & straightPieces ) return true;
-
-    return false;
+    return AttacksPawns(color, square) & Piece(enemyColor, PAWN);
 }
 
 bool Board::AreHeavyPieces() const {
@@ -455,5 +423,5 @@ void Board::UpdateCheckers() {
     const COLOR color = ActivePlayer();
     const int kingSquare = BitscanForward( GetPieces(color, KING) );
 
-    m_history[m_ply].checkers = AttackersTo(color, kingSquare);
+    m_history[m_ply].checkers = AttackersTo(color, kingSquare, m_allpieces);
 }
