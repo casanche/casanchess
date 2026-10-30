@@ -10,7 +10,7 @@ namespace ZobristKeys {
     
     extern u64 m_zkeyColor;
     extern u64 m_zkeyPieces[2][8][64]; //[COLOR][PIECE_TYPE][SQUARE]
-    extern u64 m_zkeyCastling[2][2]; //[COLOR][CASTLING_TYPE]
+    extern u64 m_zkeyCastling[2][2]; //[COLOR][CASTLING_TYPE_SIMPLE]
     extern u64 m_zkeyEnpassant[8]; //[FILE]
     extern u64 m_zkeyRootContext;
 }

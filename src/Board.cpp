@@ -318,6 +318,12 @@ bool Board::IsAttacked(COLOR color, int square) const {
     return false;
 }
 
+bool Board::IsAttackedByPawn(COLOR color, int square) const {
+    COLOR enemyColor = (COLOR)!color;
+
+    return AttacksPawns(color, square) & Piece(enemyColor, PAWN);
+}
+
 bool Board::AreHeavyPieces() const {
     const COLOR color = ActivePlayer();
     return Piece(color, ALL_PIECES) ^ (Piece(color, PAWN) | Piece(color, KING));
