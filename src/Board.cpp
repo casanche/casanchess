@@ -277,19 +277,7 @@ PIECE_TYPE Board::GetPieceAtSquare(COLOR color, int square) const {
 }
 
 bool Board::IsAttacked(COLOR color, int square) const {
-    COLOR enemyColor = (COLOR)!color;
-
-    if( AttacksPawns(color, square) & Piece(enemyColor, PAWN) ) return true;
-    if( AttacksKnights(square) & Piece(enemyColor, KNIGHT) ) return true;
-    if( AttacksKing(square) & Piece(enemyColor, KING) ) return true;
-
-    Bitboard blockers = m_allpieces;
-    Bitboard diagonalPieces = Piece(enemyColor, BISHOP) | Piece(enemyColor, QUEEN);
-    if( AttacksSliding(BISHOP, square, blockers) & diagonalPieces ) return true;
-    Bitboard straightPieces = Piece(enemyColor, ROOK) | Piece(enemyColor, QUEEN);
-    if( AttacksSliding(ROOK, square, blockers) & straightPieces ) return true;
-
-    return false;
+    return AttackersTo(color, square, m_allpieces);
 }
 
 bool Board::IsAttackedByPawn(COLOR color, int square) const {
