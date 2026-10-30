@@ -64,8 +64,6 @@ public:
 
     // Helper methods
     Bitboard AttackersTo(COLOR color, int square, Bitboard blockers) const;
-    Bitboard AttackersTo(COLOR color, int square) const;
-    Bitboard AttackersTo(int square) const { return AttackersTo(ActivePlayer(), square); }
     PIECE_TYPE GetPieceAtSquare(COLOR color, int square) const;
     bool AreHeavyPieces() const;
     bool GivesCheck(Move move) const;
