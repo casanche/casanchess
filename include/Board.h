@@ -70,6 +70,7 @@ public:
     bool AreHeavyPieces() const;
     bool GivesCheck(Move move) const;
     bool IsAttacked(COLOR color, int square) const;
+    bool IsAttackedByPawn(COLOR color, int square) const;
     bool IsCheck() const { return Checkers(); }
     bool IsCheckmate() const;
     bool IsRepetitionDraw() const;

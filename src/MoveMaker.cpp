@@ -1,4 +1,5 @@
 #include "MoveMaker.h"
+
 #include "Board.h"
 #include "Debug.h"
 #include "NNUE_Architecture.h"
@@ -40,8 +41,11 @@ void MoveMaker::MakeMove(Board& board, Move move, bool update_nnue) {
     }
     else if(moveType == DOUBLE_PUSH) {
         int squareShift = color == WHITE ? -8 : 8;
-        board.m_enPassantSquare = SquareBB(toSq + squareShift);
-        board.m_zobristKey.UpdateEnpassant(board.m_enPassantSquare);
+        int epSquare = toSq + squareShift;
+        if( board.IsAttackedByPawn(color, epSquare) ) {
+            board.m_enPassantSquare = SquareBB(epSquare);
+            board.m_zobristKey.UpdateEnpassant(board.m_enPassantSquare);
+        }
     }
     else if(moveType == ENPASSANT) {
         COLOR enemyColor = board.InactivePlayer();
