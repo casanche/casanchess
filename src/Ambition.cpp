@@ -17,10 +17,11 @@ namespace {
     constexpr int LOGIT_SCALE = 100;
     constexpr int RESIDUAL_LIMIT = 2 * LOGIT_SCALE;
 
-    // Draw baseline for network-20260910.nnue
-    // logit(P(draw)) = 1.078608 - 1.294259 * abs(eval / 100)
+    // Draw baseline for network-20261118.nnue
+    // logit(P(draw)) = +1.080633 -1.323581 * abs(eval / 100)
     constexpr int BASELINE_INTERCEPT = 108;
-    constexpr int BASELINE_SLOPE = 1294;
+    constexpr int BASELINE_SLOPE = 1324;
+
     constexpr int BASELINE_SLOPE_SCALE = 1000;
 
     constexpr int PROBABILITY_SCALE = 32768;
