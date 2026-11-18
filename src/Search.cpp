@@ -633,7 +633,6 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
     D( m_debug.Increment("Quiescence: _: Hits"); );
     D( if(m_plyqs <= 2 || m_plyqs % 5 == 0) m_debug.Increment("Quiescence: QPly " + std::to_string(m_plyqs)) );
 
-    m_nodes++;
     m_selPly = std::max(m_selPly, m_ply);
 
     // Termination checks
@@ -737,6 +736,7 @@ int Search::QuiescenceSearch(Board &board, int alpha, int beta) {
         board.MakeMove(move);
 
         m_ply++; m_plyqs++;
+        m_nodes++;
         D( m_debug.Increment("Quiescence: MakeMove (QPly > 0)") );
 
         int score = -QuiescenceSearch(board, -beta, -alpha);
