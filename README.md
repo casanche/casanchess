@@ -2,8 +2,10 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)"
-          srcset="https://github.com/user-attachments/assets/70be2055-1800-41e3-9280-abd962a36667">
-  <img src="https://github.com/user-attachments/assets/05ae7e96-177d-4331-a815-53a53ee720f6"
+          srcset="https://github.com/user-attachments/assets/ec459797-e6a3-4ae0-9ded-c91dd292b75f">
+  <source media="(prefers-color-scheme: light)"
+          srcset="https://github.com/user-attachments/assets/0ba56988-a028-4d32-8603-71f0c262b1aa">
+  <img src="https://github.com/user-attachments/assets/0ba56988-a028-4d32-8603-71f0c262b1aa"
        height="200" alt="Casanchess Logo">
 </picture>
 
